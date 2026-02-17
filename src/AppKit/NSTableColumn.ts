@@ -2,7 +2,9 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSSortDescriptor } from "../Foundation/NSSortDescriptor.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSTableHeaderCell } from "./NSTableHeaderCell.js";
 import type { _NSTableView } from "./NSTableView.js";
 
 export declare class _NSTableColumn extends _NSObject {
@@ -30,12 +32,12 @@ export declare class _NSTableColumn extends _NSObject {
   setMaxWidth$(value: number): void;
   title(): _NSString;
   setTitle$(value: _NSString): void;
-  headerCell(): NobjcObject;
-  setHeaderCell$(value: NobjcObject): void;
+  headerCell(): _NSTableHeaderCell;
+  setHeaderCell$(value: _NSTableHeaderCell): void;
   editable(): boolean;
   setEditable$(value: boolean): void;
-  sortDescriptorPrototype(): NobjcObject;
-  setSortDescriptorPrototype$(value: NobjcObject): void;
+  sortDescriptorPrototype(): _NSSortDescriptor | null;
+  setSortDescriptorPrototype$(value: _NSSortDescriptor | null): void;
   resizingMask(): number;
   setResizingMask$(value: number): void;
   headerToolTip(): NobjcObject;

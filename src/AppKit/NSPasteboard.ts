@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSData } from "../Foundation/NSData.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
+import type { _NSFileWrapper } from "../Foundation/NSFileWrapper.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
 import type { _NSString } from "../Foundation/NSString.js";
@@ -44,8 +45,8 @@ export declare class _NSPasteboard extends _NSObject {
   detectMetadataForTypes$completionHandler$(types: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   writeFileContents$(filename: _NSString): boolean;
   readFileContentsType$toFile$(type: number | null, filename: _NSString): _NSString | null;
-  writeFileWrapper$(wrapper: NobjcObject): boolean;
-  readFileWrapper(): NobjcObject;
+  writeFileWrapper$(wrapper: _NSFileWrapper): boolean;
+  readFileWrapper(): _NSFileWrapper | null;
 
   // Properties
   name(): number;

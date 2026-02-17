@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSData } from "./NSData.js";
 import type { _NSDictionary } from "./NSDictionary.js";
+import type { _NSInputStream } from "./NSInputStream.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURL } from "./NSURL.js";
@@ -38,7 +39,7 @@ export declare class _NSURLRequest extends _NSObject {
   HTTPMethod(): _NSString | null;
   allHTTPHeaderFields(): _NSDictionary | null;
   HTTPBody(): _NSData | null;
-  HTTPBodyStream(): NobjcObject;
+  HTTPBodyStream(): _NSInputStream | null;
   HTTPShouldHandleCookies(): boolean;
   HTTPShouldUsePipelining(): boolean;
 }

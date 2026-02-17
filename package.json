@@ -10,6 +10,7 @@
     "./WebKit": "./src/WebKit/index.ts"
   },
   "scripts": {
+    "clear": "rm -rf src",
     "generate": "bun run generator/index.ts"
   },
   "peerDependencies": {

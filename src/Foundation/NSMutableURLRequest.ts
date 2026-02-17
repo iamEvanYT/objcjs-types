@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSData } from "./NSData.js";
 import type { _NSDictionary } from "./NSDictionary.js";
+import type { _NSInputStream } from "./NSInputStream.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURL } from "./NSURL.js";
 import type { _NSURLRequest } from "./NSURLRequest.js";
@@ -49,8 +50,8 @@ export declare class _NSMutableURLRequest extends _NSURLRequest {
   setAllHTTPHeaderFields$(value: _NSDictionary | null): void;
   HTTPBody(): _NSData | null;
   setHTTPBody$(value: _NSData | null): void;
-  HTTPBodyStream(): NobjcObject;
-  setHTTPBodyStream$(value: NobjcObject): void;
+  HTTPBodyStream(): _NSInputStream | null;
+  setHTTPBodyStream$(value: _NSInputStream | null): void;
   HTTPShouldHandleCookies(): boolean;
   setHTTPShouldHandleCookies$(value: boolean): void;
   HTTPShouldUsePipelining(): boolean;

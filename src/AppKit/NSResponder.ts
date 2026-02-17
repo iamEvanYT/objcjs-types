@@ -5,6 +5,7 @@ import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSError } from "../Foundation/NSError.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSUndoManager } from "../Foundation/NSUndoManager.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSMenu } from "./NSMenu.js";
 import type { _NSWindow } from "./NSWindow.js";
@@ -78,5 +79,5 @@ export declare class _NSResponder extends _NSObject {
   acceptsFirstResponder(): boolean;
   menu(): _NSMenu | null;
   setMenu$(value: _NSMenu | null): void;
-  undoManager(): NobjcObject;
+  undoManager(): _NSUndoManager | null;
 }

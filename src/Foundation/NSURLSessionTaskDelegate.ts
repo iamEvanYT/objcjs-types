@@ -2,9 +2,11 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSError } from "./NSError.js";
 import type { _NSHTTPURLResponse } from "./NSHTTPURLResponse.js";
+import type { _NSURLAuthenticationChallenge } from "./NSURLAuthenticationChallenge.js";
 import type { _NSURLRequest } from "./NSURLRequest.js";
 import type { _NSURLSession } from "./NSURLSession.js";
 import type { _NSURLSessionTask } from "./NSURLSessionTask.js";
+import type { _NSURLSessionTaskMetrics } from "./NSURLSessionTaskMetrics.js";
 import type { _NSURLSessionDelegate } from "./NSURLSessionDelegate.js";
 
 export interface _NSURLSessionTaskDelegate extends _NSURLSessionDelegate {
@@ -13,11 +15,11 @@ export interface _NSURLSessionTaskDelegate extends _NSURLSessionDelegate {
   URLSession$task$willBeginDelayedRequest$completionHandler$?(session: _NSURLSession, task: _NSURLSessionTask, request: _NSURLRequest, completionHandler: (...args: any[]) => any | null): void;
   URLSession$taskIsWaitingForConnectivity$?(session: _NSURLSession, task: _NSURLSessionTask): void;
   URLSession$task$willPerformHTTPRedirection$newRequest$completionHandler$?(session: _NSURLSession, task: _NSURLSessionTask, response: _NSHTTPURLResponse, request: _NSURLRequest, completionHandler: (...args: any[]) => any | null): void;
-  URLSession$task$didReceiveChallenge$completionHandler$?(session: _NSURLSession, task: _NSURLSessionTask, challenge: NobjcObject, completionHandler: (...args: any[]) => any | null): void;
+  URLSession$task$didReceiveChallenge$completionHandler$?(session: _NSURLSession, task: _NSURLSessionTask, challenge: _NSURLAuthenticationChallenge, completionHandler: (...args: any[]) => any | null): void;
   URLSession$task$needNewBodyStream$?(session: _NSURLSession, task: _NSURLSessionTask, completionHandler: (...args: any[]) => any | null): void;
   URLSession$task$needNewBodyStreamFromOffset$completionHandler$?(session: _NSURLSession, task: _NSURLSessionTask, offset: number, completionHandler: (...args: any[]) => any | null): void;
   URLSession$task$didSendBodyData$totalBytesSent$totalBytesExpectedToSend$?(session: _NSURLSession, task: _NSURLSessionTask, bytesSent: number, totalBytesSent: number, totalBytesExpectedToSend: number): void;
   URLSession$task$didReceiveInformationalResponse$?(session: _NSURLSession, task: _NSURLSessionTask, response: _NSHTTPURLResponse): void;
-  URLSession$task$didFinishCollectingMetrics$?(session: _NSURLSession, task: _NSURLSessionTask, metrics: NobjcObject): void;
+  URLSession$task$didFinishCollectingMetrics$?(session: _NSURLSession, task: _NSURLSessionTask, metrics: _NSURLSessionTaskMetrics): void;
   URLSession$task$didCompleteWithError$?(session: _NSURLSession, task: _NSURLSessionTask, error: _NSError | null): void;
 }

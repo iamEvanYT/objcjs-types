@@ -5,6 +5,8 @@ import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSFont } from "./NSFont.js";
+import type { _NSFontDescriptor } from "./NSFontDescriptor.js";
+import type { _NSFontPanel } from "./NSFontPanel.js";
 import type { _NSMenu } from "./NSMenu.js";
 
 export declare class _NSFontManager extends _NSObject {
@@ -20,7 +22,7 @@ export declare class _NSFontManager extends _NSObject {
   setSelectedFont$isMultiple$(fontObj: _NSFont, flag: boolean): void;
   setFontMenu$(newMenu: _NSMenu): void;
   fontMenu$(create: boolean): _NSMenu | null;
-  fontPanel$(create: boolean): NobjcObject;
+  fontPanel$(create: boolean): _NSFontPanel | null;
   fontWithFamily$traits$weight$size$(family: _NSString, traits: number, weight: number, size: number): _NSFont | null;
   traitsOfFont$(fontObj: _NSFont): number;
   weightOfFont$(fontObj: _NSFont): number;
@@ -36,12 +38,12 @@ export declare class _NSFontManager extends _NSObject {
   localizedNameForFamily$face$(family: _NSString, faceKey: _NSString | null): _NSString;
   setSelectedAttributes$isMultiple$(attributes: _NSDictionary, flag: boolean): void;
   convertAttributes$(attributes: _NSDictionary): _NSDictionary;
-  availableFontNamesMatchingFontDescriptor$(descriptor: NobjcObject): _NSArray | null;
+  availableFontNamesMatchingFontDescriptor$(descriptor: _NSFontDescriptor): _NSArray | null;
   fontDescriptorsInCollection$(collectionNames: _NSString): _NSArray | null;
   addCollection$options$(collectionName: _NSString, collectionOptions: number): boolean;
   removeCollection$(collectionName: _NSString): boolean;
   addFontDescriptors$toCollection$(descriptors: _NSArray, collectionName: _NSString): void;
-  removeFontDescriptor$fromCollection$(descriptor: NobjcObject, collection: _NSString): void;
+  removeFontDescriptor$fromCollection$(descriptor: _NSFontDescriptor, collection: _NSString): void;
   convertFontTraits$(traits: number): number;
   fontNamed$hasTraits$(fName: _NSString, someTraits: number): boolean;
   availableFontNamesWithTraits$(someTraits: number): _NSArray | null;

@@ -3,289 +3,49 @@ import { NobjcLibrary } from "objc-js";
 
 const AppKit = new NobjcLibrary("/System/Library/Frameworks/AppKit.framework/AppKit");
 
-import type { _NSApplication } from "./NSApplication.js";
-export const NSApplication = AppKit["NSApplication"] as unknown as typeof _NSApplication;
-export type { _NSApplication };
-
-import type { _NSWindow } from "./NSWindow.js";
-export const NSWindow = AppKit["NSWindow"] as unknown as typeof _NSWindow;
-export type { _NSWindow };
-
-import type { _NSView } from "./NSView.js";
-export const NSView = AppKit["NSView"] as unknown as typeof _NSView;
-export type { _NSView };
-
-import type { _NSViewController } from "./NSViewController.js";
-export const NSViewController = AppKit["NSViewController"] as unknown as typeof _NSViewController;
-export type { _NSViewController };
-
-import type { _NSWindowController } from "./NSWindowController.js";
-export const NSWindowController = AppKit["NSWindowController"] as unknown as typeof _NSWindowController;
-export type { _NSWindowController };
-
-import type { _NSResponder } from "./NSResponder.js";
-export const NSResponder = AppKit["NSResponder"] as unknown as typeof _NSResponder;
-export type { _NSResponder };
-
-import type { _NSControl } from "./NSControl.js";
-export const NSControl = AppKit["NSControl"] as unknown as typeof _NSControl;
-export type { _NSControl };
-
-import type { _NSButton } from "./NSButton.js";
-export const NSButton = AppKit["NSButton"] as unknown as typeof _NSButton;
-export type { _NSButton };
-
-import type { _NSTextField } from "./NSTextField.js";
-export const NSTextField = AppKit["NSTextField"] as unknown as typeof _NSTextField;
-export type { _NSTextField };
-
-import type { _NSTextView } from "./NSTextView.js";
-export const NSTextView = AppKit["NSTextView"] as unknown as typeof _NSTextView;
-export type { _NSTextView };
-
-import type { _NSSecureTextField } from "./NSSecureTextField.js";
-export const NSSecureTextField = AppKit["NSSecureTextField"] as unknown as typeof _NSSecureTextField;
-export type { _NSSecureTextField };
-
-import type { _NSSearchField } from "./NSSearchField.js";
-export const NSSearchField = AppKit["NSSearchField"] as unknown as typeof _NSSearchField;
-export type { _NSSearchField };
-
-import type { _NSMenu } from "./NSMenu.js";
-export const NSMenu = AppKit["NSMenu"] as unknown as typeof _NSMenu;
-export type { _NSMenu };
-
-import type { _NSMenuItem } from "./NSMenuItem.js";
-export const NSMenuItem = AppKit["NSMenuItem"] as unknown as typeof _NSMenuItem;
-export type { _NSMenuItem };
-
-import type { _NSImage } from "./NSImage.js";
-export const NSImage = AppKit["NSImage"] as unknown as typeof _NSImage;
-export type { _NSImage };
-
-import type { _NSImageView } from "./NSImageView.js";
-export const NSImageView = AppKit["NSImageView"] as unknown as typeof _NSImageView;
-export type { _NSImageView };
-
-import type { _NSColor } from "./NSColor.js";
-export const NSColor = AppKit["NSColor"] as unknown as typeof _NSColor;
-export type { _NSColor };
-
-import type { _NSFont } from "./NSFont.js";
-export const NSFont = AppKit["NSFont"] as unknown as typeof _NSFont;
-export type { _NSFont };
-
-import type { _NSFontManager } from "./NSFontManager.js";
-export const NSFontManager = AppKit["NSFontManager"] as unknown as typeof _NSFontManager;
-export type { _NSFontManager };
-
-import type { _NSAlert } from "./NSAlert.js";
-export const NSAlert = AppKit["NSAlert"] as unknown as typeof _NSAlert;
-export type { _NSAlert };
-
-import type { _NSPanel } from "./NSPanel.js";
-export const NSPanel = AppKit["NSPanel"] as unknown as typeof _NSPanel;
-export type { _NSPanel };
-
-import type { _NSSavePanel } from "./NSSavePanel.js";
-export const NSSavePanel = AppKit["NSSavePanel"] as unknown as typeof _NSSavePanel;
-export type { _NSSavePanel };
-
-import type { _NSOpenPanel } from "./NSOpenPanel.js";
-export const NSOpenPanel = AppKit["NSOpenPanel"] as unknown as typeof _NSOpenPanel;
-export type { _NSOpenPanel };
-
-import type { _NSSplitView } from "./NSSplitView.js";
-export const NSSplitView = AppKit["NSSplitView"] as unknown as typeof _NSSplitView;
-export type { _NSSplitView };
-
-import type { _NSSplitViewController } from "./NSSplitViewController.js";
-export const NSSplitViewController = AppKit["NSSplitViewController"] as unknown as typeof _NSSplitViewController;
-export type { _NSSplitViewController };
-
-import type { _NSTableView } from "./NSTableView.js";
-export const NSTableView = AppKit["NSTableView"] as unknown as typeof _NSTableView;
-export type { _NSTableView };
-
-import type { _NSTableColumn } from "./NSTableColumn.js";
-export const NSTableColumn = AppKit["NSTableColumn"] as unknown as typeof _NSTableColumn;
-export type { _NSTableColumn };
-
-import type { _NSTableCellView } from "./NSTableCellView.js";
-export const NSTableCellView = AppKit["NSTableCellView"] as unknown as typeof _NSTableCellView;
-export type { _NSTableCellView };
-
-import type { _NSOutlineView } from "./NSOutlineView.js";
-export const NSOutlineView = AppKit["NSOutlineView"] as unknown as typeof _NSOutlineView;
-export type { _NSOutlineView };
-
-import type { _NSScrollView } from "./NSScrollView.js";
-export const NSScrollView = AppKit["NSScrollView"] as unknown as typeof _NSScrollView;
-export type { _NSScrollView };
-
-import type { _NSClipView } from "./NSClipView.js";
-export const NSClipView = AppKit["NSClipView"] as unknown as typeof _NSClipView;
-export type { _NSClipView };
-
-import type { _NSStackView } from "./NSStackView.js";
-export const NSStackView = AppKit["NSStackView"] as unknown as typeof _NSStackView;
-export type { _NSStackView };
-
-import type { _NSTabView } from "./NSTabView.js";
-export const NSTabView = AppKit["NSTabView"] as unknown as typeof _NSTabView;
-export type { _NSTabView };
-
-import type { _NSTabViewItem } from "./NSTabViewItem.js";
-export const NSTabViewItem = AppKit["NSTabViewItem"] as unknown as typeof _NSTabViewItem;
-export type { _NSTabViewItem };
-
-import type { _NSToolbar } from "./NSToolbar.js";
-export const NSToolbar = AppKit["NSToolbar"] as unknown as typeof _NSToolbar;
-export type { _NSToolbar };
-
-import type { _NSToolbarItem } from "./NSToolbarItem.js";
-export const NSToolbarItem = AppKit["NSToolbarItem"] as unknown as typeof _NSToolbarItem;
-export type { _NSToolbarItem };
-
-import type { _NSStatusBar } from "./NSStatusBar.js";
-export const NSStatusBar = AppKit["NSStatusBar"] as unknown as typeof _NSStatusBar;
-export type { _NSStatusBar };
-
-import type { _NSStatusItem } from "./NSStatusItem.js";
-export const NSStatusItem = AppKit["NSStatusItem"] as unknown as typeof _NSStatusItem;
-export type { _NSStatusItem };
-
-import type { _NSScreen } from "./NSScreen.js";
-export const NSScreen = AppKit["NSScreen"] as unknown as typeof _NSScreen;
-export type { _NSScreen };
-
-import type { _NSEvent } from "./NSEvent.js";
-export const NSEvent = AppKit["NSEvent"] as unknown as typeof _NSEvent;
-export type { _NSEvent };
-
-import type { _NSCursor } from "./NSCursor.js";
-export const NSCursor = AppKit["NSCursor"] as unknown as typeof _NSCursor;
-export type { _NSCursor };
-
-import type { _NSNib } from "./NSNib.js";
-export const NSNib = AppKit["NSNib"] as unknown as typeof _NSNib;
-export type { _NSNib };
-
-import type { _NSStoryboard } from "./NSStoryboard.js";
-export const NSStoryboard = AppKit["NSStoryboard"] as unknown as typeof _NSStoryboard;
-export type { _NSStoryboard };
-
-import type { _NSLayoutConstraint } from "./NSLayoutConstraint.js";
-export const NSLayoutConstraint = AppKit["NSLayoutConstraint"] as unknown as typeof _NSLayoutConstraint;
-export type { _NSLayoutConstraint };
-
-import type { _NSGestureRecognizer } from "./NSGestureRecognizer.js";
-export const NSGestureRecognizer = AppKit["NSGestureRecognizer"] as unknown as typeof _NSGestureRecognizer;
-export type { _NSGestureRecognizer };
-
-import type { _NSClickGestureRecognizer } from "./NSClickGestureRecognizer.js";
-export const NSClickGestureRecognizer = AppKit["NSClickGestureRecognizer"] as unknown as typeof _NSClickGestureRecognizer;
-export type { _NSClickGestureRecognizer };
-
-import type { _NSPressGestureRecognizer } from "./NSPressGestureRecognizer.js";
-export const NSPressGestureRecognizer = AppKit["NSPressGestureRecognizer"] as unknown as typeof _NSPressGestureRecognizer;
-export type { _NSPressGestureRecognizer };
-
-import type { _NSPanGestureRecognizer } from "./NSPanGestureRecognizer.js";
-export const NSPanGestureRecognizer = AppKit["NSPanGestureRecognizer"] as unknown as typeof _NSPanGestureRecognizer;
-export type { _NSPanGestureRecognizer };
-
-import type { _NSMagnificationGestureRecognizer } from "./NSMagnificationGestureRecognizer.js";
-export const NSMagnificationGestureRecognizer = AppKit["NSMagnificationGestureRecognizer"] as unknown as typeof _NSMagnificationGestureRecognizer;
-export type { _NSMagnificationGestureRecognizer };
-
-import type { _NSRotationGestureRecognizer } from "./NSRotationGestureRecognizer.js";
-export const NSRotationGestureRecognizer = AppKit["NSRotationGestureRecognizer"] as unknown as typeof _NSRotationGestureRecognizer;
-export type { _NSRotationGestureRecognizer };
-
-import type { _NSPopover } from "./NSPopover.js";
-export const NSPopover = AppKit["NSPopover"] as unknown as typeof _NSPopover;
-export type { _NSPopover };
-
-import type { _NSSlider } from "./NSSlider.js";
-export const NSSlider = AppKit["NSSlider"] as unknown as typeof _NSSlider;
-export type { _NSSlider };
-
-import type { _NSProgressIndicator } from "./NSProgressIndicator.js";
-export const NSProgressIndicator = AppKit["NSProgressIndicator"] as unknown as typeof _NSProgressIndicator;
-export type { _NSProgressIndicator };
-
-import type { _NSLevelIndicator } from "./NSLevelIndicator.js";
-export const NSLevelIndicator = AppKit["NSLevelIndicator"] as unknown as typeof _NSLevelIndicator;
-export type { _NSLevelIndicator };
-
-import type { _NSStepper } from "./NSStepper.js";
-export const NSStepper = AppKit["NSStepper"] as unknown as typeof _NSStepper;
-export type { _NSStepper };
-
-import type { _NSSegmentedControl } from "./NSSegmentedControl.js";
-export const NSSegmentedControl = AppKit["NSSegmentedControl"] as unknown as typeof _NSSegmentedControl;
-export type { _NSSegmentedControl };
-
-import type { _NSComboBox } from "./NSComboBox.js";
-export const NSComboBox = AppKit["NSComboBox"] as unknown as typeof _NSComboBox;
-export type { _NSComboBox };
-
-import type { _NSPopUpButton } from "./NSPopUpButton.js";
-export const NSPopUpButton = AppKit["NSPopUpButton"] as unknown as typeof _NSPopUpButton;
-export type { _NSPopUpButton };
-
-import type { _NSDatePicker } from "./NSDatePicker.js";
-export const NSDatePicker = AppKit["NSDatePicker"] as unknown as typeof _NSDatePicker;
-export type { _NSDatePicker };
-
-import type { _NSColorWell } from "./NSColorWell.js";
-export const NSColorWell = AppKit["NSColorWell"] as unknown as typeof _NSColorWell;
-export type { _NSColorWell };
-
-import type { _NSColorPanel } from "./NSColorPanel.js";
-export const NSColorPanel = AppKit["NSColorPanel"] as unknown as typeof _NSColorPanel;
-export type { _NSColorPanel };
-
-import type { _NSBox } from "./NSBox.js";
-export const NSBox = AppKit["NSBox"] as unknown as typeof _NSBox;
-export type { _NSBox };
-
-import type { _NSCollectionView } from "./NSCollectionView.js";
-export const NSCollectionView = AppKit["NSCollectionView"] as unknown as typeof _NSCollectionView;
-export type { _NSCollectionView };
-
-import type { _NSCollectionViewItem } from "./NSCollectionViewItem.js";
-export const NSCollectionViewItem = AppKit["NSCollectionViewItem"] as unknown as typeof _NSCollectionViewItem;
-export type { _NSCollectionViewItem };
-
-import type { _NSBrowser } from "./NSBrowser.js";
-export const NSBrowser = AppKit["NSBrowser"] as unknown as typeof _NSBrowser;
-export type { _NSBrowser };
-
-import type { _NSCell } from "./NSCell.js";
-export const NSCell = AppKit["NSCell"] as unknown as typeof _NSCell;
-export type { _NSCell };
+import type { _NSATSTypesetter } from "./NSATSTypesetter.js";
+export const NSATSTypesetter = AppKit["NSATSTypesetter"] as unknown as typeof _NSATSTypesetter;
+export type { _NSATSTypesetter };
+
+import type { _NSAccessibilityCustomAction } from "./NSAccessibilityCustomAction.js";
+export const NSAccessibilityCustomAction = AppKit["NSAccessibilityCustomAction"] as unknown as typeof _NSAccessibilityCustomAction;
+export type { _NSAccessibilityCustomAction };
+
+import type { _NSAccessibilityCustomRotor } from "./NSAccessibilityCustomRotor.js";
+export const NSAccessibilityCustomRotor = AppKit["NSAccessibilityCustomRotor"] as unknown as typeof _NSAccessibilityCustomRotor;
+export type { _NSAccessibilityCustomRotor };
+
+import type { _NSAccessibilityCustomRotorItemResult } from "./NSAccessibilityCustomRotorItemResult.js";
+export const NSAccessibilityCustomRotorItemResult = AppKit["NSAccessibilityCustomRotorItemResult"] as unknown as typeof _NSAccessibilityCustomRotorItemResult;
+export type { _NSAccessibilityCustomRotorItemResult };
+
+import type { _NSAccessibilityCustomRotorSearchParameters } from "./NSAccessibilityCustomRotorSearchParameters.js";
+export const NSAccessibilityCustomRotorSearchParameters = AppKit["NSAccessibilityCustomRotorSearchParameters"] as unknown as typeof _NSAccessibilityCustomRotorSearchParameters;
+export type { _NSAccessibilityCustomRotorSearchParameters };
+
+import type { _NSAccessibilityElement } from "./NSAccessibilityElement.js";
+export const NSAccessibilityElement = AppKit["NSAccessibilityElement"] as unknown as typeof _NSAccessibilityElement;
+export type { _NSAccessibilityElement };
 
 import type { _NSActionCell } from "./NSActionCell.js";
 export const NSActionCell = AppKit["NSActionCell"] as unknown as typeof _NSActionCell;
 export type { _NSActionCell };
 
-import type { _NSButtonCell } from "./NSButtonCell.js";
-export const NSButtonCell = AppKit["NSButtonCell"] as unknown as typeof _NSButtonCell;
-export type { _NSButtonCell };
+import type { _NSAdaptiveImageGlyph } from "./NSAdaptiveImageGlyph.js";
+export const NSAdaptiveImageGlyph = AppKit["NSAdaptiveImageGlyph"] as unknown as typeof _NSAdaptiveImageGlyph;
+export type { _NSAdaptiveImageGlyph };
 
-import type { _NSTextFieldCell } from "./NSTextFieldCell.js";
-export const NSTextFieldCell = AppKit["NSTextFieldCell"] as unknown as typeof _NSTextFieldCell;
-export type { _NSTextFieldCell };
+import type { _NSAlert } from "./NSAlert.js";
+export const NSAlert = AppKit["NSAlert"] as unknown as typeof _NSAlert;
+export type { _NSAlert };
 
-import type { _NSBezierPath } from "./NSBezierPath.js";
-export const NSBezierPath = AppKit["NSBezierPath"] as unknown as typeof _NSBezierPath;
-export type { _NSBezierPath };
+import type { _NSAlignmentFeedbackFilter } from "./NSAlignmentFeedbackFilter.js";
+export const NSAlignmentFeedbackFilter = AppKit["NSAlignmentFeedbackFilter"] as unknown as typeof _NSAlignmentFeedbackFilter;
+export type { _NSAlignmentFeedbackFilter };
 
-import type { _NSAffineTransform } from "./NSAffineTransform.js";
-export const NSAffineTransform = AppKit["NSAffineTransform"] as unknown as typeof _NSAffineTransform;
-export type { _NSAffineTransform };
+import type { _NSAnimation } from "./NSAnimation.js";
+export const NSAnimation = AppKit["NSAnimation"] as unknown as typeof _NSAnimation;
+export type { _NSAnimation };
 
 import type { _NSAnimationContext } from "./NSAnimationContext.js";
 export const NSAnimationContext = AppKit["NSAnimationContext"] as unknown as typeof _NSAnimationContext;
@@ -295,9 +55,593 @@ import type { _NSAppearance } from "./NSAppearance.js";
 export const NSAppearance = AppKit["NSAppearance"] as unknown as typeof _NSAppearance;
 export type { _NSAppearance };
 
-import type { _NSWorkspace } from "./NSWorkspace.js";
-export const NSWorkspace = AppKit["NSWorkspace"] as unknown as typeof _NSWorkspace;
-export type { _NSWorkspace };
+import type { _NSApplication } from "./NSApplication.js";
+export const NSApplication = AppKit["NSApplication"] as unknown as typeof _NSApplication;
+export type { _NSApplication };
+
+import type { _NSArrayController } from "./NSArrayController.js";
+export const NSArrayController = AppKit["NSArrayController"] as unknown as typeof _NSArrayController;
+export type { _NSArrayController };
+
+import type { _NSBackgroundExtensionView } from "./NSBackgroundExtensionView.js";
+export const NSBackgroundExtensionView = AppKit["NSBackgroundExtensionView"] as unknown as typeof _NSBackgroundExtensionView;
+export type { _NSBackgroundExtensionView };
+
+import type { _NSBezierPath } from "./NSBezierPath.js";
+export const NSBezierPath = AppKit["NSBezierPath"] as unknown as typeof _NSBezierPath;
+export type { _NSBezierPath };
+
+import type { _NSBindingSelectionMarker } from "./NSBindingSelectionMarker.js";
+export const NSBindingSelectionMarker = AppKit["NSBindingSelectionMarker"] as unknown as typeof _NSBindingSelectionMarker;
+export type { _NSBindingSelectionMarker };
+
+import type { _NSBitmapImageRep } from "./NSBitmapImageRep.js";
+export const NSBitmapImageRep = AppKit["NSBitmapImageRep"] as unknown as typeof _NSBitmapImageRep;
+export type { _NSBitmapImageRep };
+
+import type { _NSBox } from "./NSBox.js";
+export const NSBox = AppKit["NSBox"] as unknown as typeof _NSBox;
+export type { _NSBox };
+
+import type { _NSBrowser } from "./NSBrowser.js";
+export const NSBrowser = AppKit["NSBrowser"] as unknown as typeof _NSBrowser;
+export type { _NSBrowser };
+
+import type { _NSBrowserCell } from "./NSBrowserCell.js";
+export const NSBrowserCell = AppKit["NSBrowserCell"] as unknown as typeof _NSBrowserCell;
+export type { _NSBrowserCell };
+
+import type { _NSButton } from "./NSButton.js";
+export const NSButton = AppKit["NSButton"] as unknown as typeof _NSButton;
+export type { _NSButton };
+
+import type { _NSButtonCell } from "./NSButtonCell.js";
+export const NSButtonCell = AppKit["NSButtonCell"] as unknown as typeof _NSButtonCell;
+export type { _NSButtonCell };
+
+import type { _NSButtonTouchBarItem } from "./NSButtonTouchBarItem.js";
+export const NSButtonTouchBarItem = AppKit["NSButtonTouchBarItem"] as unknown as typeof _NSButtonTouchBarItem;
+export type { _NSButtonTouchBarItem };
+
+import type { _NSCIImageRep } from "./NSCIImageRep.js";
+export const NSCIImageRep = AppKit["NSCIImageRep"] as unknown as typeof _NSCIImageRep;
+export type { _NSCIImageRep };
+
+import type { _NSCachedImageRep } from "./NSCachedImageRep.js";
+export const NSCachedImageRep = AppKit["NSCachedImageRep"] as unknown as typeof _NSCachedImageRep;
+export type { _NSCachedImageRep };
+
+import type { _NSCandidateListTouchBarItem } from "./NSCandidateListTouchBarItem.js";
+export const NSCandidateListTouchBarItem = AppKit["NSCandidateListTouchBarItem"] as unknown as typeof _NSCandidateListTouchBarItem;
+export type { _NSCandidateListTouchBarItem };
+
+import type { _NSCell } from "./NSCell.js";
+export const NSCell = AppKit["NSCell"] as unknown as typeof _NSCell;
+export type { _NSCell };
+
+import type { _NSClickGestureRecognizer } from "./NSClickGestureRecognizer.js";
+export const NSClickGestureRecognizer = AppKit["NSClickGestureRecognizer"] as unknown as typeof _NSClickGestureRecognizer;
+export type { _NSClickGestureRecognizer };
+
+import type { _NSClipView } from "./NSClipView.js";
+export const NSClipView = AppKit["NSClipView"] as unknown as typeof _NSClipView;
+export type { _NSClipView };
+
+import type { _NSCollectionLayoutAnchor } from "./NSCollectionLayoutAnchor.js";
+export const NSCollectionLayoutAnchor = AppKit["NSCollectionLayoutAnchor"] as unknown as typeof _NSCollectionLayoutAnchor;
+export type { _NSCollectionLayoutAnchor };
+
+import type { _NSCollectionLayoutBoundarySupplementaryItem } from "./NSCollectionLayoutBoundarySupplementaryItem.js";
+export const NSCollectionLayoutBoundarySupplementaryItem = AppKit["NSCollectionLayoutBoundarySupplementaryItem"] as unknown as typeof _NSCollectionLayoutBoundarySupplementaryItem;
+export type { _NSCollectionLayoutBoundarySupplementaryItem };
+
+import type { _NSCollectionLayoutDecorationItem } from "./NSCollectionLayoutDecorationItem.js";
+export const NSCollectionLayoutDecorationItem = AppKit["NSCollectionLayoutDecorationItem"] as unknown as typeof _NSCollectionLayoutDecorationItem;
+export type { _NSCollectionLayoutDecorationItem };
+
+import type { _NSCollectionLayoutDimension } from "./NSCollectionLayoutDimension.js";
+export const NSCollectionLayoutDimension = AppKit["NSCollectionLayoutDimension"] as unknown as typeof _NSCollectionLayoutDimension;
+export type { _NSCollectionLayoutDimension };
+
+import type { _NSCollectionLayoutEdgeSpacing } from "./NSCollectionLayoutEdgeSpacing.js";
+export const NSCollectionLayoutEdgeSpacing = AppKit["NSCollectionLayoutEdgeSpacing"] as unknown as typeof _NSCollectionLayoutEdgeSpacing;
+export type { _NSCollectionLayoutEdgeSpacing };
+
+import type { _NSCollectionLayoutGroup } from "./NSCollectionLayoutGroup.js";
+export const NSCollectionLayoutGroup = AppKit["NSCollectionLayoutGroup"] as unknown as typeof _NSCollectionLayoutGroup;
+export type { _NSCollectionLayoutGroup };
+
+import type { _NSCollectionLayoutGroupCustomItem } from "./NSCollectionLayoutGroupCustomItem.js";
+export const NSCollectionLayoutGroupCustomItem = AppKit["NSCollectionLayoutGroupCustomItem"] as unknown as typeof _NSCollectionLayoutGroupCustomItem;
+export type { _NSCollectionLayoutGroupCustomItem };
+
+import type { _NSCollectionLayoutItem } from "./NSCollectionLayoutItem.js";
+export const NSCollectionLayoutItem = AppKit["NSCollectionLayoutItem"] as unknown as typeof _NSCollectionLayoutItem;
+export type { _NSCollectionLayoutItem };
+
+import type { _NSCollectionLayoutSection } from "./NSCollectionLayoutSection.js";
+export const NSCollectionLayoutSection = AppKit["NSCollectionLayoutSection"] as unknown as typeof _NSCollectionLayoutSection;
+export type { _NSCollectionLayoutSection };
+
+import type { _NSCollectionLayoutSize } from "./NSCollectionLayoutSize.js";
+export const NSCollectionLayoutSize = AppKit["NSCollectionLayoutSize"] as unknown as typeof _NSCollectionLayoutSize;
+export type { _NSCollectionLayoutSize };
+
+import type { _NSCollectionLayoutSpacing } from "./NSCollectionLayoutSpacing.js";
+export const NSCollectionLayoutSpacing = AppKit["NSCollectionLayoutSpacing"] as unknown as typeof _NSCollectionLayoutSpacing;
+export type { _NSCollectionLayoutSpacing };
+
+import type { _NSCollectionLayoutSupplementaryItem } from "./NSCollectionLayoutSupplementaryItem.js";
+export const NSCollectionLayoutSupplementaryItem = AppKit["NSCollectionLayoutSupplementaryItem"] as unknown as typeof _NSCollectionLayoutSupplementaryItem;
+export type { _NSCollectionLayoutSupplementaryItem };
+
+import type { _NSCollectionView } from "./NSCollectionView.js";
+export const NSCollectionView = AppKit["NSCollectionView"] as unknown as typeof _NSCollectionView;
+export type { _NSCollectionView };
+
+import type { _NSCollectionViewCompositionalLayout } from "./NSCollectionViewCompositionalLayout.js";
+export const NSCollectionViewCompositionalLayout = AppKit["NSCollectionViewCompositionalLayout"] as unknown as typeof _NSCollectionViewCompositionalLayout;
+export type { _NSCollectionViewCompositionalLayout };
+
+import type { _NSCollectionViewCompositionalLayoutConfiguration } from "./NSCollectionViewCompositionalLayoutConfiguration.js";
+export const NSCollectionViewCompositionalLayoutConfiguration = AppKit["NSCollectionViewCompositionalLayoutConfiguration"] as unknown as typeof _NSCollectionViewCompositionalLayoutConfiguration;
+export type { _NSCollectionViewCompositionalLayoutConfiguration };
+
+import type { _NSCollectionViewDiffableDataSource } from "./NSCollectionViewDiffableDataSource.js";
+export const NSCollectionViewDiffableDataSource = AppKit["NSCollectionViewDiffableDataSource"] as unknown as typeof _NSCollectionViewDiffableDataSource;
+export type { _NSCollectionViewDiffableDataSource };
+
+import type { _NSCollectionViewFlowLayout } from "./NSCollectionViewFlowLayout.js";
+export const NSCollectionViewFlowLayout = AppKit["NSCollectionViewFlowLayout"] as unknown as typeof _NSCollectionViewFlowLayout;
+export type { _NSCollectionViewFlowLayout };
+
+import type { _NSCollectionViewFlowLayoutInvalidationContext } from "./NSCollectionViewFlowLayoutInvalidationContext.js";
+export const NSCollectionViewFlowLayoutInvalidationContext = AppKit["NSCollectionViewFlowLayoutInvalidationContext"] as unknown as typeof _NSCollectionViewFlowLayoutInvalidationContext;
+export type { _NSCollectionViewFlowLayoutInvalidationContext };
+
+import type { _NSCollectionViewGridLayout } from "./NSCollectionViewGridLayout.js";
+export const NSCollectionViewGridLayout = AppKit["NSCollectionViewGridLayout"] as unknown as typeof _NSCollectionViewGridLayout;
+export type { _NSCollectionViewGridLayout };
+
+import type { _NSCollectionViewItem } from "./NSCollectionViewItem.js";
+export const NSCollectionViewItem = AppKit["NSCollectionViewItem"] as unknown as typeof _NSCollectionViewItem;
+export type { _NSCollectionViewItem };
+
+import type { _NSCollectionViewLayout } from "./NSCollectionViewLayout.js";
+export const NSCollectionViewLayout = AppKit["NSCollectionViewLayout"] as unknown as typeof _NSCollectionViewLayout;
+export type { _NSCollectionViewLayout };
+
+import type { _NSCollectionViewLayoutAttributes } from "./NSCollectionViewLayoutAttributes.js";
+export const NSCollectionViewLayoutAttributes = AppKit["NSCollectionViewLayoutAttributes"] as unknown as typeof _NSCollectionViewLayoutAttributes;
+export type { _NSCollectionViewLayoutAttributes };
+
+import type { _NSCollectionViewLayoutInvalidationContext } from "./NSCollectionViewLayoutInvalidationContext.js";
+export const NSCollectionViewLayoutInvalidationContext = AppKit["NSCollectionViewLayoutInvalidationContext"] as unknown as typeof _NSCollectionViewLayoutInvalidationContext;
+export type { _NSCollectionViewLayoutInvalidationContext };
+
+import type { _NSCollectionViewTransitionLayout } from "./NSCollectionViewTransitionLayout.js";
+export const NSCollectionViewTransitionLayout = AppKit["NSCollectionViewTransitionLayout"] as unknown as typeof _NSCollectionViewTransitionLayout;
+export type { _NSCollectionViewTransitionLayout };
+
+import type { _NSCollectionViewUpdateItem } from "./NSCollectionViewUpdateItem.js";
+export const NSCollectionViewUpdateItem = AppKit["NSCollectionViewUpdateItem"] as unknown as typeof _NSCollectionViewUpdateItem;
+export type { _NSCollectionViewUpdateItem };
+
+import type { _NSColor } from "./NSColor.js";
+export const NSColor = AppKit["NSColor"] as unknown as typeof _NSColor;
+export type { _NSColor };
+
+import type { _NSColorList } from "./NSColorList.js";
+export const NSColorList = AppKit["NSColorList"] as unknown as typeof _NSColorList;
+export type { _NSColorList };
+
+import type { _NSColorPanel } from "./NSColorPanel.js";
+export const NSColorPanel = AppKit["NSColorPanel"] as unknown as typeof _NSColorPanel;
+export type { _NSColorPanel };
+
+import type { _NSColorPicker } from "./NSColorPicker.js";
+export const NSColorPicker = AppKit["NSColorPicker"] as unknown as typeof _NSColorPicker;
+export type { _NSColorPicker };
+
+import type { _NSColorPickerTouchBarItem } from "./NSColorPickerTouchBarItem.js";
+export const NSColorPickerTouchBarItem = AppKit["NSColorPickerTouchBarItem"] as unknown as typeof _NSColorPickerTouchBarItem;
+export type { _NSColorPickerTouchBarItem };
+
+import type { _NSColorSampler } from "./NSColorSampler.js";
+export const NSColorSampler = AppKit["NSColorSampler"] as unknown as typeof _NSColorSampler;
+export type { _NSColorSampler };
+
+import type { _NSColorSpace } from "./NSColorSpace.js";
+export const NSColorSpace = AppKit["NSColorSpace"] as unknown as typeof _NSColorSpace;
+export type { _NSColorSpace };
+
+import type { _NSColorWell } from "./NSColorWell.js";
+export const NSColorWell = AppKit["NSColorWell"] as unknown as typeof _NSColorWell;
+export type { _NSColorWell };
+
+import type { _NSComboBox } from "./NSComboBox.js";
+export const NSComboBox = AppKit["NSComboBox"] as unknown as typeof _NSComboBox;
+export type { _NSComboBox };
+
+import type { _NSComboBoxCell } from "./NSComboBoxCell.js";
+export const NSComboBoxCell = AppKit["NSComboBoxCell"] as unknown as typeof _NSComboBoxCell;
+export type { _NSComboBoxCell };
+
+import type { _NSComboButton } from "./NSComboButton.js";
+export const NSComboButton = AppKit["NSComboButton"] as unknown as typeof _NSComboButton;
+export type { _NSComboButton };
+
+import type { _NSControl } from "./NSControl.js";
+export const NSControl = AppKit["NSControl"] as unknown as typeof _NSControl;
+export type { _NSControl };
+
+import type { _NSController } from "./NSController.js";
+export const NSController = AppKit["NSController"] as unknown as typeof _NSController;
+export type { _NSController };
+
+import type { _NSCursor } from "./NSCursor.js";
+export const NSCursor = AppKit["NSCursor"] as unknown as typeof _NSCursor;
+export type { _NSCursor };
+
+import type { _NSCustomImageRep } from "./NSCustomImageRep.js";
+export const NSCustomImageRep = AppKit["NSCustomImageRep"] as unknown as typeof _NSCustomImageRep;
+export type { _NSCustomImageRep };
+
+import type { _NSCustomTouchBarItem } from "./NSCustomTouchBarItem.js";
+export const NSCustomTouchBarItem = AppKit["NSCustomTouchBarItem"] as unknown as typeof _NSCustomTouchBarItem;
+export type { _NSCustomTouchBarItem };
+
+import type { _NSDataAsset } from "./NSDataAsset.js";
+export const NSDataAsset = AppKit["NSDataAsset"] as unknown as typeof _NSDataAsset;
+export type { _NSDataAsset };
+
+import type { _NSDatePicker } from "./NSDatePicker.js";
+export const NSDatePicker = AppKit["NSDatePicker"] as unknown as typeof _NSDatePicker;
+export type { _NSDatePicker };
+
+import type { _NSDatePickerCell } from "./NSDatePickerCell.js";
+export const NSDatePickerCell = AppKit["NSDatePickerCell"] as unknown as typeof _NSDatePickerCell;
+export type { _NSDatePickerCell };
+
+import type { _NSDictionaryController } from "./NSDictionaryController.js";
+export const NSDictionaryController = AppKit["NSDictionaryController"] as unknown as typeof _NSDictionaryController;
+export type { _NSDictionaryController };
+
+import type { _NSDictionaryControllerKeyValuePair } from "./NSDictionaryControllerKeyValuePair.js";
+export const NSDictionaryControllerKeyValuePair = AppKit["NSDictionaryControllerKeyValuePair"] as unknown as typeof _NSDictionaryControllerKeyValuePair;
+export type { _NSDictionaryControllerKeyValuePair };
+
+import type { _NSDiffableDataSourceSnapshot } from "./NSDiffableDataSourceSnapshot.js";
+export const NSDiffableDataSourceSnapshot = AppKit["NSDiffableDataSourceSnapshot"] as unknown as typeof _NSDiffableDataSourceSnapshot;
+export type { _NSDiffableDataSourceSnapshot };
+
+import type { _NSDockTile } from "./NSDockTile.js";
+export const NSDockTile = AppKit["NSDockTile"] as unknown as typeof _NSDockTile;
+export type { _NSDockTile };
+
+import type { _NSDocument } from "./NSDocument.js";
+export const NSDocument = AppKit["NSDocument"] as unknown as typeof _NSDocument;
+export type { _NSDocument };
+
+import type { _NSDocumentController } from "./NSDocumentController.js";
+export const NSDocumentController = AppKit["NSDocumentController"] as unknown as typeof _NSDocumentController;
+export type { _NSDocumentController };
+
+import type { _NSDraggingImageComponent } from "./NSDraggingImageComponent.js";
+export const NSDraggingImageComponent = AppKit["NSDraggingImageComponent"] as unknown as typeof _NSDraggingImageComponent;
+export type { _NSDraggingImageComponent };
+
+import type { _NSDraggingItem } from "./NSDraggingItem.js";
+export const NSDraggingItem = AppKit["NSDraggingItem"] as unknown as typeof _NSDraggingItem;
+export type { _NSDraggingItem };
+
+import type { _NSDraggingSession } from "./NSDraggingSession.js";
+export const NSDraggingSession = AppKit["NSDraggingSession"] as unknown as typeof _NSDraggingSession;
+export type { _NSDraggingSession };
+
+import type { _NSDrawer } from "./NSDrawer.js";
+export const NSDrawer = AppKit["NSDrawer"] as unknown as typeof _NSDrawer;
+export type { _NSDrawer };
+
+import type { _NSEPSImageRep } from "./NSEPSImageRep.js";
+export const NSEPSImageRep = AppKit["NSEPSImageRep"] as unknown as typeof _NSEPSImageRep;
+export type { _NSEPSImageRep };
+
+import type { _NSEvent } from "./NSEvent.js";
+export const NSEvent = AppKit["NSEvent"] as unknown as typeof _NSEvent;
+export type { _NSEvent };
+
+import type { _NSFilePromiseProvider } from "./NSFilePromiseProvider.js";
+export const NSFilePromiseProvider = AppKit["NSFilePromiseProvider"] as unknown as typeof _NSFilePromiseProvider;
+export type { _NSFilePromiseProvider };
+
+import type { _NSFilePromiseReceiver } from "./NSFilePromiseReceiver.js";
+export const NSFilePromiseReceiver = AppKit["NSFilePromiseReceiver"] as unknown as typeof _NSFilePromiseReceiver;
+export type { _NSFilePromiseReceiver };
+
+import type { _NSFont } from "./NSFont.js";
+export const NSFont = AppKit["NSFont"] as unknown as typeof _NSFont;
+export type { _NSFont };
+
+import type { _NSFontAssetRequest } from "./NSFontAssetRequest.js";
+export const NSFontAssetRequest = AppKit["NSFontAssetRequest"] as unknown as typeof _NSFontAssetRequest;
+export type { _NSFontAssetRequest };
+
+import type { _NSFontCollection } from "./NSFontCollection.js";
+export const NSFontCollection = AppKit["NSFontCollection"] as unknown as typeof _NSFontCollection;
+export type { _NSFontCollection };
+
+import type { _NSFontDescriptor } from "./NSFontDescriptor.js";
+export const NSFontDescriptor = AppKit["NSFontDescriptor"] as unknown as typeof _NSFontDescriptor;
+export type { _NSFontDescriptor };
+
+import type { _NSFontManager } from "./NSFontManager.js";
+export const NSFontManager = AppKit["NSFontManager"] as unknown as typeof _NSFontManager;
+export type { _NSFontManager };
+
+import type { _NSFontPanel } from "./NSFontPanel.js";
+export const NSFontPanel = AppKit["NSFontPanel"] as unknown as typeof _NSFontPanel;
+export type { _NSFontPanel };
+
+import type { _NSForm } from "./NSForm.js";
+export const NSForm = AppKit["NSForm"] as unknown as typeof _NSForm;
+export type { _NSForm };
+
+import type { _NSFormCell } from "./NSFormCell.js";
+export const NSFormCell = AppKit["NSFormCell"] as unknown as typeof _NSFormCell;
+export type { _NSFormCell };
+
+import type { _NSGestureRecognizer } from "./NSGestureRecognizer.js";
+export const NSGestureRecognizer = AppKit["NSGestureRecognizer"] as unknown as typeof _NSGestureRecognizer;
+export type { _NSGestureRecognizer };
+
+import type { _NSGlassEffectContainerView } from "./NSGlassEffectContainerView.js";
+export const NSGlassEffectContainerView = AppKit["NSGlassEffectContainerView"] as unknown as typeof _NSGlassEffectContainerView;
+export type { _NSGlassEffectContainerView };
+
+import type { _NSGlassEffectView } from "./NSGlassEffectView.js";
+export const NSGlassEffectView = AppKit["NSGlassEffectView"] as unknown as typeof _NSGlassEffectView;
+export type { _NSGlassEffectView };
+
+import type { _NSGlyphGenerator } from "./NSGlyphGenerator.js";
+export const NSGlyphGenerator = AppKit["NSGlyphGenerator"] as unknown as typeof _NSGlyphGenerator;
+export type { _NSGlyphGenerator };
+
+import type { _NSGlyphInfo } from "./NSGlyphInfo.js";
+export const NSGlyphInfo = AppKit["NSGlyphInfo"] as unknown as typeof _NSGlyphInfo;
+export type { _NSGlyphInfo };
+
+import type { _NSGradient } from "./NSGradient.js";
+export const NSGradient = AppKit["NSGradient"] as unknown as typeof _NSGradient;
+export type { _NSGradient };
+
+import type { _NSGraphicsContext } from "./NSGraphicsContext.js";
+export const NSGraphicsContext = AppKit["NSGraphicsContext"] as unknown as typeof _NSGraphicsContext;
+export type { _NSGraphicsContext };
+
+import type { _NSGridCell } from "./NSGridCell.js";
+export const NSGridCell = AppKit["NSGridCell"] as unknown as typeof _NSGridCell;
+export type { _NSGridCell };
+
+import type { _NSGridColumn } from "./NSGridColumn.js";
+export const NSGridColumn = AppKit["NSGridColumn"] as unknown as typeof _NSGridColumn;
+export type { _NSGridColumn };
+
+import type { _NSGridRow } from "./NSGridRow.js";
+export const NSGridRow = AppKit["NSGridRow"] as unknown as typeof _NSGridRow;
+export type { _NSGridRow };
+
+import type { _NSGridView } from "./NSGridView.js";
+export const NSGridView = AppKit["NSGridView"] as unknown as typeof _NSGridView;
+export type { _NSGridView };
+
+import type { _NSGroupTouchBarItem } from "./NSGroupTouchBarItem.js";
+export const NSGroupTouchBarItem = AppKit["NSGroupTouchBarItem"] as unknown as typeof _NSGroupTouchBarItem;
+export type { _NSGroupTouchBarItem };
+
+import type { _NSHapticFeedbackManager } from "./NSHapticFeedbackManager.js";
+export const NSHapticFeedbackManager = AppKit["NSHapticFeedbackManager"] as unknown as typeof _NSHapticFeedbackManager;
+export type { _NSHapticFeedbackManager };
+
+import type { _NSHelpManager } from "./NSHelpManager.js";
+export const NSHelpManager = AppKit["NSHelpManager"] as unknown as typeof _NSHelpManager;
+export type { _NSHelpManager };
+
+import type { _NSImage } from "./NSImage.js";
+export const NSImage = AppKit["NSImage"] as unknown as typeof _NSImage;
+export type { _NSImage };
+
+import type { _NSImageCell } from "./NSImageCell.js";
+export const NSImageCell = AppKit["NSImageCell"] as unknown as typeof _NSImageCell;
+export type { _NSImageCell };
+
+import type { _NSImageRep } from "./NSImageRep.js";
+export const NSImageRep = AppKit["NSImageRep"] as unknown as typeof _NSImageRep;
+export type { _NSImageRep };
+
+import type { _NSImageSymbolConfiguration } from "./NSImageSymbolConfiguration.js";
+export const NSImageSymbolConfiguration = AppKit["NSImageSymbolConfiguration"] as unknown as typeof _NSImageSymbolConfiguration;
+export type { _NSImageSymbolConfiguration };
+
+import type { _NSImageView } from "./NSImageView.js";
+export const NSImageView = AppKit["NSImageView"] as unknown as typeof _NSImageView;
+export type { _NSImageView };
+
+import type { _NSInputManager } from "./NSInputManager.js";
+export const NSInputManager = AppKit["NSInputManager"] as unknown as typeof _NSInputManager;
+export type { _NSInputManager };
+
+import type { _NSInputServer } from "./NSInputServer.js";
+export const NSInputServer = AppKit["NSInputServer"] as unknown as typeof _NSInputServer;
+export type { _NSInputServer };
+
+import type { _NSItemBadge } from "./NSItemBadge.js";
+export const NSItemBadge = AppKit["NSItemBadge"] as unknown as typeof _NSItemBadge;
+export type { _NSItemBadge };
+
+import type { _NSLayoutAnchor } from "./NSLayoutAnchor.js";
+export const NSLayoutAnchor = AppKit["NSLayoutAnchor"] as unknown as typeof _NSLayoutAnchor;
+export type { _NSLayoutAnchor };
+
+import type { _NSLayoutConstraint } from "./NSLayoutConstraint.js";
+export const NSLayoutConstraint = AppKit["NSLayoutConstraint"] as unknown as typeof _NSLayoutConstraint;
+export type { _NSLayoutConstraint };
+
+import type { _NSLayoutDimension } from "./NSLayoutDimension.js";
+export const NSLayoutDimension = AppKit["NSLayoutDimension"] as unknown as typeof _NSLayoutDimension;
+export type { _NSLayoutDimension };
+
+import type { _NSLayoutGuide } from "./NSLayoutGuide.js";
+export const NSLayoutGuide = AppKit["NSLayoutGuide"] as unknown as typeof _NSLayoutGuide;
+export type { _NSLayoutGuide };
+
+import type { _NSLayoutManager } from "./NSLayoutManager.js";
+export const NSLayoutManager = AppKit["NSLayoutManager"] as unknown as typeof _NSLayoutManager;
+export type { _NSLayoutManager };
+
+import type { _NSLayoutXAxisAnchor } from "./NSLayoutXAxisAnchor.js";
+export const NSLayoutXAxisAnchor = AppKit["NSLayoutXAxisAnchor"] as unknown as typeof _NSLayoutXAxisAnchor;
+export type { _NSLayoutXAxisAnchor };
+
+import type { _NSLayoutYAxisAnchor } from "./NSLayoutYAxisAnchor.js";
+export const NSLayoutYAxisAnchor = AppKit["NSLayoutYAxisAnchor"] as unknown as typeof _NSLayoutYAxisAnchor;
+export type { _NSLayoutYAxisAnchor };
+
+import type { _NSLevelIndicator } from "./NSLevelIndicator.js";
+export const NSLevelIndicator = AppKit["NSLevelIndicator"] as unknown as typeof _NSLevelIndicator;
+export type { _NSLevelIndicator };
+
+import type { _NSLevelIndicatorCell } from "./NSLevelIndicatorCell.js";
+export const NSLevelIndicatorCell = AppKit["NSLevelIndicatorCell"] as unknown as typeof _NSLevelIndicatorCell;
+export type { _NSLevelIndicatorCell };
+
+import type { _NSMagnificationGestureRecognizer } from "./NSMagnificationGestureRecognizer.js";
+export const NSMagnificationGestureRecognizer = AppKit["NSMagnificationGestureRecognizer"] as unknown as typeof _NSMagnificationGestureRecognizer;
+export type { _NSMagnificationGestureRecognizer };
+
+import type { _NSMatrix } from "./NSMatrix.js";
+export const NSMatrix = AppKit["NSMatrix"] as unknown as typeof _NSMatrix;
+export type { _NSMatrix };
+
+import type { _NSMediaLibraryBrowserController } from "./NSMediaLibraryBrowserController.js";
+export const NSMediaLibraryBrowserController = AppKit["NSMediaLibraryBrowserController"] as unknown as typeof _NSMediaLibraryBrowserController;
+export type { _NSMediaLibraryBrowserController };
+
+import type { _NSMenu } from "./NSMenu.js";
+export const NSMenu = AppKit["NSMenu"] as unknown as typeof _NSMenu;
+export type { _NSMenu };
+
+import type { _NSMenuItem } from "./NSMenuItem.js";
+export const NSMenuItem = AppKit["NSMenuItem"] as unknown as typeof _NSMenuItem;
+export type { _NSMenuItem };
+
+import type { _NSMenuItemBadge } from "./NSMenuItemBadge.js";
+export const NSMenuItemBadge = AppKit["NSMenuItemBadge"] as unknown as typeof _NSMenuItemBadge;
+export type { _NSMenuItemBadge };
+
+import type { _NSMenuItemCell } from "./NSMenuItemCell.js";
+export const NSMenuItemCell = AppKit["NSMenuItemCell"] as unknown as typeof _NSMenuItemCell;
+export type { _NSMenuItemCell };
+
+import type { _NSMenuToolbarItem } from "./NSMenuToolbarItem.js";
+export const NSMenuToolbarItem = AppKit["NSMenuToolbarItem"] as unknown as typeof _NSMenuToolbarItem;
+export type { _NSMenuToolbarItem };
+
+import type { _NSMovie } from "./NSMovie.js";
+export const NSMovie = AppKit["NSMovie"] as unknown as typeof _NSMovie;
+export type { _NSMovie };
+
+import type { _NSMutableFontCollection } from "./NSMutableFontCollection.js";
+export const NSMutableFontCollection = AppKit["NSMutableFontCollection"] as unknown as typeof _NSMutableFontCollection;
+export type { _NSMutableFontCollection };
+
+import type { _NSMutableParagraphStyle } from "./NSMutableParagraphStyle.js";
+export const NSMutableParagraphStyle = AppKit["NSMutableParagraphStyle"] as unknown as typeof _NSMutableParagraphStyle;
+export type { _NSMutableParagraphStyle };
+
+import type { _NSNib } from "./NSNib.js";
+export const NSNib = AppKit["NSNib"] as unknown as typeof _NSNib;
+export type { _NSNib };
+
+import type { _NSNibConnector } from "./NSNibConnector.js";
+export const NSNibConnector = AppKit["NSNibConnector"] as unknown as typeof _NSNibConnector;
+export type { _NSNibConnector };
+
+import type { _NSNibControlConnector } from "./NSNibControlConnector.js";
+export const NSNibControlConnector = AppKit["NSNibControlConnector"] as unknown as typeof _NSNibControlConnector;
+export type { _NSNibControlConnector };
+
+import type { _NSNibOutletConnector } from "./NSNibOutletConnector.js";
+export const NSNibOutletConnector = AppKit["NSNibOutletConnector"] as unknown as typeof _NSNibOutletConnector;
+export type { _NSNibOutletConnector };
+
+import type { _NSObjectController } from "./NSObjectController.js";
+export const NSObjectController = AppKit["NSObjectController"] as unknown as typeof _NSObjectController;
+export type { _NSObjectController };
+
+import type { _NSOpenGLContext } from "./NSOpenGLContext.js";
+export const NSOpenGLContext = AppKit["NSOpenGLContext"] as unknown as typeof _NSOpenGLContext;
+export type { _NSOpenGLContext };
+
+import type { _NSOpenGLLayer } from "./NSOpenGLLayer.js";
+export const NSOpenGLLayer = AppKit["NSOpenGLLayer"] as unknown as typeof _NSOpenGLLayer;
+export type { _NSOpenGLLayer };
+
+import type { _NSOpenGLPixelBuffer } from "./NSOpenGLPixelBuffer.js";
+export const NSOpenGLPixelBuffer = AppKit["NSOpenGLPixelBuffer"] as unknown as typeof _NSOpenGLPixelBuffer;
+export type { _NSOpenGLPixelBuffer };
+
+import type { _NSOpenGLPixelFormat } from "./NSOpenGLPixelFormat.js";
+export const NSOpenGLPixelFormat = AppKit["NSOpenGLPixelFormat"] as unknown as typeof _NSOpenGLPixelFormat;
+export type { _NSOpenGLPixelFormat };
+
+import type { _NSOpenGLView } from "./NSOpenGLView.js";
+export const NSOpenGLView = AppKit["NSOpenGLView"] as unknown as typeof _NSOpenGLView;
+export type { _NSOpenGLView };
+
+import type { _NSOpenPanel } from "./NSOpenPanel.js";
+export const NSOpenPanel = AppKit["NSOpenPanel"] as unknown as typeof _NSOpenPanel;
+export type { _NSOpenPanel };
+
+import type { _NSOutlineView } from "./NSOutlineView.js";
+export const NSOutlineView = AppKit["NSOutlineView"] as unknown as typeof _NSOutlineView;
+export type { _NSOutlineView };
+
+import type { _NSPDFImageRep } from "./NSPDFImageRep.js";
+export const NSPDFImageRep = AppKit["NSPDFImageRep"] as unknown as typeof _NSPDFImageRep;
+export type { _NSPDFImageRep };
+
+import type { _NSPDFInfo } from "./NSPDFInfo.js";
+export const NSPDFInfo = AppKit["NSPDFInfo"] as unknown as typeof _NSPDFInfo;
+export type { _NSPDFInfo };
+
+import type { _NSPDFPanel } from "./NSPDFPanel.js";
+export const NSPDFPanel = AppKit["NSPDFPanel"] as unknown as typeof _NSPDFPanel;
+export type { _NSPDFPanel };
+
+import type { _NSPICTImageRep } from "./NSPICTImageRep.js";
+export const NSPICTImageRep = AppKit["NSPICTImageRep"] as unknown as typeof _NSPICTImageRep;
+export type { _NSPICTImageRep };
+
+import type { _NSPageController } from "./NSPageController.js";
+export const NSPageController = AppKit["NSPageController"] as unknown as typeof _NSPageController;
+export type { _NSPageController };
+
+import type { _NSPageLayout } from "./NSPageLayout.js";
+export const NSPageLayout = AppKit["NSPageLayout"] as unknown as typeof _NSPageLayout;
+export type { _NSPageLayout };
+
+import type { _NSPanGestureRecognizer } from "./NSPanGestureRecognizer.js";
+export const NSPanGestureRecognizer = AppKit["NSPanGestureRecognizer"] as unknown as typeof _NSPanGestureRecognizer;
+export type { _NSPanGestureRecognizer };
+
+import type { _NSPanel } from "./NSPanel.js";
+export const NSPanel = AppKit["NSPanel"] as unknown as typeof _NSPanel;
+export type { _NSPanel };
+
+import type { _NSParagraphStyle } from "./NSParagraphStyle.js";
+export const NSParagraphStyle = AppKit["NSParagraphStyle"] as unknown as typeof _NSParagraphStyle;
+export type { _NSParagraphStyle };
 
 import type { _NSPasteboard } from "./NSPasteboard.js";
 export const NSPasteboard = AppKit["NSPasteboard"] as unknown as typeof _NSPasteboard;
@@ -307,25 +651,65 @@ import type { _NSPasteboardItem } from "./NSPasteboardItem.js";
 export const NSPasteboardItem = AppKit["NSPasteboardItem"] as unknown as typeof _NSPasteboardItem;
 export type { _NSPasteboardItem };
 
-import type { _NSDraggingSession } from "./NSDraggingSession.js";
-export const NSDraggingSession = AppKit["NSDraggingSession"] as unknown as typeof _NSDraggingSession;
-export type { _NSDraggingSession };
+import type { _NSPathCell } from "./NSPathCell.js";
+export const NSPathCell = AppKit["NSPathCell"] as unknown as typeof _NSPathCell;
+export type { _NSPathCell };
 
-import type { _NSDockTile } from "./NSDockTile.js";
-export const NSDockTile = AppKit["NSDockTile"] as unknown as typeof _NSDockTile;
-export type { _NSDockTile };
+import type { _NSPathComponentCell } from "./NSPathComponentCell.js";
+export const NSPathComponentCell = AppKit["NSPathComponentCell"] as unknown as typeof _NSPathComponentCell;
+export type { _NSPathComponentCell };
 
-import type { _NSRunningApplication } from "./NSRunningApplication.js";
-export const NSRunningApplication = AppKit["NSRunningApplication"] as unknown as typeof _NSRunningApplication;
-export type { _NSRunningApplication };
+import type { _NSPathControl } from "./NSPathControl.js";
+export const NSPathControl = AppKit["NSPathControl"] as unknown as typeof _NSPathControl;
+export type { _NSPathControl };
 
-import type { _NSSound } from "./NSSound.js";
-export const NSSound = AppKit["NSSound"] as unknown as typeof _NSSound;
-export type { _NSSound };
+import type { _NSPathControlItem } from "./NSPathControlItem.js";
+export const NSPathControlItem = AppKit["NSPathControlItem"] as unknown as typeof _NSPathControlItem;
+export type { _NSPathControlItem };
 
-import type { _NSSpeechSynthesizer } from "./NSSpeechSynthesizer.js";
-export const NSSpeechSynthesizer = AppKit["NSSpeechSynthesizer"] as unknown as typeof _NSSpeechSynthesizer;
-export type { _NSSpeechSynthesizer };
+import type { _NSPersistentDocument } from "./NSPersistentDocument.js";
+export const NSPersistentDocument = AppKit["NSPersistentDocument"] as unknown as typeof _NSPersistentDocument;
+export type { _NSPersistentDocument };
+
+import type { _NSPickerTouchBarItem } from "./NSPickerTouchBarItem.js";
+export const NSPickerTouchBarItem = AppKit["NSPickerTouchBarItem"] as unknown as typeof _NSPickerTouchBarItem;
+export type { _NSPickerTouchBarItem };
+
+import type { _NSPopUpButton } from "./NSPopUpButton.js";
+export const NSPopUpButton = AppKit["NSPopUpButton"] as unknown as typeof _NSPopUpButton;
+export type { _NSPopUpButton };
+
+import type { _NSPopUpButtonCell } from "./NSPopUpButtonCell.js";
+export const NSPopUpButtonCell = AppKit["NSPopUpButtonCell"] as unknown as typeof _NSPopUpButtonCell;
+export type { _NSPopUpButtonCell };
+
+import type { _NSPopover } from "./NSPopover.js";
+export const NSPopover = AppKit["NSPopover"] as unknown as typeof _NSPopover;
+export type { _NSPopover };
+
+import type { _NSPopoverTouchBarItem } from "./NSPopoverTouchBarItem.js";
+export const NSPopoverTouchBarItem = AppKit["NSPopoverTouchBarItem"] as unknown as typeof _NSPopoverTouchBarItem;
+export type { _NSPopoverTouchBarItem };
+
+import type { _NSPredicateEditor } from "./NSPredicateEditor.js";
+export const NSPredicateEditor = AppKit["NSPredicateEditor"] as unknown as typeof _NSPredicateEditor;
+export type { _NSPredicateEditor };
+
+import type { _NSPredicateEditorRowTemplate } from "./NSPredicateEditorRowTemplate.js";
+export const NSPredicateEditorRowTemplate = AppKit["NSPredicateEditorRowTemplate"] as unknown as typeof _NSPredicateEditorRowTemplate;
+export type { _NSPredicateEditorRowTemplate };
+
+import type { _NSPressGestureRecognizer } from "./NSPressGestureRecognizer.js";
+export const NSPressGestureRecognizer = AppKit["NSPressGestureRecognizer"] as unknown as typeof _NSPressGestureRecognizer;
+export type { _NSPressGestureRecognizer };
+
+import type { _NSPressureConfiguration } from "./NSPressureConfiguration.js";
+export const NSPressureConfiguration = AppKit["NSPressureConfiguration"] as unknown as typeof _NSPressureConfiguration;
+export type { _NSPressureConfiguration };
+
+import type { _NSPreviewRepresentingActivityItem } from "./NSPreviewRepresentingActivityItem.js";
+export const NSPreviewRepresentingActivityItem = AppKit["NSPreviewRepresentingActivityItem"] as unknown as typeof _NSPreviewRepresentingActivityItem;
+export type { _NSPreviewRepresentingActivityItem };
 
 import type { _NSPrintInfo } from "./NSPrintInfo.js";
 export const NSPrintInfo = AppKit["NSPrintInfo"] as unknown as typeof _NSPrintInfo;
@@ -339,35 +723,771 @@ import type { _NSPrintPanel } from "./NSPrintPanel.js";
 export const NSPrintPanel = AppKit["NSPrintPanel"] as unknown as typeof _NSPrintPanel;
 export type { _NSPrintPanel };
 
+import type { _NSPrinter } from "./NSPrinter.js";
+export const NSPrinter = AppKit["NSPrinter"] as unknown as typeof _NSPrinter;
+export type { _NSPrinter };
+
+import type { _NSProgressIndicator } from "./NSProgressIndicator.js";
+export const NSProgressIndicator = AppKit["NSProgressIndicator"] as unknown as typeof _NSProgressIndicator;
+export type { _NSProgressIndicator };
+
+import type { _NSResponder } from "./NSResponder.js";
+export const NSResponder = AppKit["NSResponder"] as unknown as typeof _NSResponder;
+export type { _NSResponder };
+
+import type { _NSRotationGestureRecognizer } from "./NSRotationGestureRecognizer.js";
+export const NSRotationGestureRecognizer = AppKit["NSRotationGestureRecognizer"] as unknown as typeof _NSRotationGestureRecognizer;
+export type { _NSRotationGestureRecognizer };
+
+import type { _NSRuleEditor } from "./NSRuleEditor.js";
+export const NSRuleEditor = AppKit["NSRuleEditor"] as unknown as typeof _NSRuleEditor;
+export type { _NSRuleEditor };
+
+import type { _NSRulerMarker } from "./NSRulerMarker.js";
+export const NSRulerMarker = AppKit["NSRulerMarker"] as unknown as typeof _NSRulerMarker;
+export type { _NSRulerMarker };
+
+import type { _NSRulerView } from "./NSRulerView.js";
+export const NSRulerView = AppKit["NSRulerView"] as unknown as typeof _NSRulerView;
+export type { _NSRulerView };
+
+import type { _NSRunningApplication } from "./NSRunningApplication.js";
+export const NSRunningApplication = AppKit["NSRunningApplication"] as unknown as typeof _NSRunningApplication;
+export type { _NSRunningApplication };
+
+import type { _NSSavePanel } from "./NSSavePanel.js";
+export const NSSavePanel = AppKit["NSSavePanel"] as unknown as typeof _NSSavePanel;
+export type { _NSSavePanel };
+
+import type { _NSScreen } from "./NSScreen.js";
+export const NSScreen = AppKit["NSScreen"] as unknown as typeof _NSScreen;
+export type { _NSScreen };
+
+import type { _NSScrollEdgeEffectStyle } from "./NSScrollEdgeEffectStyle.js";
+export const NSScrollEdgeEffectStyle = AppKit["NSScrollEdgeEffectStyle"] as unknown as typeof _NSScrollEdgeEffectStyle;
+export type { _NSScrollEdgeEffectStyle };
+
+import type { _NSScrollView } from "./NSScrollView.js";
+export const NSScrollView = AppKit["NSScrollView"] as unknown as typeof _NSScrollView;
+export type { _NSScrollView };
+
+import type { _NSScroller } from "./NSScroller.js";
+export const NSScroller = AppKit["NSScroller"] as unknown as typeof _NSScroller;
+export type { _NSScroller };
+
+import type { _NSScrubber } from "./NSScrubber.js";
+export const NSScrubber = AppKit["NSScrubber"] as unknown as typeof _NSScrubber;
+export type { _NSScrubber };
+
+import type { _NSScrubberArrangedView } from "./NSScrubberArrangedView.js";
+export const NSScrubberArrangedView = AppKit["NSScrubberArrangedView"] as unknown as typeof _NSScrubberArrangedView;
+export type { _NSScrubberArrangedView };
+
+import type { _NSScrubberFlowLayout } from "./NSScrubberFlowLayout.js";
+export const NSScrubberFlowLayout = AppKit["NSScrubberFlowLayout"] as unknown as typeof _NSScrubberFlowLayout;
+export type { _NSScrubberFlowLayout };
+
+import type { _NSScrubberImageItemView } from "./NSScrubberImageItemView.js";
+export const NSScrubberImageItemView = AppKit["NSScrubberImageItemView"] as unknown as typeof _NSScrubberImageItemView;
+export type { _NSScrubberImageItemView };
+
+import type { _NSScrubberItemView } from "./NSScrubberItemView.js";
+export const NSScrubberItemView = AppKit["NSScrubberItemView"] as unknown as typeof _NSScrubberItemView;
+export type { _NSScrubberItemView };
+
+import type { _NSScrubberLayout } from "./NSScrubberLayout.js";
+export const NSScrubberLayout = AppKit["NSScrubberLayout"] as unknown as typeof _NSScrubberLayout;
+export type { _NSScrubberLayout };
+
+import type { _NSScrubberLayoutAttributes } from "./NSScrubberLayoutAttributes.js";
+export const NSScrubberLayoutAttributes = AppKit["NSScrubberLayoutAttributes"] as unknown as typeof _NSScrubberLayoutAttributes;
+export type { _NSScrubberLayoutAttributes };
+
+import type { _NSScrubberProportionalLayout } from "./NSScrubberProportionalLayout.js";
+export const NSScrubberProportionalLayout = AppKit["NSScrubberProportionalLayout"] as unknown as typeof _NSScrubberProportionalLayout;
+export type { _NSScrubberProportionalLayout };
+
+import type { _NSScrubberSelectionStyle } from "./NSScrubberSelectionStyle.js";
+export const NSScrubberSelectionStyle = AppKit["NSScrubberSelectionStyle"] as unknown as typeof _NSScrubberSelectionStyle;
+export type { _NSScrubberSelectionStyle };
+
+import type { _NSScrubberSelectionView } from "./NSScrubberSelectionView.js";
+export const NSScrubberSelectionView = AppKit["NSScrubberSelectionView"] as unknown as typeof _NSScrubberSelectionView;
+export type { _NSScrubberSelectionView };
+
+import type { _NSScrubberTextItemView } from "./NSScrubberTextItemView.js";
+export const NSScrubberTextItemView = AppKit["NSScrubberTextItemView"] as unknown as typeof _NSScrubberTextItemView;
+export type { _NSScrubberTextItemView };
+
+import type { _NSSearchField } from "./NSSearchField.js";
+export const NSSearchField = AppKit["NSSearchField"] as unknown as typeof _NSSearchField;
+export type { _NSSearchField };
+
+import type { _NSSearchFieldCell } from "./NSSearchFieldCell.js";
+export const NSSearchFieldCell = AppKit["NSSearchFieldCell"] as unknown as typeof _NSSearchFieldCell;
+export type { _NSSearchFieldCell };
+
+import type { _NSSearchToolbarItem } from "./NSSearchToolbarItem.js";
+export const NSSearchToolbarItem = AppKit["NSSearchToolbarItem"] as unknown as typeof _NSSearchToolbarItem;
+export type { _NSSearchToolbarItem };
+
+import type { _NSSecureTextField } from "./NSSecureTextField.js";
+export const NSSecureTextField = AppKit["NSSecureTextField"] as unknown as typeof _NSSecureTextField;
+export type { _NSSecureTextField };
+
+import type { _NSSecureTextFieldCell } from "./NSSecureTextFieldCell.js";
+export const NSSecureTextFieldCell = AppKit["NSSecureTextFieldCell"] as unknown as typeof _NSSecureTextFieldCell;
+export type { _NSSecureTextFieldCell };
+
+import type { _NSSegmentedCell } from "./NSSegmentedCell.js";
+export const NSSegmentedCell = AppKit["NSSegmentedCell"] as unknown as typeof _NSSegmentedCell;
+export type { _NSSegmentedCell };
+
+import type { _NSSegmentedControl } from "./NSSegmentedControl.js";
+export const NSSegmentedControl = AppKit["NSSegmentedControl"] as unknown as typeof _NSSegmentedControl;
+export type { _NSSegmentedControl };
+
+import type { _NSShadow } from "./NSShadow.js";
+export const NSShadow = AppKit["NSShadow"] as unknown as typeof _NSShadow;
+export type { _NSShadow };
+
+import type { _NSSharingCollaborationModeRestriction } from "./NSSharingCollaborationModeRestriction.js";
+export const NSSharingCollaborationModeRestriction = AppKit["NSSharingCollaborationModeRestriction"] as unknown as typeof _NSSharingCollaborationModeRestriction;
+export type { _NSSharingCollaborationModeRestriction };
+
+import type { _NSSharingService } from "./NSSharingService.js";
+export const NSSharingService = AppKit["NSSharingService"] as unknown as typeof _NSSharingService;
+export type { _NSSharingService };
+
+import type { _NSSharingServicePicker } from "./NSSharingServicePicker.js";
+export const NSSharingServicePicker = AppKit["NSSharingServicePicker"] as unknown as typeof _NSSharingServicePicker;
+export type { _NSSharingServicePicker };
+
+import type { _NSSharingServicePickerToolbarItem } from "./NSSharingServicePickerToolbarItem.js";
+export const NSSharingServicePickerToolbarItem = AppKit["NSSharingServicePickerToolbarItem"] as unknown as typeof _NSSharingServicePickerToolbarItem;
+export type { _NSSharingServicePickerToolbarItem };
+
+import type { _NSSharingServicePickerTouchBarItem } from "./NSSharingServicePickerTouchBarItem.js";
+export const NSSharingServicePickerTouchBarItem = AppKit["NSSharingServicePickerTouchBarItem"] as unknown as typeof _NSSharingServicePickerTouchBarItem;
+export type { _NSSharingServicePickerTouchBarItem };
+
+import type { _NSSlider } from "./NSSlider.js";
+export const NSSlider = AppKit["NSSlider"] as unknown as typeof _NSSlider;
+export type { _NSSlider };
+
+import type { _NSSliderAccessory } from "./NSSliderAccessory.js";
+export const NSSliderAccessory = AppKit["NSSliderAccessory"] as unknown as typeof _NSSliderAccessory;
+export type { _NSSliderAccessory };
+
+import type { _NSSliderAccessoryBehavior } from "./NSSliderAccessoryBehavior.js";
+export const NSSliderAccessoryBehavior = AppKit["NSSliderAccessoryBehavior"] as unknown as typeof _NSSliderAccessoryBehavior;
+export type { _NSSliderAccessoryBehavior };
+
+import type { _NSSliderCell } from "./NSSliderCell.js";
+export const NSSliderCell = AppKit["NSSliderCell"] as unknown as typeof _NSSliderCell;
+export type { _NSSliderCell };
+
+import type { _NSSliderTouchBarItem } from "./NSSliderTouchBarItem.js";
+export const NSSliderTouchBarItem = AppKit["NSSliderTouchBarItem"] as unknown as typeof _NSSliderTouchBarItem;
+export type { _NSSliderTouchBarItem };
+
+import type { _NSSound } from "./NSSound.js";
+export const NSSound = AppKit["NSSound"] as unknown as typeof _NSSound;
+export type { _NSSound };
+
+import type { _NSSpeechRecognizer } from "./NSSpeechRecognizer.js";
+export const NSSpeechRecognizer = AppKit["NSSpeechRecognizer"] as unknown as typeof _NSSpeechRecognizer;
+export type { _NSSpeechRecognizer };
+
+import type { _NSSpeechSynthesizer } from "./NSSpeechSynthesizer.js";
+export const NSSpeechSynthesizer = AppKit["NSSpeechSynthesizer"] as unknown as typeof _NSSpeechSynthesizer;
+export type { _NSSpeechSynthesizer };
+
+import type { _NSSpellChecker } from "./NSSpellChecker.js";
+export const NSSpellChecker = AppKit["NSSpellChecker"] as unknown as typeof _NSSpellChecker;
+export type { _NSSpellChecker };
+
+import type { _NSSplitView } from "./NSSplitView.js";
+export const NSSplitView = AppKit["NSSplitView"] as unknown as typeof _NSSplitView;
+export type { _NSSplitView };
+
+import type { _NSSplitViewController } from "./NSSplitViewController.js";
+export const NSSplitViewController = AppKit["NSSplitViewController"] as unknown as typeof _NSSplitViewController;
+export type { _NSSplitViewController };
+
+import type { _NSSplitViewItem } from "./NSSplitViewItem.js";
+export const NSSplitViewItem = AppKit["NSSplitViewItem"] as unknown as typeof _NSSplitViewItem;
+export type { _NSSplitViewItem };
+
+import type { _NSSplitViewItemAccessoryViewController } from "./NSSplitViewItemAccessoryViewController.js";
+export const NSSplitViewItemAccessoryViewController = AppKit["NSSplitViewItemAccessoryViewController"] as unknown as typeof _NSSplitViewItemAccessoryViewController;
+export type { _NSSplitViewItemAccessoryViewController };
+
+import type { _NSStackView } from "./NSStackView.js";
+export const NSStackView = AppKit["NSStackView"] as unknown as typeof _NSStackView;
+export type { _NSStackView };
+
+import type { _NSStatusBar } from "./NSStatusBar.js";
+export const NSStatusBar = AppKit["NSStatusBar"] as unknown as typeof _NSStatusBar;
+export type { _NSStatusBar };
+
+import type { _NSStatusBarButton } from "./NSStatusBarButton.js";
+export const NSStatusBarButton = AppKit["NSStatusBarButton"] as unknown as typeof _NSStatusBarButton;
+export type { _NSStatusBarButton };
+
+import type { _NSStatusItem } from "./NSStatusItem.js";
+export const NSStatusItem = AppKit["NSStatusItem"] as unknown as typeof _NSStatusItem;
+export type { _NSStatusItem };
+
+import type { _NSStepper } from "./NSStepper.js";
+export const NSStepper = AppKit["NSStepper"] as unknown as typeof _NSStepper;
+export type { _NSStepper };
+
+import type { _NSStepperCell } from "./NSStepperCell.js";
+export const NSStepperCell = AppKit["NSStepperCell"] as unknown as typeof _NSStepperCell;
+export type { _NSStepperCell };
+
+import type { _NSStepperTouchBarItem } from "./NSStepperTouchBarItem.js";
+export const NSStepperTouchBarItem = AppKit["NSStepperTouchBarItem"] as unknown as typeof _NSStepperTouchBarItem;
+export type { _NSStepperTouchBarItem };
+
+import type { _NSStoryboard } from "./NSStoryboard.js";
+export const NSStoryboard = AppKit["NSStoryboard"] as unknown as typeof _NSStoryboard;
+export type { _NSStoryboard };
+
+import type { _NSStoryboardSegue } from "./NSStoryboardSegue.js";
+export const NSStoryboardSegue = AppKit["NSStoryboardSegue"] as unknown as typeof _NSStoryboardSegue;
+export type { _NSStoryboardSegue };
+
+import type { _NSStringDrawingContext } from "./NSStringDrawingContext.js";
+export const NSStringDrawingContext = AppKit["NSStringDrawingContext"] as unknown as typeof _NSStringDrawingContext;
+export type { _NSStringDrawingContext };
+
+import type { _NSSwitch } from "./NSSwitch.js";
+export const NSSwitch = AppKit["NSSwitch"] as unknown as typeof _NSSwitch;
+export type { _NSSwitch };
+
+import type { _NSTabView } from "./NSTabView.js";
+export const NSTabView = AppKit["NSTabView"] as unknown as typeof _NSTabView;
+export type { _NSTabView };
+
+import type { _NSTabViewController } from "./NSTabViewController.js";
+export const NSTabViewController = AppKit["NSTabViewController"] as unknown as typeof _NSTabViewController;
+export type { _NSTabViewController };
+
+import type { _NSTabViewItem } from "./NSTabViewItem.js";
+export const NSTabViewItem = AppKit["NSTabViewItem"] as unknown as typeof _NSTabViewItem;
+export type { _NSTabViewItem };
+
+import type { _NSTableCellView } from "./NSTableCellView.js";
+export const NSTableCellView = AppKit["NSTableCellView"] as unknown as typeof _NSTableCellView;
+export type { _NSTableCellView };
+
+import type { _NSTableColumn } from "./NSTableColumn.js";
+export const NSTableColumn = AppKit["NSTableColumn"] as unknown as typeof _NSTableColumn;
+export type { _NSTableColumn };
+
+import type { _NSTableHeaderCell } from "./NSTableHeaderCell.js";
+export const NSTableHeaderCell = AppKit["NSTableHeaderCell"] as unknown as typeof _NSTableHeaderCell;
+export type { _NSTableHeaderCell };
+
+import type { _NSTableHeaderView } from "./NSTableHeaderView.js";
+export const NSTableHeaderView = AppKit["NSTableHeaderView"] as unknown as typeof _NSTableHeaderView;
+export type { _NSTableHeaderView };
+
+import type { _NSTableRowView } from "./NSTableRowView.js";
+export const NSTableRowView = AppKit["NSTableRowView"] as unknown as typeof _NSTableRowView;
+export type { _NSTableRowView };
+
+import type { _NSTableView } from "./NSTableView.js";
+export const NSTableView = AppKit["NSTableView"] as unknown as typeof _NSTableView;
+export type { _NSTableView };
+
+import type { _NSTableViewDiffableDataSource } from "./NSTableViewDiffableDataSource.js";
+export const NSTableViewDiffableDataSource = AppKit["NSTableViewDiffableDataSource"] as unknown as typeof _NSTableViewDiffableDataSource;
+export type { _NSTableViewDiffableDataSource };
+
+import type { _NSTableViewRowAction } from "./NSTableViewRowAction.js";
+export const NSTableViewRowAction = AppKit["NSTableViewRowAction"] as unknown as typeof _NSTableViewRowAction;
+export type { _NSTableViewRowAction };
+
+import type { _NSText } from "./NSText.js";
+export const NSText = AppKit["NSText"] as unknown as typeof _NSText;
+export type { _NSText };
+
+import type { _NSTextAlternatives } from "./NSTextAlternatives.js";
+export const NSTextAlternatives = AppKit["NSTextAlternatives"] as unknown as typeof _NSTextAlternatives;
+export type { _NSTextAlternatives };
+
+import type { _NSTextAttachment } from "./NSTextAttachment.js";
+export const NSTextAttachment = AppKit["NSTextAttachment"] as unknown as typeof _NSTextAttachment;
+export type { _NSTextAttachment };
+
+import type { _NSTextAttachmentCell } from "./NSTextAttachmentCell.js";
+export const NSTextAttachmentCell = AppKit["NSTextAttachmentCell"] as unknown as typeof _NSTextAttachmentCell;
+export type { _NSTextAttachmentCell };
+
+import type { _NSTextAttachmentViewProvider } from "./NSTextAttachmentViewProvider.js";
+export const NSTextAttachmentViewProvider = AppKit["NSTextAttachmentViewProvider"] as unknown as typeof _NSTextAttachmentViewProvider;
+export type { _NSTextAttachmentViewProvider };
+
+import type { _NSTextBlock } from "./NSTextBlock.js";
+export const NSTextBlock = AppKit["NSTextBlock"] as unknown as typeof _NSTextBlock;
+export type { _NSTextBlock };
+
+import type { _NSTextCheckingController } from "./NSTextCheckingController.js";
+export const NSTextCheckingController = AppKit["NSTextCheckingController"] as unknown as typeof _NSTextCheckingController;
+export type { _NSTextCheckingController };
+
+import type { _NSTextContainer } from "./NSTextContainer.js";
+export const NSTextContainer = AppKit["NSTextContainer"] as unknown as typeof _NSTextContainer;
+export type { _NSTextContainer };
+
+import type { _NSTextContentManager } from "./NSTextContentManager.js";
+export const NSTextContentManager = AppKit["NSTextContentManager"] as unknown as typeof _NSTextContentManager;
+export type { _NSTextContentManager };
+
+import type { _NSTextContentStorage } from "./NSTextContentStorage.js";
+export const NSTextContentStorage = AppKit["NSTextContentStorage"] as unknown as typeof _NSTextContentStorage;
+export type { _NSTextContentStorage };
+
+import type { _NSTextElement } from "./NSTextElement.js";
+export const NSTextElement = AppKit["NSTextElement"] as unknown as typeof _NSTextElement;
+export type { _NSTextElement };
+
+import type { _NSTextField } from "./NSTextField.js";
+export const NSTextField = AppKit["NSTextField"] as unknown as typeof _NSTextField;
+export type { _NSTextField };
+
+import type { _NSTextFieldCell } from "./NSTextFieldCell.js";
+export const NSTextFieldCell = AppKit["NSTextFieldCell"] as unknown as typeof _NSTextFieldCell;
+export type { _NSTextFieldCell };
+
+import type { _NSTextFinder } from "./NSTextFinder.js";
+export const NSTextFinder = AppKit["NSTextFinder"] as unknown as typeof _NSTextFinder;
+export type { _NSTextFinder };
+
+import type { _NSTextInputContext } from "./NSTextInputContext.js";
+export const NSTextInputContext = AppKit["NSTextInputContext"] as unknown as typeof _NSTextInputContext;
+export type { _NSTextInputContext };
+
+import type { _NSTextInsertionIndicator } from "./NSTextInsertionIndicator.js";
+export const NSTextInsertionIndicator = AppKit["NSTextInsertionIndicator"] as unknown as typeof _NSTextInsertionIndicator;
+export type { _NSTextInsertionIndicator };
+
+import type { _NSTextLayoutFragment } from "./NSTextLayoutFragment.js";
+export const NSTextLayoutFragment = AppKit["NSTextLayoutFragment"] as unknown as typeof _NSTextLayoutFragment;
+export type { _NSTextLayoutFragment };
+
+import type { _NSTextLayoutManager } from "./NSTextLayoutManager.js";
+export const NSTextLayoutManager = AppKit["NSTextLayoutManager"] as unknown as typeof _NSTextLayoutManager;
+export type { _NSTextLayoutManager };
+
+import type { _NSTextLineFragment } from "./NSTextLineFragment.js";
+export const NSTextLineFragment = AppKit["NSTextLineFragment"] as unknown as typeof _NSTextLineFragment;
+export type { _NSTextLineFragment };
+
+import type { _NSTextList } from "./NSTextList.js";
+export const NSTextList = AppKit["NSTextList"] as unknown as typeof _NSTextList;
+export type { _NSTextList };
+
+import type { _NSTextListElement } from "./NSTextListElement.js";
+export const NSTextListElement = AppKit["NSTextListElement"] as unknown as typeof _NSTextListElement;
+export type { _NSTextListElement };
+
+import type { _NSTextParagraph } from "./NSTextParagraph.js";
+export const NSTextParagraph = AppKit["NSTextParagraph"] as unknown as typeof _NSTextParagraph;
+export type { _NSTextParagraph };
+
+import type { _NSTextPreview } from "./NSTextPreview.js";
+export const NSTextPreview = AppKit["NSTextPreview"] as unknown as typeof _NSTextPreview;
+export type { _NSTextPreview };
+
+import type { _NSTextRange } from "./NSTextRange.js";
+export const NSTextRange = AppKit["NSTextRange"] as unknown as typeof _NSTextRange;
+export type { _NSTextRange };
+
+import type { _NSTextSelection } from "./NSTextSelection.js";
+export const NSTextSelection = AppKit["NSTextSelection"] as unknown as typeof _NSTextSelection;
+export type { _NSTextSelection };
+
+import type { _NSTextSelectionNavigation } from "./NSTextSelectionNavigation.js";
+export const NSTextSelectionNavigation = AppKit["NSTextSelectionNavigation"] as unknown as typeof _NSTextSelectionNavigation;
+export type { _NSTextSelectionNavigation };
+
+import type { _NSTextStorage } from "./NSTextStorage.js";
+export const NSTextStorage = AppKit["NSTextStorage"] as unknown as typeof _NSTextStorage;
+export type { _NSTextStorage };
+
+import type { _NSTextTab } from "./NSTextTab.js";
+export const NSTextTab = AppKit["NSTextTab"] as unknown as typeof _NSTextTab;
+export type { _NSTextTab };
+
+import type { _NSTextTable } from "./NSTextTable.js";
+export const NSTextTable = AppKit["NSTextTable"] as unknown as typeof _NSTextTable;
+export type { _NSTextTable };
+
+import type { _NSTextTableBlock } from "./NSTextTableBlock.js";
+export const NSTextTableBlock = AppKit["NSTextTableBlock"] as unknown as typeof _NSTextTableBlock;
+export type { _NSTextTableBlock };
+
+import type { _NSTextView } from "./NSTextView.js";
+export const NSTextView = AppKit["NSTextView"] as unknown as typeof _NSTextView;
+export type { _NSTextView };
+
+import type { _NSTextViewportLayoutController } from "./NSTextViewportLayoutController.js";
+export const NSTextViewportLayoutController = AppKit["NSTextViewportLayoutController"] as unknown as typeof _NSTextViewportLayoutController;
+export type { _NSTextViewportLayoutController };
+
+import type { _NSTintConfiguration } from "./NSTintConfiguration.js";
+export const NSTintConfiguration = AppKit["NSTintConfiguration"] as unknown as typeof _NSTintConfiguration;
+export type { _NSTintConfiguration };
+
+import type { _NSTitlebarAccessoryViewController } from "./NSTitlebarAccessoryViewController.js";
+export const NSTitlebarAccessoryViewController = AppKit["NSTitlebarAccessoryViewController"] as unknown as typeof _NSTitlebarAccessoryViewController;
+export type { _NSTitlebarAccessoryViewController };
+
+import type { _NSTokenField } from "./NSTokenField.js";
+export const NSTokenField = AppKit["NSTokenField"] as unknown as typeof _NSTokenField;
+export type { _NSTokenField };
+
+import type { _NSTokenFieldCell } from "./NSTokenFieldCell.js";
+export const NSTokenFieldCell = AppKit["NSTokenFieldCell"] as unknown as typeof _NSTokenFieldCell;
+export type { _NSTokenFieldCell };
+
+import type { _NSToolbar } from "./NSToolbar.js";
+export const NSToolbar = AppKit["NSToolbar"] as unknown as typeof _NSToolbar;
+export type { _NSToolbar };
+
+import type { _NSToolbarItem } from "./NSToolbarItem.js";
+export const NSToolbarItem = AppKit["NSToolbarItem"] as unknown as typeof _NSToolbarItem;
+export type { _NSToolbarItem };
+
+import type { _NSToolbarItemGroup } from "./NSToolbarItemGroup.js";
+export const NSToolbarItemGroup = AppKit["NSToolbarItemGroup"] as unknown as typeof _NSToolbarItemGroup;
+export type { _NSToolbarItemGroup };
+
+import type { _NSTouch } from "./NSTouch.js";
+export const NSTouch = AppKit["NSTouch"] as unknown as typeof _NSTouch;
+export type { _NSTouch };
+
+import type { _NSTouchBar } from "./NSTouchBar.js";
+export const NSTouchBar = AppKit["NSTouchBar"] as unknown as typeof _NSTouchBar;
+export type { _NSTouchBar };
+
+import type { _NSTouchBarItem } from "./NSTouchBarItem.js";
+export const NSTouchBarItem = AppKit["NSTouchBarItem"] as unknown as typeof _NSTouchBarItem;
+export type { _NSTouchBarItem };
+
+import type { _NSTrackingArea } from "./NSTrackingArea.js";
+export const NSTrackingArea = AppKit["NSTrackingArea"] as unknown as typeof _NSTrackingArea;
+export type { _NSTrackingArea };
+
+import type { _NSTrackingSeparatorToolbarItem } from "./NSTrackingSeparatorToolbarItem.js";
+export const NSTrackingSeparatorToolbarItem = AppKit["NSTrackingSeparatorToolbarItem"] as unknown as typeof _NSTrackingSeparatorToolbarItem;
+export type { _NSTrackingSeparatorToolbarItem };
+
+import type { _NSTreeController } from "./NSTreeController.js";
+export const NSTreeController = AppKit["NSTreeController"] as unknown as typeof _NSTreeController;
+export type { _NSTreeController };
+
+import type { _NSTreeNode } from "./NSTreeNode.js";
+export const NSTreeNode = AppKit["NSTreeNode"] as unknown as typeof _NSTreeNode;
+export type { _NSTreeNode };
+
+import type { _NSTypesetter } from "./NSTypesetter.js";
+export const NSTypesetter = AppKit["NSTypesetter"] as unknown as typeof _NSTypesetter;
+export type { _NSTypesetter };
+
+import type { _NSUserDefaultsController } from "./NSUserDefaultsController.js";
+export const NSUserDefaultsController = AppKit["NSUserDefaultsController"] as unknown as typeof _NSUserDefaultsController;
+export type { _NSUserDefaultsController };
+
+import type { _NSUserInterfaceCompressionOptions } from "./NSUserInterfaceCompressionOptions.js";
+export const NSUserInterfaceCompressionOptions = AppKit["NSUserInterfaceCompressionOptions"] as unknown as typeof _NSUserInterfaceCompressionOptions;
+export type { _NSUserInterfaceCompressionOptions };
+
+import type { _NSView } from "./NSView.js";
+export const NSView = AppKit["NSView"] as unknown as typeof _NSView;
+export type { _NSView };
+
+import type { _NSViewAnimation } from "./NSViewAnimation.js";
+export const NSViewAnimation = AppKit["NSViewAnimation"] as unknown as typeof _NSViewAnimation;
+export type { _NSViewAnimation };
+
+import type { _NSViewController } from "./NSViewController.js";
+export const NSViewController = AppKit["NSViewController"] as unknown as typeof _NSViewController;
+export type { _NSViewController };
+
+import type { _NSViewLayoutRegion } from "./NSViewLayoutRegion.js";
+export const NSViewLayoutRegion = AppKit["NSViewLayoutRegion"] as unknown as typeof _NSViewLayoutRegion;
+export type { _NSViewLayoutRegion };
+
+import type { _NSVisualEffectView } from "./NSVisualEffectView.js";
+export const NSVisualEffectView = AppKit["NSVisualEffectView"] as unknown as typeof _NSVisualEffectView;
+export type { _NSVisualEffectView };
+
+import type { _NSWindow } from "./NSWindow.js";
+export const NSWindow = AppKit["NSWindow"] as unknown as typeof _NSWindow;
+export type { _NSWindow };
+
+import type { _NSWindowController } from "./NSWindowController.js";
+export const NSWindowController = AppKit["NSWindowController"] as unknown as typeof _NSWindowController;
+export type { _NSWindowController };
+
+import type { _NSWindowTab } from "./NSWindowTab.js";
+export const NSWindowTab = AppKit["NSWindowTab"] as unknown as typeof _NSWindowTab;
+export type { _NSWindowTab };
+
+import type { _NSWindowTabGroup } from "./NSWindowTabGroup.js";
+export const NSWindowTabGroup = AppKit["NSWindowTabGroup"] as unknown as typeof _NSWindowTabGroup;
+export type { _NSWindowTabGroup };
+
+import type { _NSWorkspace } from "./NSWorkspace.js";
+export const NSWorkspace = AppKit["NSWorkspace"] as unknown as typeof _NSWorkspace;
+export type { _NSWorkspace };
+
+import type { _NSWorkspaceAuthorization } from "./NSWorkspaceAuthorization.js";
+export const NSWorkspaceAuthorization = AppKit["NSWorkspaceAuthorization"] as unknown as typeof _NSWorkspaceAuthorization;
+export type { _NSWorkspaceAuthorization };
+
+import type { _NSWorkspaceOpenConfiguration } from "./NSWorkspaceOpenConfiguration.js";
+export const NSWorkspaceOpenConfiguration = AppKit["NSWorkspaceOpenConfiguration"] as unknown as typeof _NSWorkspaceOpenConfiguration;
+export type { _NSWorkspaceOpenConfiguration };
+
+import type { _NSWritingToolsCoordinator } from "./NSWritingToolsCoordinator.js";
+export const NSWritingToolsCoordinator = AppKit["NSWritingToolsCoordinator"] as unknown as typeof _NSWritingToolsCoordinator;
+export type { _NSWritingToolsCoordinator };
+
+import type { _NSWritingToolsCoordinatorAnimationParameters } from "./NSWritingToolsCoordinatorAnimationParameters.js";
+export const NSWritingToolsCoordinatorAnimationParameters = AppKit["NSWritingToolsCoordinatorAnimationParameters"] as unknown as typeof _NSWritingToolsCoordinatorAnimationParameters;
+export type { _NSWritingToolsCoordinatorAnimationParameters };
+
+import type { _NSWritingToolsCoordinatorContext } from "./NSWritingToolsCoordinatorContext.js";
+export const NSWritingToolsCoordinatorContext = AppKit["NSWritingToolsCoordinatorContext"] as unknown as typeof _NSWritingToolsCoordinatorContext;
+export type { _NSWritingToolsCoordinatorContext };
+
+import type { _NSAccessibility } from "./NSAccessibility.js";
+export type { _NSAccessibility };
+
+import type { _NSAccessibilityButton } from "./NSAccessibilityButton.js";
+export type { _NSAccessibilityButton };
+
+import type { _NSAccessibilityCheckBox } from "./NSAccessibilityCheckBox.js";
+export type { _NSAccessibilityCheckBox };
+
+import type { _NSAccessibilityContainsTransientUI } from "./NSAccessibilityContainsTransientUI.js";
+export type { _NSAccessibilityContainsTransientUI };
+
+import type { _NSAccessibilityElementLoading } from "./NSAccessibilityElementLoading.js";
+export type { _NSAccessibilityElementLoading };
+
+import type { _NSAccessibilityGroup } from "./NSAccessibilityGroup.js";
+export type { _NSAccessibilityGroup };
+
+import type { _NSAccessibilityImage } from "./NSAccessibilityImage.js";
+export type { _NSAccessibilityImage };
+
+import type { _NSAccessibilityLayoutArea } from "./NSAccessibilityLayoutArea.js";
+export type { _NSAccessibilityLayoutArea };
+
+import type { _NSAccessibilityLayoutItem } from "./NSAccessibilityLayoutItem.js";
+export type { _NSAccessibilityLayoutItem };
+
+import type { _NSAccessibilityList } from "./NSAccessibilityList.js";
+export type { _NSAccessibilityList };
+
+import type { _NSAccessibilityNavigableStaticText } from "./NSAccessibilityNavigableStaticText.js";
+export type { _NSAccessibilityNavigableStaticText };
+
+import type { _NSAccessibilityOutline } from "./NSAccessibilityOutline.js";
+export type { _NSAccessibilityOutline };
+
+import type { _NSAccessibilityProgressIndicator } from "./NSAccessibilityProgressIndicator.js";
+export type { _NSAccessibilityProgressIndicator };
+
+import type { _NSAccessibilityRadioButton } from "./NSAccessibilityRadioButton.js";
+export type { _NSAccessibilityRadioButton };
+
+import type { _NSAccessibilityRow } from "./NSAccessibilityRow.js";
+export type { _NSAccessibilityRow };
+
+import type { _NSAccessibilitySlider } from "./NSAccessibilitySlider.js";
+export type { _NSAccessibilitySlider };
+
+import type { _NSAccessibilityStaticText } from "./NSAccessibilityStaticText.js";
+export type { _NSAccessibilityStaticText };
+
+import type { _NSAccessibilityStepper } from "./NSAccessibilityStepper.js";
+export type { _NSAccessibilityStepper };
+
+import type { _NSAccessibilitySwitch } from "./NSAccessibilitySwitch.js";
+export type { _NSAccessibilitySwitch };
+
+import type { _NSAccessibilityTable } from "./NSAccessibilityTable.js";
+export type { _NSAccessibilityTable };
+
+import type { _NSAccessibilityColor } from "./NSAccessibilityColor.js";
+export type { _NSAccessibilityColor };
+
+import type { _NSAccessibilityCustomRotorItemSearchDelegate } from "./NSAccessibilityCustomRotorItemSearchDelegate.js";
+export type { _NSAccessibilityCustomRotorItemSearchDelegate };
+
+import type { _NSAlertDelegate } from "./NSAlertDelegate.js";
+export type { _NSAlertDelegate };
+
+import type { _NSAlignmentFeedbackToken } from "./NSAlignmentFeedbackToken.js";
+export type { _NSAlignmentFeedbackToken };
+
+import type { _NSAnimatablePropertyContainer } from "./NSAnimatablePropertyContainer.js";
+export type { _NSAnimatablePropertyContainer };
+
+import type { _NSAnimationDelegate } from "./NSAnimationDelegate.js";
+export type { _NSAnimationDelegate };
+
+import type { _NSAppearanceCustomization } from "./NSAppearanceCustomization.js";
+export type { _NSAppearanceCustomization };
+
 import type { _NSApplicationDelegate } from "./NSApplicationDelegate.js";
 export type { _NSApplicationDelegate };
 
-import type { _NSWindowDelegate } from "./NSWindowDelegate.js";
-export type { _NSWindowDelegate };
+import type { _NSServicesMenuRequestor } from "./NSServicesMenuRequestor.js";
+export type { _NSServicesMenuRequestor };
 
-import type { _NSTableViewDelegate } from "./NSTableViewDelegate.js";
-export type { _NSTableViewDelegate };
+import type { _NSBrowserDelegate } from "./NSBrowserDelegate.js";
+export type { _NSBrowserDelegate };
 
-import type { _NSTableViewDataSource } from "./NSTableViewDataSource.js";
-export type { _NSTableViewDataSource };
+import type { _NSCandidateListTouchBarItemDelegate } from "./NSCandidateListTouchBarItemDelegate.js";
+export type { _NSCandidateListTouchBarItemDelegate };
 
-import type { _NSOutlineViewDelegate } from "./NSOutlineViewDelegate.js";
-export type { _NSOutlineViewDelegate };
+import type { _NSChangeSpelling } from "./NSChangeSpelling.js";
+export type { _NSChangeSpelling };
 
-import type { _NSOutlineViewDataSource } from "./NSOutlineViewDataSource.js";
-export type { _NSOutlineViewDataSource };
+import type { _NSIgnoreMisspelledWords } from "./NSIgnoreMisspelledWords.js";
+export type { _NSIgnoreMisspelledWords };
 
-import type { _NSTextFieldDelegate } from "./NSTextFieldDelegate.js";
-export type { _NSTextFieldDelegate };
+import type { _NSCloudSharingServiceDelegate } from "./NSCloudSharingServiceDelegate.js";
+export type { _NSCloudSharingServiceDelegate };
 
-import type { _NSTextViewDelegate } from "./NSTextViewDelegate.js";
-export type { _NSTextViewDelegate };
+import type { _NSSharingServiceDelegate } from "./NSSharingServiceDelegate.js";
+export type { _NSSharingServiceDelegate };
 
-import type { _NSTextDelegate } from "./NSTextDelegate.js";
-export type { _NSTextDelegate };
+import type { _NSSharingServicePickerDelegate } from "./NSSharingServicePickerDelegate.js";
+export type { _NSSharingServicePickerDelegate };
+
+import type { _NSCloudSharingValidation } from "./NSCloudSharingValidation.js";
+export type { _NSCloudSharingValidation };
+
+import type { _NSToolbarItemValidation } from "./NSToolbarItemValidation.js";
+export type { _NSToolbarItemValidation };
+
+import type { _NSCollectionLayoutContainer } from "./NSCollectionLayoutContainer.js";
+export type { _NSCollectionLayoutContainer };
+
+import type { _NSCollectionLayoutEnvironment } from "./NSCollectionLayoutEnvironment.js";
+export type { _NSCollectionLayoutEnvironment };
+
+import type { _NSCollectionLayoutVisibleItem } from "./NSCollectionLayoutVisibleItem.js";
+export type { _NSCollectionLayoutVisibleItem };
+
+import type { _NSCollectionViewDataSource } from "./NSCollectionViewDataSource.js";
+export type { _NSCollectionViewDataSource };
+
+import type { _NSCollectionViewDelegate } from "./NSCollectionViewDelegate.js";
+export type { _NSCollectionViewDelegate };
+
+import type { _NSCollectionViewElement } from "./NSCollectionViewElement.js";
+export type { _NSCollectionViewElement };
+
+import type { _NSCollectionViewPrefetching } from "./NSCollectionViewPrefetching.js";
+export type { _NSCollectionViewPrefetching };
+
+import type { _NSCollectionViewSectionHeaderView } from "./NSCollectionViewSectionHeaderView.js";
+export type { _NSCollectionViewSectionHeaderView };
+
+import type { _NSCollectionViewDelegateFlowLayout } from "./NSCollectionViewDelegateFlowLayout.js";
+export type { _NSCollectionViewDelegateFlowLayout };
+
+import type { _NSColorChanging } from "./NSColorChanging.js";
+export type { _NSColorChanging };
+
+import type { _NSColorPickingCustom } from "./NSColorPickingCustom.js";
+export type { _NSColorPickingCustom };
+
+import type { _NSColorPickingDefault } from "./NSColorPickingDefault.js";
+export type { _NSColorPickingDefault };
+
+import type { _NSComboBoxCellDataSource } from "./NSComboBoxCellDataSource.js";
+export type { _NSComboBoxCellDataSource };
+
+import type { _NSComboBoxDataSource } from "./NSComboBoxDataSource.js";
+export type { _NSComboBoxDataSource };
+
+import type { _NSComboBoxDelegate } from "./NSComboBoxDelegate.js";
+export type { _NSComboBoxDelegate };
 
 import type { _NSControlTextEditingDelegate } from "./NSControlTextEditingDelegate.js";
 export type { _NSControlTextEditingDelegate };
+
+import type { _NSDatePickerCellDelegate } from "./NSDatePickerCellDelegate.js";
+export type { _NSDatePickerCellDelegate };
+
+import type { _NSDockTilePlugIn } from "./NSDockTilePlugIn.js";
+export type { _NSDockTilePlugIn };
+
+import type { _NSDraggingDestination } from "./NSDraggingDestination.js";
+export type { _NSDraggingDestination };
+
+import type { _NSDraggingInfo } from "./NSDraggingInfo.js";
+export type { _NSDraggingInfo };
+
+import type { _NSDraggingSource } from "./NSDraggingSource.js";
+export type { _NSDraggingSource };
+
+import type { _NSSpringLoadingDestination } from "./NSSpringLoadingDestination.js";
+export type { _NSSpringLoadingDestination };
+
+import type { _NSDrawerDelegate } from "./NSDrawerDelegate.js";
+export type { _NSDrawerDelegate };
+
+import type { _NSEditor } from "./NSEditor.js";
+export type { _NSEditor };
+
+import type { _NSEditorRegistration } from "./NSEditorRegistration.js";
+export type { _NSEditorRegistration };
+
+import type { _NSFilePromiseProviderDelegate } from "./NSFilePromiseProviderDelegate.js";
+export type { _NSFilePromiseProviderDelegate };
+
+import type { _NSFontChanging } from "./NSFontChanging.js";
+export type { _NSFontChanging };
+
+import type { _NSGestureRecognizerDelegate } from "./NSGestureRecognizerDelegate.js";
+export type { _NSGestureRecognizerDelegate };
+
+import type { _NSGlyphStorage } from "./NSGlyphStorage.js";
+export type { _NSGlyphStorage };
+
+import type { _NSHapticFeedbackPerformer } from "./NSHapticFeedbackPerformer.js";
+export type { _NSHapticFeedbackPerformer };
+
+import type { _NSImageDelegate } from "./NSImageDelegate.js";
+export type { _NSImageDelegate };
+
+import type { _NSInputServerMouseTracker } from "./NSInputServerMouseTracker.js";
+export type { _NSInputServerMouseTracker };
+
+import type { _NSInputServiceProvider } from "./NSInputServiceProvider.js";
+export type { _NSInputServiceProvider };
+
+import type { _NSLayoutManagerDelegate } from "./NSLayoutManagerDelegate.js";
+export type { _NSLayoutManagerDelegate };
+
+import type { _NSTextLayoutOrientationProvider } from "./NSTextLayoutOrientationProvider.js";
+export type { _NSTextLayoutOrientationProvider };
+
+import type { _NSMatrixDelegate } from "./NSMatrixDelegate.js";
+export type { _NSMatrixDelegate };
 
 import type { _NSMenuDelegate } from "./NSMenuDelegate.js";
 export type { _NSMenuDelegate };
@@ -375,35 +1495,209 @@ export type { _NSMenuDelegate };
 import type { _NSMenuItemValidation } from "./NSMenuItemValidation.js";
 export type { _NSMenuItemValidation };
 
-import type { _NSToolbarDelegate } from "./NSToolbarDelegate.js";
-export type { _NSToolbarDelegate };
+import type { _NSOpenSavePanelDelegate } from "./NSOpenSavePanelDelegate.js";
+export type { _NSOpenSavePanelDelegate };
 
-import type { _NSSplitViewDelegate } from "./NSSplitViewDelegate.js";
-export type { _NSSplitViewDelegate };
+import type { _NSOutlineViewDataSource } from "./NSOutlineViewDataSource.js";
+export type { _NSOutlineViewDataSource };
 
-import type { _NSCollectionViewDelegate } from "./NSCollectionViewDelegate.js";
-export type { _NSCollectionViewDelegate };
+import type { _NSOutlineViewDelegate } from "./NSOutlineViewDelegate.js";
+export type { _NSOutlineViewDelegate };
 
-import type { _NSCollectionViewDataSource } from "./NSCollectionViewDataSource.js";
-export type { _NSCollectionViewDataSource };
+import type { _NSPageControllerDelegate } from "./NSPageControllerDelegate.js";
+export type { _NSPageControllerDelegate };
 
-import type { _NSGestureRecognizerDelegate } from "./NSGestureRecognizerDelegate.js";
-export type { _NSGestureRecognizerDelegate };
+import type { _NSPasteboardItemDataProvider } from "./NSPasteboardItemDataProvider.js";
+export type { _NSPasteboardItemDataProvider };
 
-import type { _NSAlertDelegate } from "./NSAlertDelegate.js";
-export type { _NSAlertDelegate };
+import type { _NSPasteboardReading } from "./NSPasteboardReading.js";
+export type { _NSPasteboardReading };
+
+import type { _NSPasteboardTypeOwner } from "./NSPasteboardTypeOwner.js";
+export type { _NSPasteboardTypeOwner };
+
+import type { _NSPasteboardWriting } from "./NSPasteboardWriting.js";
+export type { _NSPasteboardWriting };
+
+import type { _NSPathCellDelegate } from "./NSPathCellDelegate.js";
+export type { _NSPathCellDelegate };
+
+import type { _NSPathControlDelegate } from "./NSPathControlDelegate.js";
+export type { _NSPathControlDelegate };
+
+import type { _NSPopoverDelegate } from "./NSPopoverDelegate.js";
+export type { _NSPopoverDelegate };
+
+import type { _NSPreviewRepresentableActivityItem } from "./NSPreviewRepresentableActivityItem.js";
+export type { _NSPreviewRepresentableActivityItem };
+
+import type { _NSPrintPanelAccessorizing } from "./NSPrintPanelAccessorizing.js";
+export type { _NSPrintPanelAccessorizing };
+
+import type { _NSRuleEditorDelegate } from "./NSRuleEditorDelegate.js";
+export type { _NSRuleEditorDelegate };
+
+import type { _NSScrubberDataSource } from "./NSScrubberDataSource.js";
+export type { _NSScrubberDataSource };
+
+import type { _NSScrubberDelegate } from "./NSScrubberDelegate.js";
+export type { _NSScrubberDelegate };
+
+import type { _NSScrubberFlowLayoutDelegate } from "./NSScrubberFlowLayoutDelegate.js";
+export type { _NSScrubberFlowLayoutDelegate };
+
+import type { _NSSearchFieldDelegate } from "./NSSearchFieldDelegate.js";
+export type { _NSSearchFieldDelegate };
+
+import type { _NSSeguePerforming } from "./NSSeguePerforming.js";
+export type { _NSSeguePerforming };
+
+import type { _NSSharingServicePickerToolbarItemDelegate } from "./NSSharingServicePickerToolbarItemDelegate.js";
+export type { _NSSharingServicePickerToolbarItemDelegate };
+
+import type { _NSSharingServicePickerTouchBarItemDelegate } from "./NSSharingServicePickerTouchBarItemDelegate.js";
+export type { _NSSharingServicePickerTouchBarItemDelegate };
 
 import type { _NSSoundDelegate } from "./NSSoundDelegate.js";
 export type { _NSSoundDelegate };
 
+import type { _NSSpeechRecognizerDelegate } from "./NSSpeechRecognizerDelegate.js";
+export type { _NSSpeechRecognizerDelegate };
+
+import type { _NSSpeechSynthesizerDelegate } from "./NSSpeechSynthesizerDelegate.js";
+export type { _NSSpeechSynthesizerDelegate };
+
+import type { _NSSplitViewDelegate } from "./NSSplitViewDelegate.js";
+export type { _NSSplitViewDelegate };
+
+import type { _NSStackViewDelegate } from "./NSStackViewDelegate.js";
+export type { _NSStackViewDelegate };
+
+import type { _NSStandardKeyBindingResponding } from "./NSStandardKeyBindingResponding.js";
+export type { _NSStandardKeyBindingResponding };
+
 import type { _NSTabViewDelegate } from "./NSTabViewDelegate.js";
 export type { _NSTabViewDelegate };
 
-import type { _NSBrowserDelegate } from "./NSBrowserDelegate.js";
-export type { _NSBrowserDelegate };
+import type { _NSTableViewDataSource } from "./NSTableViewDataSource.js";
+export type { _NSTableViewDataSource };
 
-import type { _NSComboBoxDelegate } from "./NSComboBoxDelegate.js";
-export type { _NSComboBoxDelegate };
+import type { _NSTableViewDelegate } from "./NSTableViewDelegate.js";
+export type { _NSTableViewDelegate };
 
-import type { _NSComboBoxDataSource } from "./NSComboBoxDataSource.js";
-export type { _NSComboBoxDataSource };
+import type { _NSTextAttachmentContainer } from "./NSTextAttachmentContainer.js";
+export type { _NSTextAttachmentContainer };
+
+import type { _NSTextAttachmentLayout } from "./NSTextAttachmentLayout.js";
+export type { _NSTextAttachmentLayout };
+
+import type { _NSTextCheckingClient } from "./NSTextCheckingClient.js";
+export type { _NSTextCheckingClient };
+
+import type { _NSTextInputTraits } from "./NSTextInputTraits.js";
+export type { _NSTextInputTraits };
+
+import type { _NSTextContent } from "./NSTextContent.js";
+export type { _NSTextContent };
+
+import type { _NSTextContentManagerDelegate } from "./NSTextContentManagerDelegate.js";
+export type { _NSTextContentManagerDelegate };
+
+import type { _NSTextContentStorageDelegate } from "./NSTextContentStorageDelegate.js";
+export type { _NSTextContentStorageDelegate };
+
+import type { _NSTextElementProvider } from "./NSTextElementProvider.js";
+export type { _NSTextElementProvider };
+
+import type { _NSTextDelegate } from "./NSTextDelegate.js";
+export type { _NSTextDelegate };
+
+import type { _NSTextFieldDelegate } from "./NSTextFieldDelegate.js";
+export type { _NSTextFieldDelegate };
+
+import type { _NSTextFinderBarContainer } from "./NSTextFinderBarContainer.js";
+export type { _NSTextFinderBarContainer };
+
+import type { _NSTextFinderClient } from "./NSTextFinderClient.js";
+export type { _NSTextFinderClient };
+
+import type { _NSTextInput } from "./NSTextInput.js";
+export type { _NSTextInput };
+
+import type { _NSTextInputClient } from "./NSTextInputClient.js";
+export type { _NSTextInputClient };
+
+import type { _NSTextLayoutManagerDelegate } from "./NSTextLayoutManagerDelegate.js";
+export type { _NSTextLayoutManagerDelegate };
+
+import type { _NSTextLocation } from "./NSTextLocation.js";
+export type { _NSTextLocation };
+
+import type { _NSTextSelectionDataSource } from "./NSTextSelectionDataSource.js";
+export type { _NSTextSelectionDataSource };
+
+import type { _NSTextStorageDelegate } from "./NSTextStorageDelegate.js";
+export type { _NSTextStorageDelegate };
+
+import type { _NSTextStorageObserving } from "./NSTextStorageObserving.js";
+export type { _NSTextStorageObserving };
+
+import type { _NSTextViewDelegate } from "./NSTextViewDelegate.js";
+export type { _NSTextViewDelegate };
+
+import type { _NSTextViewportLayoutControllerDelegate } from "./NSTextViewportLayoutControllerDelegate.js";
+export type { _NSTextViewportLayoutControllerDelegate };
+
+import type { _NSTokenFieldCellDelegate } from "./NSTokenFieldCellDelegate.js";
+export type { _NSTokenFieldCellDelegate };
+
+import type { _NSTokenFieldDelegate } from "./NSTokenFieldDelegate.js";
+export type { _NSTokenFieldDelegate };
+
+import type { _NSToolbarDelegate } from "./NSToolbarDelegate.js";
+export type { _NSToolbarDelegate };
+
+import type { _NSTouchBarDelegate } from "./NSTouchBarDelegate.js";
+export type { _NSTouchBarDelegate };
+
+import type { _NSTouchBarProvider } from "./NSTouchBarProvider.js";
+export type { _NSTouchBarProvider };
+
+import type { _NSUserActivityRestoring } from "./NSUserActivityRestoring.js";
+export type { _NSUserActivityRestoring };
+
+import type { _NSUserInterfaceCompression } from "./NSUserInterfaceCompression.js";
+export type { _NSUserInterfaceCompression };
+
+import type { _NSUserInterfaceItemIdentification } from "./NSUserInterfaceItemIdentification.js";
+export type { _NSUserInterfaceItemIdentification };
+
+import type { _NSUserInterfaceItemSearching } from "./NSUserInterfaceItemSearching.js";
+export type { _NSUserInterfaceItemSearching };
+
+import type { _NSUserInterfaceValidations } from "./NSUserInterfaceValidations.js";
+export type { _NSUserInterfaceValidations };
+
+import type { _NSValidatedUserInterfaceItem } from "./NSValidatedUserInterfaceItem.js";
+export type { _NSValidatedUserInterfaceItem };
+
+import type { _NSViewContentSelectionInfo } from "./NSViewContentSelectionInfo.js";
+export type { _NSViewContentSelectionInfo };
+
+import type { _NSViewLayerContentScaleDelegate } from "./NSViewLayerContentScaleDelegate.js";
+export type { _NSViewLayerContentScaleDelegate };
+
+import type { _NSViewToolTipOwner } from "./NSViewToolTipOwner.js";
+export type { _NSViewToolTipOwner };
+
+import type { _NSViewControllerPresentationAnimator } from "./NSViewControllerPresentationAnimator.js";
+export type { _NSViewControllerPresentationAnimator };
+
+import type { _NSWindowDelegate } from "./NSWindowDelegate.js";
+export type { _NSWindowDelegate };
+
+import type { _NSWindowRestoration } from "./NSWindowRestoration.js";
+export type { _NSWindowRestoration };
+
+import type { _NSWritingToolsCoordinatorDelegate } from "./NSWritingToolsCoordinatorDelegate.js";
+export type { _NSWritingToolsCoordinatorDelegate };

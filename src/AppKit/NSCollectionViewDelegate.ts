@@ -2,6 +2,8 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSCollectionView } from "./NSCollectionView.js";
 import type { _NSCollectionViewItem } from "./NSCollectionViewItem.js";
+import type { _NSCollectionViewLayout } from "./NSCollectionViewLayout.js";
+import type { _NSCollectionViewTransitionLayout } from "./NSCollectionViewTransitionLayout.js";
 import type { _NSDraggingSession } from "./NSDraggingSession.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSImage } from "./NSImage.js";
@@ -44,5 +46,5 @@ export interface _NSCollectionViewDelegate {
   collectionView$willDisplaySupplementaryView$forElementKind$atIndexPath$?(collectionView: _NSCollectionView, view: _NSView, elementKind: number, indexPath: _NSIndexPath): void;
   collectionView$didEndDisplayingItem$forRepresentedObjectAtIndexPath$?(collectionView: _NSCollectionView, item: _NSCollectionViewItem, indexPath: _NSIndexPath): void;
   collectionView$didEndDisplayingSupplementaryView$forElementOfKind$atIndexPath$?(collectionView: _NSCollectionView, view: _NSView, elementKind: number, indexPath: _NSIndexPath): void;
-  collectionView$transitionLayoutForOldLayout$newLayout$?(collectionView: _NSCollectionView, fromLayout: NobjcObject, toLayout: NobjcObject): NobjcObject;
+  collectionView$transitionLayoutForOldLayout$newLayout$?(collectionView: _NSCollectionView, fromLayout: _NSCollectionViewLayout, toLayout: _NSCollectionViewLayout): _NSCollectionViewTransitionLayout;
 }

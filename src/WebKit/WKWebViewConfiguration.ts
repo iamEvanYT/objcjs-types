@@ -5,6 +5,8 @@ import type { _NSString } from "../Foundation/NSString.js";
 import type { _WKPreferences } from "./WKPreferences.js";
 import type { _WKProcessPool } from "./WKProcessPool.js";
 import type { _WKUserContentController } from "./WKUserContentController.js";
+import type { _WKWebExtensionController } from "./WKWebExtensionController.js";
+import type { _WKWebpagePreferences } from "./WKWebpagePreferences.js";
 import type { _WKWebsiteDataStore } from "./WKWebsiteDataStore.js";
 
 export declare class _WKWebViewConfiguration extends _NSObject {
@@ -22,8 +24,8 @@ export declare class _WKWebViewConfiguration extends _NSObject {
   setPreferences$(value: _WKPreferences): void;
   userContentController(): _WKUserContentController;
   setUserContentController$(value: _WKUserContentController): void;
-  webExtensionController(): NobjcObject;
-  setWebExtensionController$(value: NobjcObject): void;
+  webExtensionController(): _WKWebExtensionController | null;
+  setWebExtensionController$(value: _WKWebExtensionController | null): void;
   websiteDataStore(): _WKWebsiteDataStore;
   setWebsiteDataStore$(value: _WKWebsiteDataStore): void;
   suppressesIncrementalRendering(): boolean;
@@ -38,8 +40,8 @@ export declare class _WKWebViewConfiguration extends _NSObject {
   setUpgradeKnownHostsToHTTPS$(value: boolean): void;
   mediaTypesRequiringUserActionForPlayback(): number;
   setMediaTypesRequiringUserActionForPlayback$(value: number): void;
-  defaultWebpagePreferences(): NobjcObject;
-  setDefaultWebpagePreferences$(value: NobjcObject): void;
+  defaultWebpagePreferences(): _WKWebpagePreferences;
+  setDefaultWebpagePreferences$(value: _WKWebpagePreferences): void;
   limitsNavigationsToAppBoundDomains(): boolean;
   setLimitsNavigationsToAppBoundDomains$(value: boolean): void;
   allowsInlinePredictions(): boolean;

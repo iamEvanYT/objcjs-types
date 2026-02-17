@@ -4,6 +4,8 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSGraphicsContext } from "./NSGraphicsContext.js";
+import type { _NSTouch } from "./NSTouch.js";
 import type { _NSView } from "./NSView.js";
 import type { CGPoint } from "../structs.js";
 
@@ -16,10 +18,10 @@ export declare class _NSEvent extends _NSObject {
   static eventWithCGEvent$(cgEvent: number): _NSEvent | null;
   static startPeriodicEventsAfterDelay$withPeriod$(delay: number, period: number): void;
   static stopPeriodicEvents(): void;
-  static mouseEventWithType$location$modifierFlags$timestamp$windowNumber$context$eventNumber$clickCount$pressure$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: NobjcObject, eNum: number, cNum: number, pressure: number): _NSEvent | null;
-  static keyEventWithType$location$modifierFlags$timestamp$windowNumber$context$characters$charactersIgnoringModifiers$isARepeat$keyCode$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: NobjcObject, keys: _NSString, ukeys: _NSString, flag: boolean, code: number): _NSEvent | null;
-  static enterExitEventWithType$location$modifierFlags$timestamp$windowNumber$context$eventNumber$trackingNumber$userData$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: NobjcObject, eNum: number, tNum: number, data: NobjcObject): _NSEvent | null;
-  static otherEventWithType$location$modifierFlags$timestamp$windowNumber$context$subtype$data1$data2$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: NobjcObject, subtype: number, d1: number, d2: number): _NSEvent | null;
+  static mouseEventWithType$location$modifierFlags$timestamp$windowNumber$context$eventNumber$clickCount$pressure$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: _NSGraphicsContext | null, eNum: number, cNum: number, pressure: number): _NSEvent | null;
+  static keyEventWithType$location$modifierFlags$timestamp$windowNumber$context$characters$charactersIgnoringModifiers$isARepeat$keyCode$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: _NSGraphicsContext | null, keys: _NSString, ukeys: _NSString, flag: boolean, code: number): _NSEvent | null;
+  static enterExitEventWithType$location$modifierFlags$timestamp$windowNumber$context$eventNumber$trackingNumber$userData$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: _NSGraphicsContext | null, eNum: number, tNum: number, data: NobjcObject): _NSEvent | null;
+  static otherEventWithType$location$modifierFlags$timestamp$windowNumber$context$subtype$data1$data2$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: _NSGraphicsContext | null, subtype: number, d1: number, d2: number): _NSEvent | null;
   static addGlobalMonitorForEventsMatchingMask$handler$(mask: number, block: (...args: any[]) => any): NobjcObject;
   static addLocalMonitorForEventsMatchingMask$handler$(mask: number, block: (...args: any[]) => any | null): NobjcObject;
   static removeMonitor$(eventMonitor: NobjcObject): void;
@@ -29,6 +31,6 @@ export declare class _NSEvent extends _NSObject {
   touchesMatchingPhase$inView$(phase: number, view: _NSView | null): _NSSet;
   allTouches(): _NSSet;
   touchesForView$(view: _NSView): _NSSet;
-  coalescedTouchesForTouch$(touch: NobjcObject): _NSArray;
+  coalescedTouchesForTouch$(touch: _NSTouch): _NSArray;
   trackSwipeEventWithOptions$dampenAmountThresholdMin$max$usingHandler$(options: number, minDampenThreshold: number, maxDampenThreshold: number, trackingHandler: (...args: any[]) => any): void;
 }

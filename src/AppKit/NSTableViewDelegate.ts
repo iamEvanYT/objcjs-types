@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSCell } from "./NSCell.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSTableColumn } from "./NSTableColumn.js";
+import type { _NSTableRowView } from "./NSTableRowView.js";
 import type { _NSTableView } from "./NSTableView.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
@@ -15,9 +16,9 @@ import type { CGPoint } from "../structs.js";
 export interface _NSTableViewDelegate extends _NSControlTextEditingDelegate {
   // Instance methods
   tableView$viewForTableColumn$row$?(tableView: _NSTableView, tableColumn: _NSTableColumn | null, row: number): _NSView | null;
-  tableView$rowViewForRow$?(tableView: _NSTableView, row: number): NobjcObject;
-  tableView$didAddRowView$forRow$?(tableView: _NSTableView, rowView: NobjcObject, row: number): void;
-  tableView$didRemoveRowView$forRow$?(tableView: _NSTableView, rowView: NobjcObject, row: number): void;
+  tableView$rowViewForRow$?(tableView: _NSTableView, row: number): _NSTableRowView | null;
+  tableView$didAddRowView$forRow$?(tableView: _NSTableView, rowView: _NSTableRowView, row: number): void;
+  tableView$didRemoveRowView$forRow$?(tableView: _NSTableView, rowView: _NSTableRowView, row: number): void;
   tableView$willDisplayCell$forTableColumn$row$?(tableView: _NSTableView, cell: NobjcObject, tableColumn: _NSTableColumn | null, row: number): void;
   tableView$shouldEditTableColumn$row$?(tableView: _NSTableView, tableColumn: _NSTableColumn | null, row: number): boolean;
   tableView$toolTipForCell$rect$tableColumn$row$mouseLocation$?(tableView: _NSTableView, cell: _NSCell, rect: number, tableColumn: _NSTableColumn | null, row: number, mouseLocation: CGPoint): _NSString;

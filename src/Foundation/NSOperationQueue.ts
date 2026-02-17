@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSOperation } from "./NSOperation.js";
+import type { _NSProgress } from "./NSProgress.js";
 import type { _NSString } from "./NSString.js";
 
 export declare class _NSOperationQueue extends _NSObject {
@@ -22,7 +23,7 @@ export declare class _NSOperationQueue extends _NSObject {
   waitUntilAllOperationsAreFinished(): void;
 
   // Properties
-  progress(): NobjcObject;
+  progress(): _NSProgress;
   maxConcurrentOperationCount(): number;
   setMaxConcurrentOperationCount$(value: number): void;
   suspended(): boolean;

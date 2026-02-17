@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSBrowser } from "./NSBrowser.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSImage } from "./NSImage.js";
+import type { _NSMatrix } from "./NSMatrix.js";
 import type { _NSPasteboard } from "./NSPasteboard.js";
 import type { _NSViewController } from "./NSViewController.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
@@ -14,7 +15,7 @@ import type { _NSURL } from "../Foundation/NSURL.js";
 export interface _NSBrowserDelegate {
   // Instance methods
   browser$numberOfRowsInColumn$?(sender: _NSBrowser, column: number): number;
-  browser$createRowsForColumn$inMatrix$?(sender: _NSBrowser, column: number, matrix: NobjcObject): void;
+  browser$createRowsForColumn$inMatrix$?(sender: _NSBrowser, column: number, matrix: _NSMatrix): void;
   browser$numberOfChildrenOfItem$?(browser: _NSBrowser, item: NobjcObject): number;
   browser$child$ofItem$?(browser: _NSBrowser, index: number, item: NobjcObject): NobjcObject;
   browser$isLeafItem$?(browser: _NSBrowser, item: NobjcObject): boolean;

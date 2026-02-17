@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSActionCell } from "./NSActionCell.js";
 import type { _NSColor } from "./NSColor.js";
+import type { _NSText } from "./NSText.js";
 import type { _NSAttributedString } from "../Foundation/NSAttributedString.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSString } from "../Foundation/NSString.js";
@@ -13,7 +14,7 @@ export declare class _NSTextFieldCell extends _NSActionCell {
   // Instance methods
   initTextCell$(string_: _NSString): _NSTextFieldCell;
   initWithCoder$(coder: _NSCoder): _NSTextFieldCell;
-  setUpFieldEditorAttributes$(textObj: NobjcObject): NobjcObject;
+  setUpFieldEditorAttributes$(textObj: _NSText): _NSText;
   setWantsNotificationForMarkedText$(flag: boolean): void;
 
   // Properties

@@ -5,6 +5,7 @@ import type { _NSCoder } from "./NSCoder.js";
 import type { _NSEnumerator } from "./NSEnumerator.js";
 import type { _NSIndexSet } from "./NSIndexSet.js";
 import type { _NSObject } from "./NSObject.js";
+import type { _NSOrderedCollectionDifference } from "./NSOrderedCollectionDifference.js";
 import type { _NSSet } from "./NSSet.js";
 import type { _NSString } from "./NSString.js";
 import type { NSRange } from "../structs.js";
@@ -65,10 +66,10 @@ export declare class _NSOrderedSet extends _NSObject {
   initWithArray$range$copyItems$(set: _NSArray, range: NSRange, flag: boolean): _NSOrderedSet;
   initWithSet$(set: _NSSet): _NSOrderedSet;
   initWithSet$copyItems$(set: _NSSet, flag: boolean): _NSOrderedSet;
-  differenceFromOrderedSet$withOptions$usingEquivalenceTest$(other: _NSOrderedSet, options: number, block: (...args: any[]) => any): NobjcObject;
-  differenceFromOrderedSet$withOptions$(other: _NSOrderedSet, options: number): NobjcObject;
-  differenceFromOrderedSet$(other: _NSOrderedSet): NobjcObject;
-  orderedSetByApplyingDifference$(difference: NobjcObject): _NSOrderedSet | null;
+  differenceFromOrderedSet$withOptions$usingEquivalenceTest$(other: _NSOrderedSet, options: number, block: (...args: any[]) => any): _NSOrderedCollectionDifference;
+  differenceFromOrderedSet$withOptions$(other: _NSOrderedSet, options: number): _NSOrderedCollectionDifference;
+  differenceFromOrderedSet$(other: _NSOrderedSet): _NSOrderedCollectionDifference;
+  orderedSetByApplyingDifference$(difference: _NSOrderedCollectionDifference): _NSOrderedSet | null;
 
   // Properties
   count(): number;

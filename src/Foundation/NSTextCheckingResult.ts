@@ -4,6 +4,7 @@ import type { _NSArray } from "./NSArray.js";
 import type { _NSDate } from "./NSDate.js";
 import type { _NSDictionary } from "./NSDictionary.js";
 import type { _NSObject } from "./NSObject.js";
+import type { _NSOrthography } from "./NSOrthography.js";
 import type { _NSRegularExpression } from "./NSRegularExpression.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSTimeZone } from "./NSTimeZone.js";
@@ -15,7 +16,7 @@ export declare class _NSTextCheckingResult extends _NSObject {
   static new(): _NSTextCheckingResult;
   init(): _NSTextCheckingResult;
   // Class methods
-  static orthographyCheckingResultWithRange$orthography$(range: NSRange, orthography: NobjcObject): _NSTextCheckingResult;
+  static orthographyCheckingResultWithRange$orthography$(range: NSRange, orthography: _NSOrthography): _NSTextCheckingResult;
   static spellCheckingResultWithRange$(range: NSRange): _NSTextCheckingResult;
   static grammarCheckingResultWithRange$details$(range: NSRange, details: NobjcObject): _NSTextCheckingResult;
   static dateCheckingResultWithRange$date$(range: NSRange, date: _NSDate): _NSTextCheckingResult;
@@ -39,7 +40,7 @@ export declare class _NSTextCheckingResult extends _NSObject {
   // Properties
   resultType(): number;
   range(): NSRange;
-  orthography(): NobjcObject;
+  orthography(): _NSOrthography | null;
   grammarDetails(): NobjcObject;
   date(): _NSDate | null;
   timeZone(): _NSTimeZone | null;

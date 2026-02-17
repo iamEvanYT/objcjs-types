@@ -5,17 +5,19 @@ import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSMutableDictionary } from "../Foundation/NSMutableDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSPDFInfo } from "./NSPDFInfo.js";
+import type { _NSPrinter } from "./NSPrinter.js";
 import type { CGRect, CGSize } from "../structs.js";
 
 export declare class _NSPrintInfo extends _NSObject {
   static alloc(): _NSPrintInfo;
   static new(): _NSPrintInfo;
   // Class methods
-  static setDefaultPrinter$(printer: NobjcObject): void;
+  static setDefaultPrinter$(printer: _NSPrinter | null): void;
   static sizeForPaperName$(name: number | null): CGSize;
   static sharedPrintInfo(): _NSPrintInfo;
   static setSharedPrintInfo$(value: _NSPrintInfo): void;
-  static defaultPrinter(): NobjcObject;
+  static defaultPrinter(): _NSPrinter | null;
 
   // Instance methods
   initWithDictionary$(attributes: _NSDictionary): _NSPrintInfo;
@@ -28,7 +30,7 @@ export declare class _NSPrintInfo extends _NSObject {
   PMPrintSettings(): NobjcObject;
   updateFromPMPageFormat(): void;
   updateFromPMPrintSettings(): void;
-  takeSettingsFromPDFInfo$(inPDFInfo: NobjcObject): void;
+  takeSettingsFromPDFInfo$(inPDFInfo: _NSPDFInfo): void;
 
   // Properties
   paperName(): number | null;
@@ -57,8 +59,8 @@ export declare class _NSPrintInfo extends _NSObject {
   setVerticalPagination$(value: number): void;
   jobDisposition(): number;
   setJobDisposition$(value: number): void;
-  printer(): NobjcObject;
-  setPrinter$(value: NobjcObject): void;
+  printer(): _NSPrinter;
+  setPrinter$(value: _NSPrinter): void;
   imageablePageBounds(): CGRect;
   localizedPaperName(): _NSString | null;
   printSettings(): NobjcObject;

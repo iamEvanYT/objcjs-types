@@ -9,6 +9,7 @@ import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSError } from "../Foundation/NSError.js";
 import type { _NSNotification } from "../Foundation/NSNotification.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSUserActivity } from "../Foundation/NSUserActivity.js";
 
 export interface _NSApplicationDelegate {
   // Instance methods
@@ -34,9 +35,9 @@ export interface _NSApplicationDelegate {
   application$willEncodeRestorableState$?(app: _NSApplication, coder: _NSCoder): void;
   application$didDecodeRestorableState$?(app: _NSApplication, coder: _NSCoder): void;
   application$willContinueUserActivityWithType$?(application: _NSApplication, userActivityType: _NSString): boolean;
-  application$continueUserActivity$restorationHandler$?(application: _NSApplication, userActivity: NobjcObject, restorationHandler: (...args: any[]) => any): boolean;
+  application$continueUserActivity$restorationHandler$?(application: _NSApplication, userActivity: _NSUserActivity, restorationHandler: (...args: any[]) => any): boolean;
   application$didFailToContinueUserActivityWithType$error$?(application: _NSApplication, userActivityType: _NSString, error: _NSError): void;
-  application$didUpdateUserActivity$?(application: _NSApplication, userActivity: NobjcObject): void;
+  application$didUpdateUserActivity$?(application: _NSApplication, userActivity: _NSUserActivity): void;
   application$userDidAcceptCloudKitShareWithMetadata$?(application: _NSApplication, metadata: NobjcObject): void;
   application$delegateHandlesKey$?(sender: _NSApplication, key: _NSString): boolean;
   applicationShouldAutomaticallyLocalizeKeyEquivalents$?(application: _NSApplication): boolean;

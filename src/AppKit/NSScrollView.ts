@@ -4,6 +4,8 @@ import type { _NSClipView } from "./NSClipView.js";
 import type { _NSColor } from "./NSColor.js";
 import type { _NSCursor } from "./NSCursor.js";
 import type { _NSEvent } from "./NSEvent.js";
+import type { _NSRulerView } from "./NSRulerView.js";
+import type { _NSScroller } from "./NSScroller.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { CGPoint, CGRect, CGSize, NSEdgeInsets } from "../structs.js";
@@ -50,10 +52,10 @@ export declare class _NSScrollView extends _NSView {
   setHasVerticalScroller$(value: boolean): void;
   hasHorizontalScroller(): boolean;
   setHasHorizontalScroller$(value: boolean): void;
-  verticalScroller(): NobjcObject;
-  setVerticalScroller$(value: NobjcObject): void;
-  horizontalScroller(): NobjcObject;
-  setHorizontalScroller$(value: NobjcObject): void;
+  verticalScroller(): _NSScroller | null;
+  setVerticalScroller$(value: _NSScroller | null): void;
+  horizontalScroller(): _NSScroller | null;
+  setHorizontalScroller$(value: _NSScroller | null): void;
   autohidesScrollers(): boolean;
   setAutohidesScrollers$(value: boolean): void;
   horizontalLineScroll(): number;
@@ -100,10 +102,10 @@ export declare class _NSScrollView extends _NSView {
   setHasHorizontalRuler$(value: boolean): void;
   hasVerticalRuler(): boolean;
   setHasVerticalRuler$(value: boolean): void;
-  horizontalRulerView(): NobjcObject;
-  setHorizontalRulerView$(value: NobjcObject): void;
-  verticalRulerView(): NobjcObject;
-  setVerticalRulerView$(value: NobjcObject): void;
+  horizontalRulerView(): _NSRulerView | null;
+  setHorizontalRulerView$(value: _NSRulerView | null): void;
+  verticalRulerView(): _NSRulerView | null;
+  setVerticalRulerView$(value: _NSRulerView | null): void;
   findBarPosition(): number;
   setFindBarPosition$(value: number): void;
 }

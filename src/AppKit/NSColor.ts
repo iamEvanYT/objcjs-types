@@ -5,6 +5,7 @@ import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSColorSpace } from "./NSColorSpace.js";
 import type { _NSImage } from "./NSImage.js";
 import type { _NSPasteboard } from "./NSPasteboard.js";
 import type { CGRect } from "../structs.js";
@@ -13,14 +14,14 @@ export declare class _NSColor extends _NSObject {
   static alloc(): _NSColor;
   static new(): _NSColor;
   // Class methods
-  static colorWithColorSpace$components$count$(space: NobjcObject, components: NobjcObject, numberOfComponents: number): _NSColor;
+  static colorWithColorSpace$components$count$(space: _NSColorSpace, components: NobjcObject, numberOfComponents: number): _NSColor;
   static colorWithSRGBRed$green$blue$alpha$(red: number, green: number, blue: number, alpha: number): _NSColor;
   static colorWithGenericGamma22White$alpha$(white: number, alpha: number): _NSColor;
   static colorWithDisplayP3Red$green$blue$alpha$(red: number, green: number, blue: number, alpha: number): _NSColor;
   static colorWithWhite$alpha$(white: number, alpha: number): _NSColor;
   static colorWithRed$green$blue$alpha$(red: number, green: number, blue: number, alpha: number): _NSColor;
   static colorWithHue$saturation$brightness$alpha$(hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
-  static colorWithColorSpace$hue$saturation$brightness$alpha$(space: NobjcObject, hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
+  static colorWithColorSpace$hue$saturation$brightness$alpha$(space: _NSColorSpace, hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
   static colorWithCatalogName$colorName$(listName: number, colorName: number): _NSColor | null;
   static colorNamed$bundle$(name: number, bundle: _NSBundle | null): _NSColor | null;
   static colorNamed$(name: number): _NSColor | null;
@@ -130,7 +131,7 @@ export declare class _NSColor extends _NSObject {
   init(): _NSColor;
   initWithCoder$(coder: _NSCoder): _NSColor | null;
   colorUsingType$(type: number): _NSColor | null;
-  colorUsingColorSpace$(space: NobjcObject): _NSColor | null;
+  colorUsingColorSpace$(space: _NSColorSpace): _NSColor | null;
   colorByApplyingContentHeadroom$(contentHeadroom: number): _NSColor;
   highlightWithLevel$(val: number): _NSColor | null;
   shadowWithLevel$(val: number): _NSColor | null;
@@ -168,7 +169,7 @@ export declare class _NSColor extends _NSObject {
   magentaComponent(): number;
   yellowComponent(): number;
   blackComponent(): number;
-  colorSpace(): NobjcObject;
+  colorSpace(): _NSColorSpace;
   numberOfComponents(): number;
   patternImage(): _NSImage;
   alphaComponent(): number;

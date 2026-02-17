@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSCoder } from "./NSCoder.js";
 import type { _NSIndexSet } from "./NSIndexSet.js";
+import type { _NSOrderedCollectionDifference } from "./NSOrderedCollectionDifference.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURL } from "./NSURL.js";
 import type { NSRange } from "../structs.js";
@@ -47,5 +48,5 @@ export declare class _NSMutableArray extends _NSArray {
   sortWithOptions$usingComparator$(opts: number, cmptr: number): void;
   initWithContentsOfFile$(path: _NSString): _NSMutableArray | null;
   initWithContentsOfURL$(url: _NSURL): _NSMutableArray | null;
-  applyDifference$(difference: NobjcObject): void;
+  applyDifference$(difference: _NSOrderedCollectionDifference): void;
 }

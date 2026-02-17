@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSCoder } from "./NSCoder.js";
 import type { _NSIndexSet } from "./NSIndexSet.js";
+import type { _NSOrderedCollectionDifference } from "./NSOrderedCollectionDifference.js";
 import type { _NSOrderedSet } from "./NSOrderedSet.js";
 import type { _NSSet } from "./NSSet.js";
 import type { NSRange } from "../structs.js";
@@ -44,5 +45,5 @@ export declare class _NSMutableOrderedSet extends _NSOrderedSet {
   sortUsingComparator$(cmptr: number): void;
   sortWithOptions$usingComparator$(opts: number, cmptr: number): void;
   sortRange$options$usingComparator$(range: NSRange, opts: number, cmptr: number): void;
-  applyDifference$(difference: NobjcObject): void;
+  applyDifference$(difference: _NSOrderedCollectionDifference): void;
 }

@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSData } from "./NSData.js";
 import type { _NSDictionary } from "./NSDictionary.js";
+import type { _NSDirectoryEnumerator } from "./NSDirectoryEnumerator.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURL } from "./NSURL.js";
@@ -62,8 +63,8 @@ export declare class _NSFileManager extends _NSObject {
   contentsEqualAtPath$andPath$(path1: _NSString, path2: _NSString): boolean;
   displayNameAtPath$(path: _NSString): _NSString;
   componentsToDisplayForPath$(path: _NSString): _NSArray | null;
-  enumeratorAtPath$(path: _NSString): NobjcObject;
-  enumeratorAtURL$includingPropertiesForKeys$options$errorHandler$(url: _NSURL, keys: _NSArray | null, mask: number, handler: (...args: any[]) => any | null): NobjcObject;
+  enumeratorAtPath$(path: _NSString): _NSDirectoryEnumerator | null;
+  enumeratorAtURL$includingPropertiesForKeys$options$errorHandler$(url: _NSURL, keys: _NSArray | null, mask: number, handler: (...args: any[]) => any | null): _NSDirectoryEnumerator | null;
   subpathsAtPath$(path: _NSString): _NSArray | null;
   contentsAtPath$(path: _NSString): _NSData | null;
   createFileAtPath$contents$attributes$(path: _NSString, data: _NSData | null, attr: _NSDictionary | null): boolean;

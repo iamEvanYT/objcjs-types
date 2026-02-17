@@ -4,6 +4,8 @@ import type { _NSCell } from "./NSCell.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSOutlineView } from "./NSOutlineView.js";
 import type { _NSTableColumn } from "./NSTableColumn.js";
+import type { _NSTableRowView } from "./NSTableRowView.js";
+import type { _NSTintConfiguration } from "./NSTintConfiguration.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSIndexSet } from "../Foundation/NSIndexSet.js";
@@ -15,9 +17,9 @@ import type { CGPoint } from "../structs.js";
 export interface _NSOutlineViewDelegate extends _NSControlTextEditingDelegate {
   // Instance methods
   outlineView$viewForTableColumn$item$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn | null, item: NobjcObject): _NSView | null;
-  outlineView$rowViewForItem$?(outlineView: _NSOutlineView, item: NobjcObject): NobjcObject;
-  outlineView$didAddRowView$forRow$?(outlineView: _NSOutlineView, rowView: NobjcObject, row: number): void;
-  outlineView$didRemoveRowView$forRow$?(outlineView: _NSOutlineView, rowView: NobjcObject, row: number): void;
+  outlineView$rowViewForItem$?(outlineView: _NSOutlineView, item: NobjcObject): _NSTableRowView | null;
+  outlineView$didAddRowView$forRow$?(outlineView: _NSOutlineView, rowView: _NSTableRowView, row: number): void;
+  outlineView$didRemoveRowView$forRow$?(outlineView: _NSOutlineView, rowView: _NSTableRowView, row: number): void;
   outlineView$willDisplayCell$forTableColumn$item$?(outlineView: _NSOutlineView, cell: NobjcObject, tableColumn: _NSTableColumn | null, item: NobjcObject): void;
   outlineView$shouldEditTableColumn$item$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn | null, item: NobjcObject): boolean;
   selectionShouldChangeInOutlineView$?(outlineView: _NSOutlineView): boolean;
@@ -29,7 +31,7 @@ export interface _NSOutlineViewDelegate extends _NSControlTextEditingDelegate {
   outlineView$didDragTableColumn$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn): void;
   outlineView$toolTipForCell$rect$tableColumn$item$mouseLocation$?(outlineView: _NSOutlineView, cell: _NSCell, rect: number, tableColumn: _NSTableColumn | null, item: NobjcObject, mouseLocation: CGPoint): _NSString;
   outlineView$heightOfRowByItem$?(outlineView: _NSOutlineView, item: NobjcObject): number;
-  outlineView$tintConfigurationForItem$?(outlineView: _NSOutlineView, item: NobjcObject): NobjcObject;
+  outlineView$tintConfigurationForItem$?(outlineView: _NSOutlineView, item: NobjcObject): _NSTintConfiguration | null;
   outlineView$typeSelectStringForTableColumn$item$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn | null, item: NobjcObject): _NSString | null;
   outlineView$nextTypeSelectMatchFromItem$toItem$forString$?(outlineView: _NSOutlineView, startItem: NobjcObject, endItem: NobjcObject, searchString: _NSString): NobjcObject;
   outlineView$shouldTypeSelectForEvent$withCurrentSearchString$?(outlineView: _NSOutlineView, event: _NSEvent, searchString: _NSString | null): boolean;

@@ -6,6 +6,7 @@ import type { _NSDictionary } from "./NSDictionary.js";
 import type { _NSNumber } from "./NSNumber.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSString } from "./NSString.js";
+import type { _NSURLHandle } from "./NSURLHandle.js";
 
 export declare class _NSURL extends _NSObject {
   static alloc(): _NSURL;
@@ -67,7 +68,7 @@ export declare class _NSURL extends _NSObject {
   propertyForKey$(propertyKey: _NSString): NobjcObject;
   setResourceData$(data: _NSData): boolean;
   setProperty$forKey$(property: NobjcObject, propertyKey: _NSString): boolean;
-  URLHandleUsingCache$(shouldUseCache: boolean): NobjcObject;
+  URLHandleUsingCache$(shouldUseCache: boolean): _NSURLHandle | null;
 
   // Properties
   dataRepresentation(): _NSData;

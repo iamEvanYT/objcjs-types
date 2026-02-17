@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSDate } from "./NSDate.js";
 import type { _NSError } from "./NSError.js";
 import type { _NSObject } from "./NSObject.js";
+import type { _NSProgress } from "./NSProgress.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURLRequest } from "./NSURLRequest.js";
 import type { _NSURLResponse } from "./NSURLResponse.js";
@@ -25,7 +26,7 @@ export declare class _NSURLSessionTask extends _NSObject {
   response(): _NSURLResponse | null;
   delegate(): NobjcObject;
   setDelegate$(value: NobjcObject): void;
-  progress(): NobjcObject;
+  progress(): _NSProgress;
   earliestBeginDate(): _NSDate | null;
   setEarliestBeginDate$(value: _NSDate | null): void;
   countOfBytesClientExpectsToSend(): number;

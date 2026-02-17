@@ -8,6 +8,7 @@ import type { _NSWindow } from "./NSWindow.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSNotification } from "../Foundation/NSNotification.js";
+import type { _NSUndoManager } from "../Foundation/NSUndoManager.js";
 import type { CGPoint, CGRect, CGSize } from "../structs.js";
 
 export interface _NSWindowDelegate {
@@ -17,7 +18,7 @@ export interface _NSWindowDelegate {
   windowWillResize$toSize$?(sender: _NSWindow, frameSize: CGSize): CGSize;
   windowWillUseStandardFrame$defaultFrame$?(window: _NSWindow, newFrame: CGRect): CGRect;
   windowShouldZoom$toFrame$?(window: _NSWindow, newFrame: CGRect): boolean;
-  windowWillReturnUndoManager$?(window: _NSWindow): NobjcObject;
+  windowWillReturnUndoManager$?(window: _NSWindow): _NSUndoManager | null;
   window$willPositionSheet$usingRect$?(window: _NSWindow, sheet: _NSWindow, rect: CGRect): CGRect;
   window$shouldPopUpDocumentPathMenu$?(window: _NSWindow, menu: _NSMenu): boolean;
   window$shouldDragDocumentWithEvent$from$withPasteboard$?(window: _NSWindow, event: _NSEvent, dragImageLocation: CGPoint, pasteboard: _NSPasteboard): boolean;

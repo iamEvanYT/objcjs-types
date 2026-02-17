@@ -1,29 +1,39 @@
 /**
  * Framework configuration for the generator.
- * Defines which frameworks and classes to generate typings for.
+ * Defines which frameworks to generate typings for.
+ * Classes and protocols are auto-discovered from header files at generation time.
  */
 
-export interface FrameworkConfig {
+/** Static framework configuration — just paths and optional overrides. */
+export interface FrameworkBase {
   /** Framework name (e.g., "Foundation") */
   name: string;
   /** Path to the framework binary (for NobjcLibrary) */
   libraryPath: string;
   /** Path to the framework headers directory */
   headersPath: string;
-  /** List of class names to generate (each maps to a .h file) */
-  classes: string[];
-  /** List of protocol names to generate (each maps to a .h file) */
-  protocols?: string[];
   /** Optional pre-includes for fallback clang mode (without -fmodules) */
   preIncludes?: string[];
   /** Extra headers to parse for additional class members (class name → absolute path) */
   extraHeaders?: Record<string, string>;
 }
 
+/** Resolved framework config with discovered classes and protocols. */
+export interface FrameworkConfig extends FrameworkBase {
+  /** All discovered class names */
+  classes: string[];
+  /** All discovered protocol names */
+  protocols: string[];
+  /** Maps class name → header file name (without .h) */
+  classHeaders: Map<string, string>;
+  /** Maps protocol name → header file name (without .h) */
+  protocolHeaders: Map<string, string>;
+}
+
 const SDK_PATH =
   "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
 
-export const FRAMEWORKS: FrameworkConfig[] = [
+export const FRAMEWORK_BASES: FrameworkBase[] = [
   {
     name: "Foundation",
     libraryPath:
@@ -34,362 +44,38 @@ export const FRAMEWORKS: FrameworkConfig[] = [
       // are defined in the ObjC runtime header, not the Foundation NSObject.h
       NSObject: `${SDK_PATH}/usr/include/objc/NSObject.h`,
     },
-    classes: [
-      "NSObject",
-      "NSString",
-      "NSMutableString",
-      "NSAttributedString",
-      "NSMutableAttributedString",
-      "NSArray",
-      "NSMutableArray",
-      "NSDictionary",
-      "NSMutableDictionary",
-      "NSSet",
-      "NSMutableSet",
-      "NSOrderedSet",
-      "NSMutableOrderedSet",
-      "NSNumber",
-      "NSValue",
-      "NSData",
-      "NSMutableData",
-      "NSDate",
-      "NSURL",
-      "NSURLComponents",
-      "NSURLQueryItem",
-      "NSURLRequest",
-      "NSMutableURLRequest",
-      "NSURLResponse",
-      "NSHTTPURLResponse",
-      "NSURLSession",
-      "NSURLSessionTask",
-      "NSURLSessionDataTask",
-      "NSError",
-      "NSException",
-      "NSNotification",
-      "NSNotificationCenter",
-      "NSTimer",
-      "NSRunLoop",
-      "NSProcessInfo",
-      "NSFileManager",
-      "NSBundle",
-      "NSUserDefaults",
-      "NSJSONSerialization",
-      "NSRegularExpression",
-      "NSTextCheckingResult",
-      "NSCache",
-      "NSFormatter",
-      "NSDateFormatter",
-      "NSNumberFormatter",
-      "NSByteCountFormatter",
-      "NSPredicate",
-      "NSNull",
-      "NSLocale",
-      "NSCalendar",
-      "NSDateComponents",
-      "NSTimeZone",
-      "NSIndexSet",
-      "NSMutableIndexSet",
-      "NSIndexPath",
-      "NSEnumerator",
-      "NSCharacterSet",
-      "NSMutableCharacterSet",
-      "NSCoder",
-      "NSKeyedArchiver",
-      "NSKeyedUnarchiver",
-      "NSThread",
-      "NSLock",
-      "NSRecursiveLock",
-      "NSCondition",
-      "NSConditionLock",
-      "NSOperationQueue",
-      "NSOperation",
-      "NSBlockOperation",
-      "NSPipe",
-      "NSTask",
-      "NSFileHandle",
-    ],
-    protocols: [
-      "NSCopying",
-      "NSMutableCopying",
-      "NSCoding",
-      "NSSecureCoding",
-      "NSCacheDelegate",
-      "NSFileManagerDelegate",
-      "NSURLSessionDelegate",
-      "NSURLSessionTaskDelegate",
-      "NSURLSessionDataDelegate",
-    ],
   },
   {
     name: "AppKit",
     libraryPath: "/System/Library/Frameworks/AppKit.framework/AppKit",
     headersPath: `${SDK_PATH}/System/Library/Frameworks/AppKit.framework/Headers`,
-    classes: [
-      "NSApplication",
-      "NSWindow",
-      "NSView",
-      "NSViewController",
-      "NSWindowController",
-      "NSResponder",
-      "NSControl",
-      "NSButton",
-      "NSTextField",
-      "NSTextView",
-      "NSSecureTextField",
-      "NSSearchField",
-      "NSMenu",
-      "NSMenuItem",
-      "NSImage",
-      "NSImageView",
-      "NSColor",
-      "NSFont",
-      "NSFontManager",
-      "NSAlert",
-      "NSPanel",
-      "NSSavePanel",
-      "NSOpenPanel",
-      "NSSplitView",
-      "NSSplitViewController",
-      "NSTableView",
-      "NSTableColumn",
-      "NSTableCellView",
-      "NSOutlineView",
-      "NSScrollView",
-      "NSClipView",
-      "NSStackView",
-      "NSTabView",
-      "NSTabViewItem",
-      "NSToolbar",
-      "NSToolbarItem",
-      "NSStatusBar",
-      "NSStatusItem",
-      "NSScreen",
-      "NSEvent",
-      "NSCursor",
-      "NSNib",
-      "NSStoryboard",
-      "NSLayoutConstraint",
-      "NSGestureRecognizer",
-      "NSClickGestureRecognizer",
-      "NSPressGestureRecognizer",
-      "NSPanGestureRecognizer",
-      "NSMagnificationGestureRecognizer",
-      "NSRotationGestureRecognizer",
-      "NSPopover",
-      "NSSlider",
-      "NSProgressIndicator",
-      "NSLevelIndicator",
-      "NSStepper",
-      "NSSegmentedControl",
-      "NSComboBox",
-      "NSPopUpButton",
-      "NSDatePicker",
-      "NSColorWell",
-      "NSColorPanel",
-      "NSBox",
-      "NSCollectionView",
-      "NSCollectionViewItem",
-      "NSBrowser",
-      "NSCell",
-      "NSActionCell",
-      "NSButtonCell",
-      "NSTextFieldCell",
-      "NSBezierPath",
-      "NSAffineTransform",
-      "NSAnimationContext",
-      "NSAppearance",
-      "NSWorkspace",
-      "NSPasteboard",
-      "NSPasteboardItem",
-      "NSDraggingSession",
-      "NSDockTile",
-      "NSRunningApplication",
-      "NSSound",
-      "NSSpeechSynthesizer",
-      "NSPrintInfo",
-      "NSPrintOperation",
-      "NSPrintPanel",
-    ],
-    protocols: [
-      "NSApplicationDelegate",
-      "NSWindowDelegate",
-      "NSTableViewDelegate",
-      "NSTableViewDataSource",
-      "NSOutlineViewDelegate",
-      "NSOutlineViewDataSource",
-      "NSTextFieldDelegate",
-      "NSTextViewDelegate",
-      "NSTextDelegate",
-      "NSControlTextEditingDelegate",
-      "NSMenuDelegate",
-      "NSMenuItemValidation",
-      "NSToolbarDelegate",
-      "NSSplitViewDelegate",
-      "NSCollectionViewDelegate",
-      "NSCollectionViewDataSource",
-      "NSGestureRecognizerDelegate",
-      "NSAlertDelegate",
-      "NSSoundDelegate",
-      "NSTabViewDelegate",
-      "NSBrowserDelegate",
-      "NSComboBoxDelegate",
-      "NSComboBoxDataSource",
-    ],
   },
   {
     name: "WebKit",
     libraryPath: "/System/Library/Frameworks/WebKit.framework/WebKit",
     headersPath: `${SDK_PATH}/System/Library/Frameworks/WebKit.framework/Headers`,
     preIncludes: ["WebKit/WKFoundation.h"],
-    classes: [
-      "WKWebView",
-      "WKWebViewConfiguration",
-      "WKUserContentController",
-      "WKUserScript",
-      "WKPreferences",
-      "WKWebsiteDataStore",
-      "WKWebsiteDataRecord",
-      "WKNavigationAction",
-      "WKNavigationResponse",
-      "WKFrameInfo",
-      "WKBackForwardList",
-      "WKBackForwardListItem",
-      "WKContentWorld",
-      "WKHTTPCookieStore",
-      "WKNavigation",
-      "WKProcessPool",
-      "WKSecurityOrigin",
-      "WKWindowFeatures",
-      "WKSnapshotConfiguration",
-      "WKContentRuleListStore",
-      "WKContentRuleList",
-      "WKDownload",
-      "WKFindConfiguration",
-      "WKFindResult",
-      "WKPDFConfiguration",
-    ],
-    protocols: [
-      "WKNavigationDelegate",
-      "WKUIDelegate",
-      "WKScriptMessageHandler",
-      "WKDownloadDelegate",
-      "WKURLSchemeHandler",
-    ],
   },
 ];
 
 /**
- * Get the header file path for a given class in a framework.
- * Most ObjC classes live in a file named after the class (e.g., NSArray.h).
- * Some classes share a header file.
+ * Get the header file path for a class using discovered header mapping.
  */
-export const SHARED_HEADERS: Record<string, string> = {
-  // Foundation classes that share headers
-  NSNumber: "NSValue",
-  NSMutableString: "NSString",
-  NSMutableArray: "NSArray",
-  NSMutableDictionary: "NSDictionary",
-  NSMutableSet: "NSSet",
-  NSMutableOrderedSet: "NSOrderedSet",
-  NSMutableData: "NSData",
-  NSMutableAttributedString: "NSAttributedString",
-  NSMutableIndexSet: "NSIndexSet",
-  NSMutableCharacterSet: "NSCharacterSet",
-  NSMutableURLRequest: "NSURLRequest",
-  NSHTTPURLResponse: "NSURLResponse",
-  NSURLComponents: "NSURL",
-  NSURLQueryItem: "NSURL",
-  NSURLSessionDataTask: "NSURLSession",
-  NSURLSessionTask: "NSURLSession",
-  NSNotificationCenter: "NSNotification",
-  NSDateComponents: "NSCalendar",
-  NSCalendar: "NSCalendar",
-  NSCondition: "NSLock",
-  NSConditionLock: "NSLock",
-  NSRecursiveLock: "NSLock",
-  NSOperationQueue: "NSOperation",
-  NSBlockOperation: "NSOperation",
-  NSPipe: "NSFileHandle",
-  NSKeyedUnarchiver: "NSKeyedArchiver",
-  NSTextCheckingResult: "NSTextCheckingResult",
-  // AppKit classes that share headers
-  NSSecureTextField: "NSSecureTextField",
-  NSSplitViewController: "NSSplitViewController",
-  NSTableCellView: "NSTableCellView",
-  NSTabViewItem: "NSTabView",
-  NSCollectionViewItem: "NSCollectionView",
-  NSPasteboardItem: "NSPasteboard",
-  // WebKit
-  WKWebsiteDataRecord: "WKWebsiteDataRecord",
-  WKBackForwardListItem: "WKBackForwardListItem",
-  WKContentRuleList: "WKContentRuleListStore",
-  WKFindResult: "WKFindResult",
-};
-
 export function getHeaderPath(
   framework: FrameworkConfig,
   className: string
 ): string {
-  const headerName = SHARED_HEADERS[className] ?? className;
+  const headerName = framework.classHeaders.get(className) ?? className;
   return `${framework.headersPath}/${headerName}.h`;
 }
 
 /**
- * Maps protocol names to the header file that declares them.
- * Most delegate protocols live in the header of the class they're associated with.
- * Protocols not listed here are assumed to have their own header file.
- */
-export const PROTOCOL_HEADERS: Record<string, string> = {
-  // Foundation
-  NSCopying: "NSObject",
-  NSMutableCopying: "NSObject",
-  NSCoding: "NSObject",
-  NSSecureCoding: "NSObject",
-  NSCacheDelegate: "NSCache",
-  NSFileManagerDelegate: "NSFileManager",
-  NSURLSessionDelegate: "NSURLSession",
-  NSURLSessionTaskDelegate: "NSURLSession",
-  NSURLSessionDataDelegate: "NSURLSession",
-  // AppKit
-  NSApplicationDelegate: "NSApplication",
-  NSWindowDelegate: "NSWindow",
-  NSTableViewDelegate: "NSTableView",
-  NSTableViewDataSource: "NSTableView",
-  NSOutlineViewDelegate: "NSOutlineView",
-  NSOutlineViewDataSource: "NSOutlineView",
-  NSTextFieldDelegate: "NSTextField",
-  NSTextViewDelegate: "NSTextView",
-  NSTextDelegate: "NSText",
-  NSControlTextEditingDelegate: "NSControl",
-  NSMenuDelegate: "NSMenu",
-  NSMenuItemValidation: "NSMenu",
-  NSToolbarDelegate: "NSToolbar",
-  NSSplitViewDelegate: "NSSplitView",
-  NSCollectionViewDelegate: "NSCollectionView",
-  NSCollectionViewDataSource: "NSCollectionView",
-  NSGestureRecognizerDelegate: "NSGestureRecognizer",
-  NSAlertDelegate: "NSAlert",
-  NSSoundDelegate: "NSSound",
-  NSTabViewDelegate: "NSTabView",
-  NSBrowserDelegate: "NSBrowser",
-  NSComboBoxDelegate: "NSComboBox",
-  NSComboBoxDataSource: "NSComboBox",
-  // WebKit
-  WKNavigationDelegate: "WKNavigationDelegate",
-  WKUIDelegate: "WKUIDelegate",
-  WKScriptMessageHandler: "WKScriptMessageHandler",
-  WKDownloadDelegate: "WKDownload",
-  WKURLSchemeHandler: "WKURLSchemeHandler",
-};
-
-/**
- * Get the header file path for a protocol in a framework.
- * Uses PROTOCOL_HEADERS to find the correct header, falling back to the protocol name.
+ * Get the header file path for a protocol using discovered header mapping.
  */
 export function getProtocolHeaderPath(
   framework: FrameworkConfig,
   protocolName: string
 ): string {
-  const headerName = PROTOCOL_HEADERS[protocolName] ?? protocolName;
+  const headerName = framework.protocolHeaders.get(protocolName) ?? protocolName;
   return `${framework.headersPath}/${headerName}.h`;
 }

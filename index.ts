@@ -1,5 +1,11 @@
 import { getPointer, NobjcLibrary } from "objc-js";
-import { CGRect, createDelegate, NSApplication, NSString, NSWindow } from "./src";
+import {
+  CGRect,
+  createDelegate,
+  NSApplication,
+  NSString,
+  NSWindow,
+} from "./src";
 
 console.log("Hello via Bun!");
 

@@ -2,18 +2,24 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSData } from "./NSData.js";
+import type { _NSNetService } from "./NSNetService.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSOperationQueue } from "./NSOperationQueue.js";
 import type { _NSString } from "./NSString.js";
 import type { _NSURL } from "./NSURL.js";
 import type { _NSURLRequest } from "./NSURLRequest.js";
+import type { _NSURLSessionConfiguration } from "./NSURLSessionConfiguration.js";
 import type { _NSURLSessionDataTask } from "./NSURLSessionDataTask.js";
+import type { _NSURLSessionDownloadTask } from "./NSURLSessionDownloadTask.js";
+import type { _NSURLSessionStreamTask } from "./NSURLSessionStreamTask.js";
+import type { _NSURLSessionUploadTask } from "./NSURLSessionUploadTask.js";
+import type { _NSURLSessionWebSocketTask } from "./NSURLSessionWebSocketTask.js";
 
 export declare class _NSURLSession extends _NSObject {
   static alloc(): _NSURLSession;
   // Class methods
-  static sessionWithConfiguration$(configuration: NobjcObject): _NSURLSession;
-  static sessionWithConfiguration$delegate$delegateQueue$(configuration: NobjcObject, delegate: NobjcObject, queue: _NSOperationQueue | null): _NSURLSession;
+  static sessionWithConfiguration$(configuration: _NSURLSessionConfiguration): _NSURLSession;
+  static sessionWithConfiguration$delegate$delegateQueue$(configuration: _NSURLSessionConfiguration, delegate: NobjcObject, queue: _NSOperationQueue | null): _NSURLSession;
   static new(): _NSURLSession;
   static sharedSession(): _NSURLSession;
 
@@ -26,32 +32,32 @@ export declare class _NSURLSession extends _NSObject {
   getAllTasksWithCompletionHandler$(completionHandler: (...args: any[]) => any): void;
   dataTaskWithRequest$(request: _NSURLRequest): _NSURLSessionDataTask;
   dataTaskWithURL$(url: _NSURL): _NSURLSessionDataTask;
-  uploadTaskWithRequest$fromFile$(request: _NSURLRequest, fileURL: _NSURL): NobjcObject;
-  uploadTaskWithRequest$fromData$(request: _NSURLRequest, bodyData: _NSData): NobjcObject;
-  uploadTaskWithResumeData$(resumeData: _NSData): NobjcObject;
-  uploadTaskWithStreamedRequest$(request: _NSURLRequest): NobjcObject;
-  downloadTaskWithRequest$(request: _NSURLRequest): NobjcObject;
-  downloadTaskWithURL$(url: _NSURL): NobjcObject;
-  downloadTaskWithResumeData$(resumeData: _NSData): NobjcObject;
-  streamTaskWithHostName$port$(hostname: _NSString, port: number): NobjcObject;
-  streamTaskWithNetService$(service: NobjcObject): NobjcObject;
-  webSocketTaskWithURL$(url: _NSURL): NobjcObject;
-  webSocketTaskWithURL$protocols$(url: _NSURL, protocols: _NSArray): NobjcObject;
-  webSocketTaskWithRequest$(request: _NSURLRequest): NobjcObject;
+  uploadTaskWithRequest$fromFile$(request: _NSURLRequest, fileURL: _NSURL): _NSURLSessionUploadTask;
+  uploadTaskWithRequest$fromData$(request: _NSURLRequest, bodyData: _NSData): _NSURLSessionUploadTask;
+  uploadTaskWithResumeData$(resumeData: _NSData): _NSURLSessionUploadTask;
+  uploadTaskWithStreamedRequest$(request: _NSURLRequest): _NSURLSessionUploadTask;
+  downloadTaskWithRequest$(request: _NSURLRequest): _NSURLSessionDownloadTask;
+  downloadTaskWithURL$(url: _NSURL): _NSURLSessionDownloadTask;
+  downloadTaskWithResumeData$(resumeData: _NSData): _NSURLSessionDownloadTask;
+  streamTaskWithHostName$port$(hostname: _NSString, port: number): _NSURLSessionStreamTask;
+  streamTaskWithNetService$(service: _NSNetService): _NSURLSessionStreamTask;
+  webSocketTaskWithURL$(url: _NSURL): _NSURLSessionWebSocketTask;
+  webSocketTaskWithURL$protocols$(url: _NSURL, protocols: _NSArray): _NSURLSessionWebSocketTask;
+  webSocketTaskWithRequest$(request: _NSURLRequest): _NSURLSessionWebSocketTask;
   init(): _NSURLSession;
   dataTaskWithRequest$completionHandler$(request: _NSURLRequest, completionHandler: (...args: any[]) => any | null): _NSURLSessionDataTask;
   dataTaskWithURL$completionHandler$(url: _NSURL, completionHandler: (...args: any[]) => any | null): _NSURLSessionDataTask;
-  uploadTaskWithRequest$fromFile$completionHandler$(request: _NSURLRequest, fileURL: _NSURL, completionHandler: (...args: any[]) => any | null): NobjcObject;
-  uploadTaskWithRequest$fromData$completionHandler$(request: _NSURLRequest, bodyData: _NSData | null, completionHandler: (...args: any[]) => any | null): NobjcObject;
-  uploadTaskWithResumeData$completionHandler$(resumeData: _NSData, completionHandler: (...args: any[]) => any | null): NobjcObject;
-  downloadTaskWithRequest$completionHandler$(request: _NSURLRequest, completionHandler: (...args: any[]) => any | null): NobjcObject;
-  downloadTaskWithURL$completionHandler$(url: _NSURL, completionHandler: (...args: any[]) => any | null): NobjcObject;
-  downloadTaskWithResumeData$completionHandler$(resumeData: _NSData, completionHandler: (...args: any[]) => any | null): NobjcObject;
+  uploadTaskWithRequest$fromFile$completionHandler$(request: _NSURLRequest, fileURL: _NSURL, completionHandler: (...args: any[]) => any | null): _NSURLSessionUploadTask;
+  uploadTaskWithRequest$fromData$completionHandler$(request: _NSURLRequest, bodyData: _NSData | null, completionHandler: (...args: any[]) => any | null): _NSURLSessionUploadTask;
+  uploadTaskWithResumeData$completionHandler$(resumeData: _NSData, completionHandler: (...args: any[]) => any | null): _NSURLSessionUploadTask;
+  downloadTaskWithRequest$completionHandler$(request: _NSURLRequest, completionHandler: (...args: any[]) => any | null): _NSURLSessionDownloadTask;
+  downloadTaskWithURL$completionHandler$(url: _NSURL, completionHandler: (...args: any[]) => any | null): _NSURLSessionDownloadTask;
+  downloadTaskWithResumeData$completionHandler$(resumeData: _NSData, completionHandler: (...args: any[]) => any | null): _NSURLSessionDownloadTask;
 
   // Properties
   delegateQueue(): _NSOperationQueue;
   delegate(): NobjcObject;
-  configuration(): NobjcObject;
+  configuration(): _NSURLSessionConfiguration;
   sessionDescription(): _NSString | null;
   setSessionDescription$(value: _NSString | null): void;
 }

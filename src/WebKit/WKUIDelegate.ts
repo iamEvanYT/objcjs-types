@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _WKFrameInfo } from "./WKFrameInfo.js";
 import type { _WKNavigationAction } from "./WKNavigationAction.js";
+import type { _WKOpenPanelParameters } from "./WKOpenPanelParameters.js";
 import type { _WKSecurityOrigin } from "./WKSecurityOrigin.js";
 import type { _WKWebView } from "./WKWebView.js";
 import type { _WKWebViewConfiguration } from "./WKWebViewConfiguration.js";
@@ -17,5 +18,5 @@ export interface _WKUIDelegate {
   webView$runJavaScriptTextInputPanelWithPrompt$defaultText$initiatedByFrame$completionHandler$?(webView: _WKWebView, prompt: _NSString, defaultText: _NSString | null, frame: _WKFrameInfo, completionHandler: (...args: any[]) => any | null): void;
   webView$requestMediaCapturePermissionForOrigin$initiatedByFrame$type$decisionHandler$?(webView: _WKWebView, origin: _WKSecurityOrigin, frame: _WKFrameInfo, type: number, decisionHandler: (...args: any[]) => any): void;
   webView$requestDeviceOrientationAndMotionPermissionForOrigin$initiatedByFrame$decisionHandler$?(webView: _WKWebView, origin: _WKSecurityOrigin, frame: _WKFrameInfo, decisionHandler: (...args: any[]) => any): void;
-  webView$runOpenPanelWithParameters$initiatedByFrame$completionHandler$?(webView: _WKWebView, parameters: NobjcObject, frame: _WKFrameInfo, completionHandler: (...args: any[]) => any | null): void;
+  webView$runOpenPanelWithParameters$initiatedByFrame$completionHandler$?(webView: _WKWebView, parameters: _WKOpenPanelParameters, frame: _WKFrameInfo, completionHandler: (...args: any[]) => any | null): void;
 }

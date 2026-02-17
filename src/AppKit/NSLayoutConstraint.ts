@@ -4,6 +4,7 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSLayoutAnchor } from "./NSLayoutAnchor.js";
 
 export declare class _NSLayoutConstraint extends _NSObject {
   static alloc(): _NSLayoutConstraint;
@@ -24,8 +25,8 @@ export declare class _NSLayoutConstraint extends _NSObject {
   secondItem(): NobjcObject;
   firstAttribute(): number;
   secondAttribute(): number;
-  firstAnchor(): NobjcObject;
-  secondAnchor(): NobjcObject;
+  firstAnchor(): _NSLayoutAnchor;
+  secondAnchor(): _NSLayoutAnchor | null;
   relation(): number;
   multiplier(): number;
   constant(): number;

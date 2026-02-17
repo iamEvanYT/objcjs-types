@@ -248,10 +248,16 @@ export function emitClassFile(
     }
   }
 
-  // Build a set of parent member names with specific (non-NobjcObject) return types.
-  // If a subclass redeclares a member returning NobjcObject when the parent has a
-  // more specific type, we skip the override to avoid TypeScript assignment errors.
-  const parentSpecificMembers = new Set<string>();
+  // Build a map of parent member signatures (return type + param types) for override
+  // conflict detection. TypeScript requires override compatibility:
+  //   - Return types must be covariant (child return assignable to parent return)
+  //   - Parameter types must be contravariant (parent params assignable to child params)
+  // When the child's signature is incompatible, we skip the override entirely.
+  interface ParentSig {
+    returnType: string;
+    paramTypes: string[];
+  }
+  const parentSignatures = new Map<string, ParentSig>();
   if (allParsedClasses && cls.superclass) {
     let current = cls.superclass;
     while (current) {
@@ -259,22 +265,62 @@ export function emitClassFile(
       if (!parentCls) break;
       for (const prop of parentCls.properties) {
         const tsType = mapReturnType(prop.type, parentCls.name);
-        if (tsType !== "NobjcObject") {
-          parentSpecificMembers.add(prop.name);
+        if (!parentSignatures.has(prop.name)) {
+          parentSignatures.set(prop.name, { returnType: tsType, paramTypes: [] });
+        }
+        // Also track setter params for readwrite properties
+        if (!prop.readonly) {
+          const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
+          if (!parentSignatures.has(setterName)) {
+            const paramType = mapParamType(prop.type, parentCls.name);
+            parentSignatures.set(setterName, { returnType: "void", paramTypes: [paramType] });
+          }
         }
       }
       for (const method of [...parentCls.instanceMethods, ...parentCls.classMethods]) {
-        const tsType = mapReturnType(method.returnType, parentCls.name);
-        if (tsType !== "NobjcObject") {
-          parentSpecificMembers.add(selectorToJS(method.selector));
+        const jsName = selectorToJS(method.selector);
+        if (!parentSignatures.has(jsName)) {
+          const retType = mapReturnType(method.returnType, parentCls.name);
+          const paramTypes = method.parameters.map((p) => mapParamType(p.type, parentCls.name));
+          parentSignatures.set(jsName, { returnType: retType, paramTypes });
         }
       }
       current = parentCls.superclass ?? "";
     }
   }
 
-  function shouldSkipOverride(jsName: string, tsReturnType: string): boolean {
-    return tsReturnType === "NobjcObject" && parentSpecificMembers.has(jsName);
+  /**
+   * Check if a child method/property signature conflicts with its parent.
+   * Returns true if the override should be skipped to avoid TS errors.
+   */
+  function shouldSkipOverride(jsName: string, tsReturnType: string, childParamTypes?: string[]): boolean {
+    const parentSig = parentSignatures.get(jsName);
+    if (!parentSig) return false;
+
+    // Case 1: child returns NobjcObject but parent has a more specific type → skip
+    if (tsReturnType === "NobjcObject" && parentSig.returnType !== "NobjcObject") {
+      return true;
+    }
+
+    // Case 2: return type nullability conflict (child adds "| null" that parent doesn't have)
+    if (tsReturnType.includes(" | null") && !parentSig.returnType.includes(" | null")) {
+      return true;
+    }
+
+    // Case 3: parameter type conflicts
+    if (childParamTypes && parentSig.paramTypes.length === childParamTypes.length) {
+      for (let i = 0; i < childParamTypes.length; i++) {
+        const childParam = childParamTypes[i]!;
+        const parentParam = parentSig.paramTypes[i]!;
+        if (childParam === parentParam) continue;
+        // Any parameter type mismatch is a potential conflict — skip the override.
+        // (Proper contravariance checking would be complex; simple inequality works here
+        // because the generator already normalizes types consistently.)
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Split properties into class and instance
@@ -301,19 +347,22 @@ export function emitClassFile(
     for (const method of classMethods) {
       const jsName = selectorToJS(method.selector);
       const retType = mapReturnType(method.returnType, cls.name);
-      if (shouldSkipOverride(jsName, retType)) continue;
+      const paramTypes = method.parameters.map((p) => mapParamType(p.type, cls.name));
+      if (shouldSkipOverride(jsName, retType, paramTypes)) continue;
       const sig = emitMethodSignature(method, cls.name);
       if (sig) lines.push(sig);
     }
     for (const prop of nonDeprecatedClassProps) {
       const tsType = mapReturnType(prop.type, cls.name);
-      if (shouldSkipOverride(prop.name, tsType)) continue;
+      if (shouldSkipOverride(prop.name, tsType, [])) continue;
       lines.push(`  static ${prop.name}(): ${tsType};`);
       // Emit setter for readwrite class properties
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
         const paramType = mapParamType(prop.type, cls.name);
-        lines.push(`  static ${setterName}(value: ${paramType}): void;`);
+        if (!shouldSkipOverride(setterName, "void", [paramType])) {
+          lines.push(`  static ${setterName}(value: ${paramType}): void;`);
+        }
       }
     }
   }
@@ -335,7 +384,8 @@ export function emitClassFile(
     for (const method of regularMethods) {
       const jsName = selectorToJS(method.selector);
       const retType = mapReturnType(method.returnType, cls.name);
-      if (shouldSkipOverride(jsName, retType)) continue;
+      const paramTypes = method.parameters.map((p) => mapParamType(p.type, cls.name));
+      if (shouldSkipOverride(jsName, retType, paramTypes)) continue;
       const sig = emitMethodSignature(method, cls.name);
       if (sig) lines.push(sig);
     }
@@ -353,13 +403,15 @@ export function emitClassFile(
     lines.push("  // Properties");
     for (const prop of nonDeprecatedInstanceProps) {
       const tsType = mapReturnType(prop.type, cls.name);
-      if (shouldSkipOverride(prop.name, tsType)) continue;
+      if (shouldSkipOverride(prop.name, tsType, [])) continue;
       lines.push(`  ${prop.name}(): ${tsType};`);
       // Emit setter for readwrite properties
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
         const paramType = mapParamType(prop.type, cls.name);
-        lines.push(`  ${setterName}(value: ${paramType}): void;`);
+        if (!shouldSkipOverride(setterName, "void", [paramType])) {
+          lines.push(`  ${setterName}(value: ${paramType}): void;`);
+        }
       }
     }
   }

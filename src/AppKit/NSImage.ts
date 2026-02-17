@@ -10,6 +10,9 @@ import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSURL } from "../Foundation/NSURL.js";
 import type { _NSColor } from "./NSColor.js";
+import type { _NSGraphicsContext } from "./NSGraphicsContext.js";
+import type { _NSImageRep } from "./NSImageRep.js";
+import type { _NSImageSymbolConfiguration } from "./NSImageSymbolConfiguration.js";
 import type { _NSPasteboard } from "./NSPasteboard.js";
 import type { CGPoint, CGRect, CGSize, NSEdgeInsets } from "../structs.js";
 
@@ -47,23 +50,23 @@ export declare class _NSImage extends _NSObject {
   drawAtPoint$fromRect$operation$fraction$(point: CGPoint, fromRect: CGRect, op: number, delta: number): void;
   drawInRect$fromRect$operation$fraction$(rect: CGRect, fromRect: CGRect, op: number, delta: number): void;
   drawInRect$fromRect$operation$fraction$respectFlipped$hints$(dstSpacePortionRect: CGRect, srcSpacePortionRect: CGRect, op: number, requestedAlpha: number, respectContextIsFlipped: boolean, hints: _NSDictionary | null): void;
-  drawRepresentation$inRect$(imageRep: NobjcObject, rect: CGRect): boolean;
+  drawRepresentation$inRect$(imageRep: _NSImageRep, rect: CGRect): boolean;
   drawInRect$(rect: CGRect): void;
   recache(): void;
   TIFFRepresentationUsingCompression$factor$(comp: number, factor: number): _NSData | null;
   addRepresentations$(imageReps: _NSArray): void;
-  addRepresentation$(imageRep: NobjcObject): void;
-  removeRepresentation$(imageRep: NobjcObject): void;
+  addRepresentation$(imageRep: _NSImageRep): void;
+  removeRepresentation$(imageRep: _NSImageRep): void;
   initWithCGImage$size$(cgImage: number, size: CGSize): _NSImage;
-  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, referenceContext: NobjcObject, hints: _NSDictionary | null): number | null;
-  bestRepresentationForRect$context$hints$(rect: CGRect, referenceContext: NobjcObject, hints: _NSDictionary | null): NobjcObject;
-  hitTestRect$withImageDestinationRect$context$hints$flipped$(testRectDestSpace: CGRect, imageRectDestSpace: CGRect, context: NobjcObject, hints: _NSDictionary | null, flipped: boolean): boolean;
+  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, referenceContext: _NSGraphicsContext | null, hints: _NSDictionary | null): number | null;
+  bestRepresentationForRect$context$hints$(rect: CGRect, referenceContext: _NSGraphicsContext | null, hints: _NSDictionary | null): _NSImageRep | null;
+  hitTestRect$withImageDestinationRect$context$hints$flipped$(testRectDestSpace: CGRect, imageRectDestSpace: CGRect, context: _NSGraphicsContext | null, hints: _NSDictionary | null, flipped: boolean): boolean;
   recommendedLayerContentsScale$(preferredContentsScale: number): number;
   layerContentsForContentsScale$(layerContentsScale: number): NobjcObject;
-  imageWithSymbolConfiguration$(configuration: NobjcObject): _NSImage | null;
+  imageWithSymbolConfiguration$(configuration: _NSImageSymbolConfiguration): _NSImage | null;
   imageWithLocale$(locale: _NSLocale | null): _NSImage;
   initWithIconRef$(iconRef: NobjcObject): _NSImage;
-  bestRepresentationForDevice$(deviceDescription: _NSDictionary): NobjcObject;
+  bestRepresentationForDevice$(deviceDescription: _NSDictionary): _NSImageRep;
   lockFocus(): void;
   lockFocusFlipped$(flipped: boolean): void;
   unlockFocus(): void;
@@ -83,7 +86,7 @@ export declare class _NSImage extends _NSObject {
   compositeToPoint$fromRect$operation$(point: CGPoint, rect: CGRect, operation: number): void;
   compositeToPoint$operation$fraction$(point: CGPoint, operation: number, fraction: number): void;
   compositeToPoint$fromRect$operation$fraction$(point: CGPoint, rect: CGRect, operation: number, fraction: number): void;
-  lockFocusOnRepresentation$(imageRepresentation: NobjcObject): void;
+  lockFocusOnRepresentation$(imageRepresentation: _NSImageRep): void;
   cancelIncrementalLoad(): void;
 
   // Properties

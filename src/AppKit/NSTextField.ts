@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSColor } from "./NSColor.js";
 import type { _NSControl } from "./NSControl.js";
+import type { _NSText } from "./NSText.js";
 import type { _NSAttributedString } from "../Foundation/NSAttributedString.js";
 import type { _NSNotification } from "../Foundation/NSNotification.js";
 import type { _NSString } from "../Foundation/NSString.js";
@@ -18,8 +19,8 @@ export declare class _NSTextField extends _NSControl {
 
   // Instance methods
   selectText$(sender: NobjcObject): void;
-  textShouldBeginEditing$(textObject: NobjcObject): boolean;
-  textShouldEndEditing$(textObject: NobjcObject): boolean;
+  textShouldBeginEditing$(textObject: _NSText): boolean;
+  textShouldEndEditing$(textObject: _NSText): boolean;
   textDidBeginEditing$(notification: _NSNotification): void;
   textDidEndEditing$(notification: _NSNotification): void;
   textDidChange$(notification: _NSNotification): void;

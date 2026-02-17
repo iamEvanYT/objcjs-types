@@ -3,6 +3,8 @@ import type { NobjcObject } from "objc-js";
 import type { _NSControl } from "./NSControl.js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSImage } from "./NSImage.js";
+import type { _NSMatrix } from "./NSMatrix.js";
+import type { _NSScroller } from "./NSScroller.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSIndexPath } from "../Foundation/NSIndexPath.js";
 import type { _NSIndexSet } from "../Foundation/NSIndexSet.js";
@@ -70,12 +72,12 @@ export declare class _NSBrowser extends _NSControl {
   acceptsArrowKeys(): boolean;
   displayColumn$(column: number): void;
   displayAllColumns(): void;
-  scrollViaScroller$(sender: NobjcObject): void;
+  scrollViaScroller$(sender: _NSScroller): void;
   updateScroller(): void;
   setMatrixClass$(factoryId: NobjcObject): void;
   matrixClass(): NobjcObject;
-  columnOfMatrix$(matrix: NobjcObject): number;
-  matrixInColumn$(column: number): NobjcObject;
+  columnOfMatrix$(matrix: _NSMatrix): number;
+  matrixInColumn$(column: number): _NSMatrix | null;
 
   // Properties
   loaded(): boolean;

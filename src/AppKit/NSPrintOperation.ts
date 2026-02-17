@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSMutableData } from "../Foundation/NSMutableData.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSString } from "../Foundation/NSString.js";
+import type { _NSGraphicsContext } from "./NSGraphicsContext.js";
 import type { _NSPrintInfo } from "./NSPrintInfo.js";
 import type { _NSPrintPanel } from "./NSPrintPanel.js";
 import type { _NSView } from "./NSView.js";
@@ -28,7 +29,7 @@ export declare class _NSPrintOperation extends _NSObject {
   // Instance methods
   runOperationModalForWindow$delegate$didRunSelector$contextInfo$(docWindow: _NSWindow, delegate: NobjcObject, didRunSelector: string | null, contextInfo: NobjcObject): void;
   runOperation(): boolean;
-  createContext(): NobjcObject;
+  createContext(): _NSGraphicsContext | null;
   destroyContext(): void;
   deliverResult(): boolean;
   cleanUpOperation(): void;
@@ -59,7 +60,7 @@ export declare class _NSPrintOperation extends _NSObject {
   view(): _NSView | null;
   printInfo(): _NSPrintInfo;
   setPrintInfo$(value: _NSPrintInfo): void;
-  context(): NobjcObject;
+  context(): _NSGraphicsContext | null;
   pageRange(): NSRange;
   currentPage(): number;
 }

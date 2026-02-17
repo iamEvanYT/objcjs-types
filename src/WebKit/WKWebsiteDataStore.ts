@@ -5,6 +5,7 @@ import type { _NSData } from "../Foundation/NSData.js";
 import type { _NSDate } from "../Foundation/NSDate.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
+import type { _NSUUID } from "../Foundation/NSUUID.js";
 import type { _WKHTTPCookieStore } from "./WKHTTPCookieStore.js";
 
 export declare class _WKWebsiteDataStore extends _NSObject {
@@ -15,8 +16,8 @@ export declare class _WKWebsiteDataStore extends _NSObject {
   static defaultDataStore(): _WKWebsiteDataStore;
   static nonPersistentDataStore(): _WKWebsiteDataStore;
   static allWebsiteDataTypes(): _NSSet;
-  static dataStoreForIdentifier$(identifier: NobjcObject): _WKWebsiteDataStore;
-  static removeDataStoreForIdentifier$completionHandler$(identifier: NobjcObject, completionHandler: (...args: any[]) => any | null): void;
+  static dataStoreForIdentifier$(identifier: _NSUUID): _WKWebsiteDataStore;
+  static removeDataStoreForIdentifier$completionHandler$(identifier: _NSUUID, completionHandler: (...args: any[]) => any | null): void;
   static fetchAllDataStoreIdentifiers$(completionHandler: (...args: any[]) => any): void;
 
   // Instance methods
@@ -29,7 +30,7 @@ export declare class _WKWebsiteDataStore extends _NSObject {
   // Properties
   persistent(): boolean;
   httpCookieStore(): _WKHTTPCookieStore;
-  identifier(): NobjcObject;
+  identifier(): _NSUUID | null;
   proxyConfigurations(): NobjcObject;
   setProxyConfigurations$(value: NobjcObject): void;
 }

@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSEvent } from "./NSEvent.js";
 import type { _NSGestureRecognizer } from "./NSGestureRecognizer.js";
+import type { _NSTouch } from "./NSTouch.js";
 
 export interface _NSGestureRecognizerDelegate {
   // Instance methods
@@ -10,5 +11,5 @@ export interface _NSGestureRecognizerDelegate {
   gestureRecognizer$shouldRecognizeSimultaneouslyWithGestureRecognizer$?(gestureRecognizer: _NSGestureRecognizer, otherGestureRecognizer: _NSGestureRecognizer): boolean;
   gestureRecognizer$shouldRequireFailureOfGestureRecognizer$?(gestureRecognizer: _NSGestureRecognizer, otherGestureRecognizer: _NSGestureRecognizer): boolean;
   gestureRecognizer$shouldBeRequiredToFailByGestureRecognizer$?(gestureRecognizer: _NSGestureRecognizer, otherGestureRecognizer: _NSGestureRecognizer): boolean;
-  gestureRecognizer$shouldReceiveTouch$?(gestureRecognizer: _NSGestureRecognizer, touch: NobjcObject): boolean;
+  gestureRecognizer$shouldReceiveTouch$?(gestureRecognizer: _NSGestureRecognizer, touch: _NSTouch): boolean;
 }

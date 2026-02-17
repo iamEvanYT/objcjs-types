@@ -4,6 +4,7 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSNotification } from "../Foundation/NSNotification.js";
 import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSControl } from "./NSControl.js";
+import type { _NSText } from "./NSText.js";
 import type { _NSTextView } from "./NSTextView.js";
 import type { NSRange } from "../structs.js";
 
@@ -12,8 +13,8 @@ export interface _NSControlTextEditingDelegate {
   controlTextDidBeginEditing$?(obj: _NSNotification): void;
   controlTextDidEndEditing$?(obj: _NSNotification): void;
   controlTextDidChange$?(obj: _NSNotification): void;
-  control$textShouldBeginEditing$?(control: _NSControl, fieldEditor: NobjcObject): boolean;
-  control$textShouldEndEditing$?(control: _NSControl, fieldEditor: NobjcObject): boolean;
+  control$textShouldBeginEditing$?(control: _NSControl, fieldEditor: _NSText): boolean;
+  control$textShouldEndEditing$?(control: _NSControl, fieldEditor: _NSText): boolean;
   control$didFailToFormatString$errorDescription$?(control: _NSControl, string_: _NSString, error: _NSString | null): boolean;
   control$didFailToValidatePartialString$errorDescription$?(control: _NSControl, string_: _NSString, error: _NSString | null): void;
   control$isValidObject$?(control: _NSControl, obj: NobjcObject): boolean;

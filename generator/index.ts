@@ -9,9 +9,10 @@
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { FRAMEWORKS, getHeaderPath, getProtocolHeaderPath } from "./frameworks.ts";
+import { FRAMEWORK_BASES, getHeaderPath, getProtocolHeaderPath, type FrameworkConfig } from "./frameworks.ts";
+import { discoverFramework } from "./discover.ts";
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
-import { parseAST, parseProtocols, type ObjCClass, type ObjCProtocol } from "./ast-parser.ts";
+import { parseAST, parseProtocols, type ObjCClass } from "./ast-parser.ts";
 import { setKnownClasses } from "./type-mapper.ts";
 import {
   emitClassFile,
@@ -26,9 +27,50 @@ const SRC_DIR = join(import.meta.dir, "..", "src");
 async function main(): Promise<void> {
   console.log("=== objcjs-types generator ===\n");
 
+  // --- Discovery phase: scan headers to find all classes and protocols ---
+  console.log("Discovering classes and protocols from headers...");
+  const frameworks: FrameworkConfig[] = [];
+  for (const base of FRAMEWORK_BASES) {
+    const discovery = await discoverFramework(base.headersPath);
+
+    // Filter out protocols whose names clash with class names (e.g., NSObject)
+    // to avoid generating both a class type and protocol interface with the same _Name.
+    for (const protoName of discovery.protocols.keys()) {
+      if (discovery.classes.has(protoName)) {
+        discovery.protocols.delete(protoName);
+      }
+    }
+
+    // Add extraHeaders classes to the discovered set. Some classes (e.g., NSObject)
+    // are declared in runtime headers outside the framework's Headers/ directory,
+    // so header scanning won't find them. They still need to be in the class list
+    // for emission and for allKnownClasses (used by the emitter to resolve superclasses).
+    if (base.extraHeaders) {
+      for (const className of Object.keys(base.extraHeaders)) {
+        if (!discovery.classes.has(className)) {
+          discovery.classes.set(className, className);
+        }
+      }
+    }
+
+    const fw: FrameworkConfig = {
+      ...base,
+      classes: [...discovery.classes.keys()].sort(),
+      protocols: [...discovery.protocols.keys()].sort(),
+      classHeaders: discovery.classes,
+      protocolHeaders: discovery.protocols,
+    };
+    frameworks.push(fw);
+
+    console.log(
+      `  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols`
+    );
+  }
+  console.log("");
+
   // Collect all known classes across all frameworks
   const allKnownClasses = new Set<string>();
-  for (const fw of FRAMEWORKS) {
+  for (const fw of frameworks) {
     for (const cls of fw.classes) {
       allKnownClasses.add(cls);
     }
@@ -37,8 +79,8 @@ async function main(): Promise<void> {
 
   // Collect all known protocol names across all frameworks
   const allKnownProtocols = new Set<string>();
-  for (const fw of FRAMEWORKS) {
-    for (const proto of fw.protocols ?? []) {
+  for (const fw of frameworks) {
+    for (const proto of fw.protocols) {
       allKnownProtocols.add(proto);
     }
   }
@@ -50,7 +92,7 @@ async function main(): Promise<void> {
   const generatedProtocolsByFramework = new Map<string, string[]>();
 
   // Process each framework
-  for (const framework of FRAMEWORKS) {
+  for (const framework of frameworks) {
     console.log(`\n--- Processing ${framework.name} ---`);
 
     const frameworkDir = join(SRC_DIR, framework.name);
@@ -184,7 +226,7 @@ async function main(): Promise<void> {
       const content = emitClassFile(
         cls,
         framework,
-        FRAMEWORKS,
+        frameworks,
         allKnownClasses,
         allParsedClasses
       );
@@ -194,7 +236,7 @@ async function main(): Promise<void> {
     }
 
     // Parse and emit protocol files
-    const frameworkProtocols = framework.protocols ?? [];
+    const frameworkProtocols = framework.protocols;
     const generatedProtocols: string[] = [];
 
     if (frameworkProtocols.length > 0) {
@@ -247,7 +289,7 @@ async function main(): Promise<void> {
             const content = emitProtocolFile(
               proto,
               framework,
-              FRAMEWORKS,
+              frameworks,
               allKnownClasses,
               allKnownProtocols
             );
@@ -279,11 +321,11 @@ async function main(): Promise<void> {
   }
 
   // Emit delegates file (ProtocolMap + createDelegate)
-  const delegatesContent = emitDelegatesFile(FRAMEWORKS, generatedProtocolsByFramework);
+  const delegatesContent = emitDelegatesFile(frameworks, generatedProtocolsByFramework);
   await writeFile(join(SRC_DIR, "delegates.ts"), delegatesContent);
 
   // Emit top-level index
-  const topIndex = emitTopLevelIndex(FRAMEWORKS.map((f) => f.name));
+  const topIndex = emitTopLevelIndex(frameworks.map((f) => f.name));
   await writeFile(join(SRC_DIR, "index.ts"), topIndex);
 
   console.log("\n=== Generation complete ===");
@@ -291,12 +333,12 @@ async function main(): Promise<void> {
   // Print summary
   let totalClasses = 0;
   let totalProtocols = 0;
-  for (const fw of FRAMEWORKS) {
+  for (const fw of frameworks) {
     const dir = join(SRC_DIR, fw.name);
     const classCount = fw.classes.filter((c) =>
       existsSync(join(dir, `${c}.ts`))
     ).length;
-    const protoCount = (fw.protocols ?? []).filter((p) =>
+    const protoCount = fw.protocols.filter((p) =>
       existsSync(join(dir, `${p}.ts`))
     ).length;
     console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols`);

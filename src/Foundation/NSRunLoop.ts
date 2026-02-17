@@ -3,6 +3,7 @@ import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "./NSArray.js";
 import type { _NSDate } from "./NSDate.js";
 import type { _NSObject } from "./NSObject.js";
+import type { _NSPort } from "./NSPort.js";
 import type { _NSTimer } from "./NSTimer.js";
 
 export declare class _NSRunLoop extends _NSObject {
@@ -16,8 +17,8 @@ export declare class _NSRunLoop extends _NSObject {
   // Instance methods
   getCFRunLoop(): number;
   addTimer$forMode$(timer: _NSTimer, mode: number): void;
-  addPort$forMode$(aPort: NobjcObject, mode: number): void;
-  removePort$forMode$(aPort: NobjcObject, mode: number): void;
+  addPort$forMode$(aPort: _NSPort, mode: number): void;
+  removePort$forMode$(aPort: _NSPort, mode: number): void;
   limitDateForMode$(mode: number): _NSDate | null;
   acceptInputForMode$beforeDate$(mode: number, limitDate: _NSDate): void;
   run(): void;
