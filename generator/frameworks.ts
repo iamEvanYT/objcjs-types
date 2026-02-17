@@ -1,8 +1,11 @@
 /**
- * Framework configuration for the generator.
- * Defines which frameworks to generate typings for.
- * Classes and protocols are auto-discovered from header files at generation time.
+ * Framework configuration and auto-discovery.
+ * Scans the macOS SDK to find all ObjC frameworks with headers,
+ * then builds configuration objects for each.
  */
+
+import { readdir } from "fs/promises";
+import { existsSync } from "fs";
 
 /** Static framework configuration — just paths and optional overrides. */
 export interface FrameworkBase {
@@ -30,33 +33,72 @@ export interface FrameworkConfig extends FrameworkBase {
   protocolHeaders: Map<string, string>;
 }
 
-const SDK_PATH =
+export const SDK_PATH =
   "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
 
-export const FRAMEWORK_BASES: FrameworkBase[] = [
-  {
-    name: "Foundation",
-    libraryPath:
-      "/System/Library/Frameworks/Foundation.framework/Foundation",
-    headersPath: `${SDK_PATH}/System/Library/Frameworks/Foundation.framework/Headers`,
-    extraHeaders: {
-      // alloc, init, new, copy, isKindOfClass:, respondsToSelector:, etc.
-      // are defined in the ObjC runtime header, not the Foundation NSObject.h
-      NSObject: `${SDK_PATH}/usr/include/objc/NSObject.h`,
-    },
+const FRAMEWORKS_DIR = `${SDK_PATH}/System/Library/Frameworks`;
+
+// --- Edge-case overrides for specific frameworks ---
+
+/** Extra headers to parse for additional class members (class name → path). */
+const EXTRA_HEADERS: Record<string, Record<string, string>> = {
+  Foundation: {
+    // alloc, init, new, copy, isKindOfClass:, respondsToSelector:, etc.
+    // are defined in the ObjC runtime header, not the Foundation NSObject.h
+    NSObject: `${SDK_PATH}/usr/include/objc/NSObject.h`,
   },
-  {
-    name: "AppKit",
-    libraryPath: "/System/Library/Frameworks/AppKit.framework/AppKit",
-    headersPath: `${SDK_PATH}/System/Library/Frameworks/AppKit.framework/Headers`,
-  },
-  {
-    name: "WebKit",
-    libraryPath: "/System/Library/Frameworks/WebKit.framework/WebKit",
-    headersPath: `${SDK_PATH}/System/Library/Frameworks/WebKit.framework/Headers`,
-    preIncludes: ["WebKit/WKFoundation.h"],
-  },
-];
+};
+
+/** Additional pre-includes for fallback clang mode (without -fmodules). */
+const PRE_INCLUDES: Record<string, string[]> = {
+  WebKit: ["WebKit/WKFoundation.h"],
+};
+
+/**
+ * Discover all ObjC frameworks in the macOS SDK.
+ * Scans the Frameworks directory for .framework bundles that have
+ * a Headers/ directory with .h files. Returns FrameworkBase configs
+ * with paths derived from the standard bundle structure.
+ *
+ * Foundation is always sorted first (it's the universal base framework).
+ */
+export async function discoverAllFrameworks(): Promise<FrameworkBase[]> {
+  const entries = await readdir(FRAMEWORKS_DIR);
+  const frameworks: FrameworkBase[] = [];
+
+  for (const entry of entries) {
+    if (!entry.endsWith(".framework")) continue;
+    // Skip private/internal frameworks (underscore-prefixed)
+    if (entry.startsWith("_")) continue;
+
+    const name = entry.slice(0, -".framework".length);
+    const headersPath = `${FRAMEWORKS_DIR}/${entry}/Headers`;
+
+    // Must have a Headers directory with .h files
+    if (!existsSync(headersPath)) continue;
+    const headers = await readdir(headersPath);
+    if (!headers.some((h) => h.endsWith(".h"))) continue;
+
+    const fw: FrameworkBase = {
+      name,
+      libraryPath: `/System/Library/Frameworks/${entry}/${name}`,
+      headersPath,
+      ...(EXTRA_HEADERS[name] ? { extraHeaders: EXTRA_HEADERS[name] } : {}),
+      ...(PRE_INCLUDES[name] ? { preIncludes: PRE_INCLUDES[name] } : {}),
+    };
+
+    frameworks.push(fw);
+  }
+
+  // Foundation first (universal base), then alphabetical
+  frameworks.sort((a, b) => {
+    if (a.name === "Foundation") return -1;
+    if (b.name === "Foundation") return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return frameworks;
+}
 
 /**
  * Get the header file path for a class using discovered header mapping.

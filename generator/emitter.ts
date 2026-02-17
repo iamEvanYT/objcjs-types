@@ -909,6 +909,9 @@ export function emitFrameworkIndex(
 
 /**
  * Generate the top-level src/index.ts barrel.
+ * Only exports structs and delegates — frameworks are imported via
+ * subpath exports (e.g., "objcjs-types/AppKit") to avoid loading
+ * all framework types into the editor at once.
  */
 export function emitTopLevelIndex(frameworkNames: string[]): string {
   const lines: string[] = [];
@@ -916,9 +919,6 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   lines.push("");
 
   lines.push(`export * from "./structs.js";`);
-  for (const fw of frameworkNames) {
-    lines.push(`export * from "./${fw}/index.js";`);
-  }
   lines.push(`export { createDelegate } from "./delegates.js";`);
   lines.push(`export type { ProtocolMap } from "./delegates.js";`);
   lines.push("");

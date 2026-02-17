@@ -9,7 +9,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { FRAMEWORK_BASES, getHeaderPath, getProtocolHeaderPath, type FrameworkConfig } from "./frameworks.ts";
+import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, type FrameworkConfig } from "./frameworks.ts";
 import { discoverFramework } from "./discover.ts";
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
 import { parseAST, parseProtocols, type ObjCClass } from "./ast-parser.ts";
@@ -28,10 +28,15 @@ const SRC_DIR = join(import.meta.dir, "..", "src");
 async function main(): Promise<void> {
   console.log("=== objcjs-types generator ===\n");
 
-  // --- Discovery phase: scan headers to find all classes and protocols ---
+  // --- Framework discovery: find all ObjC frameworks in the SDK ---
+  console.log("Discovering frameworks from SDK...");
+  const allBases = await discoverAllFrameworks();
+  console.log(`  Found ${allBases.length} frameworks with headers\n`);
+
+  // --- Class/protocol discovery: scan headers for each framework ---
   console.log("Discovering classes and protocols from headers...");
   const frameworks: FrameworkConfig[] = [];
-  for (const base of FRAMEWORK_BASES) {
+  for (const base of allBases) {
     const discovery = await discoverFramework(base.headersPath);
 
     // Filter out protocols whose names clash with class names (e.g., NSObject)
@@ -53,6 +58,9 @@ async function main(): Promise<void> {
         }
       }
     }
+
+    // Skip frameworks with no ObjC classes or protocols
+    if (discovery.classes.size === 0 && discovery.protocols.size === 0) continue;
 
     const fw: FrameworkConfig = {
       ...base,

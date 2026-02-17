@@ -5,9 +5,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./Foundation": "./src/Foundation/index.ts",
-    "./AppKit": "./src/AppKit/index.ts",
-    "./WebKit": "./src/WebKit/index.ts"
+    "./delegates": "./src/delegates.ts",
+    "./*": "./src/*/index.ts"
   },
   "scripts": {
     "clear": "rm -rf src",
