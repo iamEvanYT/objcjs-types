@@ -338,3 +338,72 @@ export type { _NSPrintOperation };
 import type { _NSPrintPanel } from "./NSPrintPanel.js";
 export const NSPrintPanel = AppKit["NSPrintPanel"] as unknown as typeof _NSPrintPanel;
 export type { _NSPrintPanel };
+
+import type { _NSApplicationDelegate } from "./NSApplicationDelegate.js";
+export type { _NSApplicationDelegate };
+
+import type { _NSWindowDelegate } from "./NSWindowDelegate.js";
+export type { _NSWindowDelegate };
+
+import type { _NSTableViewDelegate } from "./NSTableViewDelegate.js";
+export type { _NSTableViewDelegate };
+
+import type { _NSTableViewDataSource } from "./NSTableViewDataSource.js";
+export type { _NSTableViewDataSource };
+
+import type { _NSOutlineViewDelegate } from "./NSOutlineViewDelegate.js";
+export type { _NSOutlineViewDelegate };
+
+import type { _NSOutlineViewDataSource } from "./NSOutlineViewDataSource.js";
+export type { _NSOutlineViewDataSource };
+
+import type { _NSTextFieldDelegate } from "./NSTextFieldDelegate.js";
+export type { _NSTextFieldDelegate };
+
+import type { _NSTextViewDelegate } from "./NSTextViewDelegate.js";
+export type { _NSTextViewDelegate };
+
+import type { _NSTextDelegate } from "./NSTextDelegate.js";
+export type { _NSTextDelegate };
+
+import type { _NSControlTextEditingDelegate } from "./NSControlTextEditingDelegate.js";
+export type { _NSControlTextEditingDelegate };
+
+import type { _NSMenuDelegate } from "./NSMenuDelegate.js";
+export type { _NSMenuDelegate };
+
+import type { _NSMenuItemValidation } from "./NSMenuItemValidation.js";
+export type { _NSMenuItemValidation };
+
+import type { _NSToolbarDelegate } from "./NSToolbarDelegate.js";
+export type { _NSToolbarDelegate };
+
+import type { _NSSplitViewDelegate } from "./NSSplitViewDelegate.js";
+export type { _NSSplitViewDelegate };
+
+import type { _NSCollectionViewDelegate } from "./NSCollectionViewDelegate.js";
+export type { _NSCollectionViewDelegate };
+
+import type { _NSCollectionViewDataSource } from "./NSCollectionViewDataSource.js";
+export type { _NSCollectionViewDataSource };
+
+import type { _NSGestureRecognizerDelegate } from "./NSGestureRecognizerDelegate.js";
+export type { _NSGestureRecognizerDelegate };
+
+import type { _NSAlertDelegate } from "./NSAlertDelegate.js";
+export type { _NSAlertDelegate };
+
+import type { _NSSoundDelegate } from "./NSSoundDelegate.js";
+export type { _NSSoundDelegate };
+
+import type { _NSTabViewDelegate } from "./NSTabViewDelegate.js";
+export type { _NSTabViewDelegate };
+
+import type { _NSBrowserDelegate } from "./NSBrowserDelegate.js";
+export type { _NSBrowserDelegate };
+
+import type { _NSComboBoxDelegate } from "./NSComboBoxDelegate.js";
+export type { _NSComboBoxDelegate };
+
+import type { _NSComboBoxDataSource } from "./NSComboBoxDataSource.js";
+export type { _NSComboBoxDataSource };

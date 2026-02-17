@@ -1,5 +1,5 @@
 import { getPointer, NobjcLibrary } from "objc-js";
-import { CGRect, NSApplication, NSString, NSWindow } from "./src";
+import { CGRect, createDelegate, NSApplication, NSString, NSWindow } from "./src";
 
 console.log("Hello via Bun!");
 
@@ -45,4 +45,18 @@ console.log(`NSView pointer: 0x${pointer.toString(16)}`);
 
 // Start the application run loop to keep the window open
 const app = NSApplication.sharedApplication();
+
+// Create a type-safe window delegate using protocol types.
+// createDelegate() infers method names and parameter types from the protocol name.
+const delegate = createDelegate("NSWindowDelegate", {
+  windowDidResize$(notification) {
+    console.log("Window resized!");
+  },
+  windowWillClose$(notification) {
+    console.log("Window closing, terminating app...");
+    app.terminate$(null as any);
+  },
+});
+window.setDelegate$(delegate);
+
 app.run();

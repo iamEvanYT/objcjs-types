@@ -12,6 +12,8 @@ export interface FrameworkConfig {
   headersPath: string;
   /** List of class names to generate (each maps to a .h file) */
   classes: string[];
+  /** List of protocol names to generate (each maps to a .h file) */
+  protocols?: string[];
   /** Optional pre-includes for fallback clang mode (without -fmodules) */
   preIncludes?: string[];
   /** Extra headers to parse for additional class members (class name → absolute path) */
@@ -106,6 +108,17 @@ export const FRAMEWORKS: FrameworkConfig[] = [
       "NSTask",
       "NSFileHandle",
     ],
+    protocols: [
+      "NSCopying",
+      "NSMutableCopying",
+      "NSCoding",
+      "NSSecureCoding",
+      "NSCacheDelegate",
+      "NSFileManagerDelegate",
+      "NSURLSessionDelegate",
+      "NSURLSessionTaskDelegate",
+      "NSURLSessionDataDelegate",
+    ],
   },
   {
     name: "AppKit",
@@ -197,6 +210,31 @@ export const FRAMEWORKS: FrameworkConfig[] = [
       "NSPrintOperation",
       "NSPrintPanel",
     ],
+    protocols: [
+      "NSApplicationDelegate",
+      "NSWindowDelegate",
+      "NSTableViewDelegate",
+      "NSTableViewDataSource",
+      "NSOutlineViewDelegate",
+      "NSOutlineViewDataSource",
+      "NSTextFieldDelegate",
+      "NSTextViewDelegate",
+      "NSTextDelegate",
+      "NSControlTextEditingDelegate",
+      "NSMenuDelegate",
+      "NSMenuItemValidation",
+      "NSToolbarDelegate",
+      "NSSplitViewDelegate",
+      "NSCollectionViewDelegate",
+      "NSCollectionViewDataSource",
+      "NSGestureRecognizerDelegate",
+      "NSAlertDelegate",
+      "NSSoundDelegate",
+      "NSTabViewDelegate",
+      "NSBrowserDelegate",
+      "NSComboBoxDelegate",
+      "NSComboBoxDataSource",
+    ],
   },
   {
     name: "WebKit",
@@ -229,6 +267,13 @@ export const FRAMEWORKS: FrameworkConfig[] = [
       "WKFindConfiguration",
       "WKFindResult",
       "WKPDFConfiguration",
+    ],
+    protocols: [
+      "WKNavigationDelegate",
+      "WKUIDelegate",
+      "WKScriptMessageHandler",
+      "WKDownloadDelegate",
+      "WKURLSchemeHandler",
     ],
   },
 ];
@@ -286,5 +331,65 @@ export function getHeaderPath(
   className: string
 ): string {
   const headerName = SHARED_HEADERS[className] ?? className;
+  return `${framework.headersPath}/${headerName}.h`;
+}
+
+/**
+ * Maps protocol names to the header file that declares them.
+ * Most delegate protocols live in the header of the class they're associated with.
+ * Protocols not listed here are assumed to have their own header file.
+ */
+export const PROTOCOL_HEADERS: Record<string, string> = {
+  // Foundation
+  NSCopying: "NSObject",
+  NSMutableCopying: "NSObject",
+  NSCoding: "NSObject",
+  NSSecureCoding: "NSObject",
+  NSCacheDelegate: "NSCache",
+  NSFileManagerDelegate: "NSFileManager",
+  NSURLSessionDelegate: "NSURLSession",
+  NSURLSessionTaskDelegate: "NSURLSession",
+  NSURLSessionDataDelegate: "NSURLSession",
+  // AppKit
+  NSApplicationDelegate: "NSApplication",
+  NSWindowDelegate: "NSWindow",
+  NSTableViewDelegate: "NSTableView",
+  NSTableViewDataSource: "NSTableView",
+  NSOutlineViewDelegate: "NSOutlineView",
+  NSOutlineViewDataSource: "NSOutlineView",
+  NSTextFieldDelegate: "NSTextField",
+  NSTextViewDelegate: "NSTextView",
+  NSTextDelegate: "NSText",
+  NSControlTextEditingDelegate: "NSControl",
+  NSMenuDelegate: "NSMenu",
+  NSMenuItemValidation: "NSMenu",
+  NSToolbarDelegate: "NSToolbar",
+  NSSplitViewDelegate: "NSSplitView",
+  NSCollectionViewDelegate: "NSCollectionView",
+  NSCollectionViewDataSource: "NSCollectionView",
+  NSGestureRecognizerDelegate: "NSGestureRecognizer",
+  NSAlertDelegate: "NSAlert",
+  NSSoundDelegate: "NSSound",
+  NSTabViewDelegate: "NSTabView",
+  NSBrowserDelegate: "NSBrowser",
+  NSComboBoxDelegate: "NSComboBox",
+  NSComboBoxDataSource: "NSComboBox",
+  // WebKit
+  WKNavigationDelegate: "WKNavigationDelegate",
+  WKUIDelegate: "WKUIDelegate",
+  WKScriptMessageHandler: "WKScriptMessageHandler",
+  WKDownloadDelegate: "WKDownload",
+  WKURLSchemeHandler: "WKURLSchemeHandler",
+};
+
+/**
+ * Get the header file path for a protocol in a framework.
+ * Uses PROTOCOL_HEADERS to find the correct header, falling back to the protocol name.
+ */
+export function getProtocolHeaderPath(
+  framework: FrameworkConfig,
+  protocolName: string
+): string {
+  const headerName = PROTOCOL_HEADERS[protocolName] ?? protocolName;
   return `${framework.headersPath}/${headerName}.h`;
 }

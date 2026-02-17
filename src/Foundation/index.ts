@@ -290,3 +290,30 @@ export type { _NSTask };
 import type { _NSFileHandle } from "./NSFileHandle.js";
 export const NSFileHandle = Foundation["NSFileHandle"] as unknown as typeof _NSFileHandle;
 export type { _NSFileHandle };
+
+import type { _NSCopying } from "./NSCopying.js";
+export type { _NSCopying };
+
+import type { _NSMutableCopying } from "./NSMutableCopying.js";
+export type { _NSMutableCopying };
+
+import type { _NSCoding } from "./NSCoding.js";
+export type { _NSCoding };
+
+import type { _NSSecureCoding } from "./NSSecureCoding.js";
+export type { _NSSecureCoding };
+
+import type { _NSCacheDelegate } from "./NSCacheDelegate.js";
+export type { _NSCacheDelegate };
+
+import type { _NSFileManagerDelegate } from "./NSFileManagerDelegate.js";
+export type { _NSFileManagerDelegate };
+
+import type { _NSURLSessionDelegate } from "./NSURLSessionDelegate.js";
+export type { _NSURLSessionDelegate };
+
+import type { _NSURLSessionTaskDelegate } from "./NSURLSessionTaskDelegate.js";
+export type { _NSURLSessionTaskDelegate };
+
+import type { _NSURLSessionDataDelegate } from "./NSURLSessionDataDelegate.js";
+export type { _NSURLSessionDataDelegate };

@@ -2,7 +2,7 @@
  * Generates TypeScript declaration files from parsed ObjC class data.
  */
 
-import type { ObjCClass, ObjCMethod } from "./ast-parser.ts";
+import type { ObjCClass, ObjCMethod, ObjCProtocol } from "./ast-parser.ts";
 import type { FrameworkConfig } from "./frameworks.ts";
 import {
   selectorToJS,
@@ -371,11 +371,233 @@ export function emitClassFile(
 }
 
 /**
+ * Given an ObjCProtocol, determine which struct type names it references.
+ */
+function collectProtocolReferencedStructs(proto: ObjCProtocol): Set<string> {
+  const refs = new Set<string>();
+
+  function extractStructRefs(typeStr: string): void {
+    for (const structName of STRUCT_TS_TYPES) {
+      if (typeStr === structName || typeStr.startsWith(structName + " ")) {
+        refs.add(structName);
+      }
+    }
+  }
+
+  const allMethods = [...proto.instanceMethods, ...proto.classMethods];
+  for (const method of allMethods) {
+    extractStructRefs(mapReturnType(method.returnType, proto.name));
+    for (const param of method.parameters) {
+      extractStructRefs(mapParamType(param.type, proto.name));
+    }
+  }
+  for (const prop of proto.properties) {
+    extractStructRefs(mapReturnType(prop.type, proto.name));
+    extractStructRefs(mapParamType(prop.type, proto.name));
+  }
+
+  return refs;
+}
+
+/**
+ * Given an ObjCProtocol, determine which other class names it references.
+ */
+function collectProtocolReferencedClasses(
+  proto: ObjCProtocol,
+  allKnownClasses: Set<string>
+): Set<string> {
+  const refs = new Set<string>();
+
+  function extractClassRefs(typeStr: string): void {
+    const regex = /_(\w+)/g;
+    let match;
+    while ((match = regex.exec(typeStr)) !== null) {
+      const name = match[1]!;
+      if (allKnownClasses.has(name)) {
+        refs.add(name);
+      }
+    }
+  }
+
+  const allMethods = [...proto.instanceMethods, ...proto.classMethods];
+  for (const method of allMethods) {
+    const retType = mapReturnType(method.returnType, proto.name);
+    extractClassRefs(retType);
+    for (const param of method.parameters) {
+      const pType = mapParamType(param.type, proto.name);
+      extractClassRefs(pType);
+    }
+  }
+
+  for (const prop of proto.properties) {
+    const pType = mapReturnType(prop.type, proto.name);
+    extractClassRefs(pType);
+  }
+
+  return refs;
+}
+
+/**
+ * Generate a .ts file for a single ObjC protocol.
+ * Protocols are emitted as TypeScript interfaces with optional methods,
+ * representing the method map shape for NobjcProtocol.implement().
+ */
+export function emitProtocolFile(
+  proto: ObjCProtocol,
+  currentFramework: FrameworkConfig,
+  allFrameworks: FrameworkConfig[],
+  allKnownClasses: Set<string>,
+  allKnownProtocols: Set<string>
+): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push(`import type { NobjcObject } from "objc-js";`);
+
+  // Collect referenced classes for imports
+  const refs = collectProtocolReferencedClasses(proto, allKnownClasses);
+
+  // Group refs by framework
+  const importsByFramework = new Map<string, string[]>();
+  for (const refClass of refs) {
+    const fw = getClassFramework(refClass, allFrameworks);
+    if (!fw) continue;
+    if (!importsByFramework.has(fw)) {
+      importsByFramework.set(fw, []);
+    }
+    importsByFramework.get(fw)!.push(refClass);
+  }
+
+  // Emit class imports
+  for (const [fwName, classes] of importsByFramework) {
+    classes.sort();
+    for (const refClass of classes) {
+      if (fwName === currentFramework.name) {
+        lines.push(
+          `import type { _${refClass} } from "./${refClass}.js";`
+        );
+      } else {
+        lines.push(
+          `import type { _${refClass} } from "../${fwName}/${refClass}.js";`
+        );
+      }
+    }
+  }
+
+  // Emit extended protocol imports
+  for (const extProto of proto.extendedProtocols) {
+    if (!allKnownProtocols.has(extProto)) continue;
+    // Determine which framework the protocol belongs to
+    const protoFw = getProtocolFramework(extProto, allFrameworks);
+    if (!protoFw) continue;
+    if (protoFw === currentFramework.name) {
+      lines.push(
+        `import type { _${extProto} } from "./${extProto}.js";`
+      );
+    } else {
+      lines.push(
+        `import type { _${extProto} } from "../${protoFw}/${extProto}.js";`
+      );
+    }
+  }
+
+  // Collect and emit struct type imports
+  const structRefs = collectProtocolReferencedStructs(proto);
+  if (structRefs.size > 0) {
+    const sorted = [...structRefs].sort();
+    lines.push(
+      `import type { ${sorted.join(", ")} } from "../structs.js";`
+    );
+  }
+
+  lines.push("");
+
+  // Build extends clause from extended protocols we have types for
+  const extendsClauses: string[] = [];
+  for (const extProto of proto.extendedProtocols) {
+    if (allKnownProtocols.has(extProto)) {
+      extendsClauses.push(`_${extProto}`);
+    }
+  }
+  const extendsStr = extendsClauses.length > 0
+    ? ` extends ${extendsClauses.join(", ")}`
+    : "";
+
+  lines.push(`export interface _${proto.name}${extendsStr} {`);
+
+  // Split properties into class and instance
+  const instanceProps = proto.properties.filter((p) => !p.isClassProperty);
+
+  // Emit instance methods (all optional with ? syntax)
+  const instanceMethods = proto.instanceMethods.filter((m) => !m.isDeprecated);
+  const instancePropertyNames = new Set(instanceProps.map((p) => p.name));
+  const regularMethods = instanceMethods.filter(
+    (m) => !instancePropertyNames.has(m.selector)
+  );
+
+  if (regularMethods.length > 0) {
+    lines.push("  // Instance methods");
+    for (const method of regularMethods) {
+      const jsName = selectorToJS(method.selector);
+      const returnType = mapReturnType(method.returnType, proto.name);
+      const params: string[] = [];
+      for (const param of method.parameters) {
+        const tsType = mapParamType(param.type, proto.name);
+        const safeName = sanitizeParamName(param.name);
+        params.push(`${safeName}: ${tsType}`);
+      }
+      const deprecated = method.isDeprecated ? "  /** @deprecated */\n" : "";
+      lines.push(`${deprecated}  ${jsName}?(${params.join(", ")}): ${returnType};`);
+    }
+  }
+
+  // Emit instance properties (as optional getter methods)
+  const nonDeprecatedInstanceProps = instanceProps.filter((p) => {
+    const getter = instanceMethods.find((m) => m.selector === p.name);
+    return !getter?.isDeprecated;
+  });
+
+  if (nonDeprecatedInstanceProps.length > 0) {
+    if (regularMethods.length > 0) lines.push("");
+    lines.push("  // Properties");
+    for (const prop of nonDeprecatedInstanceProps) {
+      const tsType = mapReturnType(prop.type, proto.name);
+      lines.push(`  ${prop.name}?(): ${tsType};`);
+      if (!prop.readonly) {
+        const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
+        const paramType = mapParamType(prop.type, proto.name);
+        lines.push(`  ${setterName}?(value: ${paramType}): void;`);
+      }
+    }
+  }
+
+  lines.push("}");
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+/**
+ * Determine which framework a protocol belongs to.
+ */
+function getProtocolFramework(
+  protocolName: string,
+  frameworks: FrameworkConfig[]
+): string | null {
+  for (const fw of frameworks) {
+    if (fw.protocols?.includes(protocolName)) {
+      return fw.name;
+    }
+  }
+  return null;
+}
+
+/**
  * Generate the barrel index.ts for a framework.
  */
 export function emitFrameworkIndex(
   framework: FrameworkConfig,
-  generatedClasses: string[]
+  generatedClasses: string[],
+  generatedProtocols?: string[]
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
@@ -397,6 +619,17 @@ export function emitFrameworkIndex(
     lines.push("");
   }
 
+  // Export protocol types (type-only, no runtime value)
+  if (generatedProtocols && generatedProtocols.length > 0) {
+    for (const protoName of generatedProtocols) {
+      lines.push(
+        `import type { _${protoName} } from "./${protoName}.js";`
+      );
+      lines.push(`export type { _${protoName} };`);
+      lines.push("");
+    }
+  }
+
   return lines.join("\n");
 }
 
@@ -412,6 +645,81 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   for (const fw of frameworkNames) {
     lines.push(`export * from "./${fw}/index.js";`);
   }
+  lines.push(`export { createDelegate } from "./delegates.js";`);
+  lines.push(`export type { ProtocolMap } from "./delegates.js";`);
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+/**
+ * Generate src/delegates.ts — a ProtocolMap interface mapping ObjC protocol
+ * name strings to their TypeScript interface types, plus a type-safe
+ * createDelegate() wrapper around NobjcProtocol.implement().
+ */
+export function emitDelegatesFile(
+  frameworks: FrameworkConfig[],
+  generatedProtocolsByFramework: Map<string, string[]>
+): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push(`import { NobjcProtocol } from "objc-js";`);
+  lines.push(`import type { NobjcObject } from "objc-js";`);
+  lines.push("");
+
+  // Collect all generated protocols with their framework for imports
+  const allProtocols: { name: string; framework: string }[] = [];
+  for (const fw of frameworks) {
+    const generated = generatedProtocolsByFramework.get(fw.name) ?? [];
+    for (const name of generated) {
+      allProtocols.push({ name, framework: fw.name });
+    }
+  }
+
+  // Sort for deterministic output
+  allProtocols.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Emit imports
+  for (const proto of allProtocols) {
+    lines.push(
+      `import type { _${proto.name} } from "./${proto.framework}/${proto.name}.js";`
+    );
+  }
+  lines.push("");
+
+  // Emit ProtocolMap interface
+  lines.push(`/** Maps ObjC protocol name strings to their TypeScript interface types. */`);
+  lines.push(`export interface ProtocolMap {`);
+  for (const proto of allProtocols) {
+    lines.push(`  ${proto.name}: _${proto.name};`);
+  }
+  lines.push(`}`);
+  lines.push("");
+
+  // Emit createDelegate function
+  lines.push(`/**`);
+  lines.push(` * Create a type-safe Objective-C delegate object.`);
+  lines.push(` *`);
+  lines.push(` * Wraps NobjcProtocol.implement() with full type inference —`);
+  lines.push(` * method names, parameter types, and return types are all inferred`);
+  lines.push(` * from the protocol name string.`);
+  lines.push(` *`);
+  lines.push(` * @example`);
+  lines.push(` * const delegate = createDelegate("NSWindowDelegate", {`);
+  lines.push(` *   windowDidResize$(notification) {`);
+  lines.push(` *     console.log("Window resized!");`);
+  lines.push(` *   },`);
+  lines.push(` * });`);
+  lines.push(` */`);
+  lines.push(`export function createDelegate<K extends keyof ProtocolMap>(`);
+  lines.push(`  protocolName: K,`);
+  lines.push(`  methods: Partial<ProtocolMap[K]>,`);
+  lines.push(`): NobjcObject {`);
+  lines.push(`  return NobjcProtocol.implement(`);
+  lines.push(`    protocolName,`);
+  lines.push(`    methods as Record<string, (...args: any[]) => any>,`);
+  lines.push(`  );`);
+  lines.push(`}`);
   lines.push("");
 
   return lines.join("\n");

@@ -4,3 +4,5 @@ export * from "./structs.js";
 export * from "./Foundation/index.js";
 export * from "./AppKit/index.js";
 export * from "./WebKit/index.js";
+export { createDelegate } from "./delegates.js";
+export type { ProtocolMap } from "./delegates.js";

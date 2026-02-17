@@ -102,3 +102,18 @@ export type { _WKFindResult };
 import type { _WKPDFConfiguration } from "./WKPDFConfiguration.js";
 export const WKPDFConfiguration = WebKit["WKPDFConfiguration"] as unknown as typeof _WKPDFConfiguration;
 export type { _WKPDFConfiguration };
+
+import type { _WKNavigationDelegate } from "./WKNavigationDelegate.js";
+export type { _WKNavigationDelegate };
+
+import type { _WKUIDelegate } from "./WKUIDelegate.js";
+export type { _WKUIDelegate };
+
+import type { _WKScriptMessageHandler } from "./WKScriptMessageHandler.js";
+export type { _WKScriptMessageHandler };
+
+import type { _WKDownloadDelegate } from "./WKDownloadDelegate.js";
+export type { _WKDownloadDelegate };
+
+import type { _WKURLSchemeHandler } from "./WKURLSchemeHandler.js";
+export type { _WKURLSchemeHandler };

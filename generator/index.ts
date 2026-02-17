@@ -9,14 +9,16 @@
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { FRAMEWORKS, getHeaderPath } from "./frameworks.ts";
+import { FRAMEWORKS, getHeaderPath, getProtocolHeaderPath } from "./frameworks.ts";
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
-import { parseAST, type ObjCClass } from "./ast-parser.ts";
+import { parseAST, parseProtocols, type ObjCClass, type ObjCProtocol } from "./ast-parser.ts";
 import { setKnownClasses } from "./type-mapper.ts";
 import {
   emitClassFile,
+  emitProtocolFile,
   emitFrameworkIndex,
   emitTopLevelIndex,
+  emitDelegatesFile,
 } from "./emitter.ts";
 
 const SRC_DIR = join(import.meta.dir, "..", "src");
@@ -33,8 +35,19 @@ async function main(): Promise<void> {
   }
   setKnownClasses(allKnownClasses);
 
+  // Collect all known protocol names across all frameworks
+  const allKnownProtocols = new Set<string>();
+  for (const fw of FRAMEWORKS) {
+    for (const proto of fw.protocols ?? []) {
+      allKnownProtocols.add(proto);
+    }
+  }
+
   // Track all parsed classes across frameworks (for cross-framework references)
   const allParsedClasses = new Map<string, ObjCClass>();
+
+  // Track generated protocols per framework (for delegates.ts generation)
+  const generatedProtocolsByFramework = new Map<string, string[]>();
 
   // Process each framework
   for (const framework of FRAMEWORKS) {
@@ -180,14 +193,94 @@ async function main(): Promise<void> {
       generatedClasses.push(className);
     }
 
+    // Parse and emit protocol files
+    const frameworkProtocols = framework.protocols ?? [];
+    const generatedProtocols: string[] = [];
+
+    if (frameworkProtocols.length > 0) {
+      // Group protocols by their header file
+      const protoHeaderToProtocols = new Map<string, string[]>();
+      for (const protoName of frameworkProtocols) {
+        const headerPath = getProtocolHeaderPath(framework, protoName);
+        if (!protoHeaderToProtocols.has(headerPath)) {
+          protoHeaderToProtocols.set(headerPath, []);
+        }
+        protoHeaderToProtocols.get(headerPath)!.push(protoName);
+      }
+
+      const targetProtoSet = new Set(frameworkProtocols);
+      let protoHeaderCount = 0;
+
+      for (const [headerPath, protoNames] of protoHeaderToProtocols) {
+        if (!existsSync(headerPath)) {
+          console.log(`  [SKIP] Protocol header not found: ${headerPath}`);
+          continue;
+        }
+
+        protoHeaderCount++;
+        const shortPath = headerPath.split("/Headers/")[1] ?? headerPath;
+        process.stdout.write(
+          `  [proto ${protoHeaderCount}/${protoHeaderToProtocols.size}] Parsing ${shortPath}...`
+        );
+
+        try {
+          let ast = await clangASTDump(headerPath);
+          let parsed = parseProtocols(ast, targetProtoSet);
+
+          // Fallback: retry without -fmodules if no protocols found
+          if (parsed.size === 0) {
+            const preIncludes = [
+              "Foundation/Foundation.h",
+              ...framework.preIncludes ?? [],
+            ];
+            ast = await clangASTDumpWithPreIncludes(headerPath, preIncludes);
+            parsed = parseProtocols(ast, targetProtoSet);
+          }
+
+          const found = protoNames.filter((n) => parsed.has(n));
+          const missed = protoNames.filter((n) => !parsed.has(n));
+
+          // Emit protocol files — only for protocols expected from this header
+          // (the AST may contain protocols from included headers too)
+          for (const name of found) {
+            const proto = parsed.get(name)!;
+            const content = emitProtocolFile(
+              proto,
+              framework,
+              FRAMEWORKS,
+              allKnownClasses,
+              allKnownProtocols
+            );
+            const filePath = join(frameworkDir, `${name}.ts`);
+            await writeFile(filePath, content);
+            generatedProtocols.push(name);
+          }
+
+          console.log(
+            ` found ${found.length}/${protoNames.length} protocols`
+          );
+          if (missed.length > 0) {
+            console.log(`    Missing: ${missed.join(", ")}`);
+          }
+        } catch (error) {
+          console.log(` ERROR: ${error}`);
+        }
+      }
+    }
+
     // Emit framework index
-    const indexContent = emitFrameworkIndex(framework, generatedClasses);
+    const indexContent = emitFrameworkIndex(framework, generatedClasses, generatedProtocols);
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
+    generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
     console.log(
-      `  Generated ${generatedClasses.length} class files + index.ts`
+      `  Generated ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + index.ts`
     );
   }
+
+  // Emit delegates file (ProtocolMap + createDelegate)
+  const delegatesContent = emitDelegatesFile(FRAMEWORKS, generatedProtocolsByFramework);
+  await writeFile(join(SRC_DIR, "delegates.ts"), delegatesContent);
 
   // Emit top-level index
   const topIndex = emitTopLevelIndex(FRAMEWORKS.map((f) => f.name));
@@ -196,16 +289,21 @@ async function main(): Promise<void> {
   console.log("\n=== Generation complete ===");
 
   // Print summary
-  let total = 0;
+  let totalClasses = 0;
+  let totalProtocols = 0;
   for (const fw of FRAMEWORKS) {
     const dir = join(SRC_DIR, fw.name);
-    const count = fw.classes.filter((c) =>
+    const classCount = fw.classes.filter((c) =>
       existsSync(join(dir, `${c}.ts`))
     ).length;
-    console.log(`  ${fw.name}: ${count} classes`);
-    total += count;
+    const protoCount = (fw.protocols ?? []).filter((p) =>
+      existsSync(join(dir, `${p}.ts`))
+    ).length;
+    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols`);
+    totalClasses += classCount;
+    totalProtocols += protoCount;
   }
-  console.log(`  Total: ${total} classes`);
+  console.log(`  Total: ${totalClasses} classes, ${totalProtocols} protocols`);
 }
 
 main().catch((err) => {

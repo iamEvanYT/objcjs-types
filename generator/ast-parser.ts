@@ -28,6 +28,14 @@ export interface ObjCClass {
   properties: ObjCProperty[];
 }
 
+export interface ObjCProtocol {
+  name: string;
+  extendedProtocols: string[];
+  instanceMethods: ObjCMethod[];
+  classMethods: ObjCMethod[];
+  properties: ObjCProperty[];
+}
+
 /**
  * Parse a clang AST root node and extract all ObjC class declarations.
  * Merges categories into their base class.
@@ -193,4 +201,141 @@ export function parseAST(
 
   walk(root);
   return classes;
+}
+
+/**
+ * Parse a clang AST root node and extract ObjC protocol declarations.
+ * Returns a map of protocol name → ObjCProtocol for protocols in the target set.
+ */
+export function parseProtocols(
+  root: ClangASTNode,
+  targetProtocols: Set<string>
+): Map<string, ObjCProtocol> {
+  const protocols = new Map<string, ObjCProtocol>();
+
+  function isDeprecated(node: ClangASTNode): boolean {
+    if (!node.inner) return false;
+    return node.inner.some(
+      (child) => child.kind === "DeprecatedAttr"
+    );
+  }
+
+  function isUnavailable(node: ClangASTNode): boolean {
+    if (!node.inner) return false;
+    return node.inner.some((child) => child.kind === "UnavailableAttr");
+  }
+
+  function extractMethod(node: ClangASTNode): ObjCMethod | null {
+    if (node.kind !== "ObjCMethodDecl") return null;
+    if (node.isImplicit) return null;
+    if (isUnavailable(node)) return null;
+
+    const selector = node.name ?? "";
+    const returnType = node.returnType?.qualType ?? "void";
+    const isClassMethod = node.instance === false;
+    const deprecated = isDeprecated(node);
+
+    const parameters: { name: string; type: string }[] = [];
+    if (node.inner) {
+      for (const child of node.inner) {
+        if (child.kind === "ParmVarDecl") {
+          parameters.push({
+            name: child.name ?? "arg",
+            type: child.type?.qualType ?? "id",
+          });
+        }
+      }
+    }
+
+    return {
+      selector,
+      returnType,
+      parameters,
+      isClassMethod,
+      isDeprecated: deprecated,
+    };
+  }
+
+  function extractProperty(node: ClangASTNode): ObjCProperty | null {
+    if (node.kind !== "ObjCPropertyDecl") return null;
+    if (node.isImplicit) return null;
+
+    const name = node.name ?? "";
+    const type = node.type?.qualType ?? "id";
+    const readonly = node.readonly === true;
+    const isClassProperty = (node as any)["class"] === true;
+
+    return { name, type, readonly, isClassProperty };
+  }
+
+  function processProtocolDecl(node: ClangASTNode): void {
+    const name = node.name ?? "";
+    if (!targetProtocols.has(name)) return;
+
+    const proto: ObjCProtocol = {
+      name,
+      extendedProtocols: [],
+      instanceMethods: [],
+      classMethods: [],
+      properties: [],
+    };
+
+    // Collect extended protocols
+    if (node.protocols) {
+      for (const p of node.protocols) {
+        proto.extendedProtocols.push(p.name);
+      }
+    }
+
+    if (!node.inner) {
+      protocols.set(name, proto);
+      return;
+    }
+
+    const existingInstanceSelectors = new Set<string>();
+    const existingClassSelectors = new Set<string>();
+    const existingProperties = new Set<string>();
+
+    for (const child of node.inner) {
+      if (child.kind === "ObjCMethodDecl") {
+        const method = extractMethod(child);
+        if (!method) continue;
+
+        if (method.isClassMethod) {
+          if (!existingClassSelectors.has(method.selector)) {
+            proto.classMethods.push(method);
+            existingClassSelectors.add(method.selector);
+          }
+        } else {
+          if (!existingInstanceSelectors.has(method.selector)) {
+            proto.instanceMethods.push(method);
+            existingInstanceSelectors.add(method.selector);
+          }
+        }
+      } else if (child.kind === "ObjCPropertyDecl") {
+        const prop = extractProperty(child);
+        if (prop && !existingProperties.has(prop.name)) {
+          proto.properties.push(prop);
+          existingProperties.add(prop.name);
+        }
+      }
+    }
+
+    protocols.set(name, proto);
+  }
+
+  function walk(node: ClangASTNode): void {
+    if (node.kind === "ObjCProtocolDecl" && node.name) {
+      processProtocolDecl(node);
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return protocols;
 }
