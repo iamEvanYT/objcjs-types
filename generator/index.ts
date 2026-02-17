@@ -15,11 +15,13 @@ import type { ObjCClass, ObjCProtocol } from "./ast-parser.ts";
 import { setKnownClasses, setKnownProtocols, setProtocolConformers } from "./type-mapper.ts";
 import {
   emitClassFile,
+  emitMergedClassFile,
   emitProtocolFile,
   emitFrameworkIndex,
   emitTopLevelIndex,
   emitDelegatesFile,
   emitStructsFile,
+  groupCaseCollisions,
 } from "./emitter.ts";
 import { WorkerPool } from "./worker-pool.ts";
 
@@ -420,6 +422,21 @@ async function main(): Promise<void> {
   const emitStart = performance.now();
   const generatedProtocolsByFramework = new Map<string, string[]>();
 
+  // Build a global classToFile map across ALL frameworks for cross-framework
+  // import resolution on case-sensitive filesystems.
+  const globalClassToFile = new Map<string, string>();
+  const collisionsByFramework = new Map<string, Map<string, string[]>>();
+
+  for (const framework of frameworksToProcess) {
+    const collisions = groupCaseCollisions(framework.classes);
+    collisionsByFramework.set(framework.name, collisions);
+    for (const [canonical, group] of collisions) {
+      for (const name of group) {
+        globalClassToFile.set(name, canonical);
+      }
+    }
+  }
+
   for (const framework of frameworksToProcess) {
     const frameworkDir = join(SRC_DIR, framework.name);
     await mkdir(frameworkDir, { recursive: true });
@@ -427,11 +444,54 @@ async function main(): Promise<void> {
     const fwClasses = frameworkClasses.get(framework.name) ?? new Map<string, ObjCClass>();
     const fwProtos = frameworkProtocolsParsed.get(framework.name) ?? new Map<string, ObjCProtocol>();
 
+    // Detect case-insensitive filename collisions among this framework's classes
+    const collisions = collisionsByFramework.get(framework.name)!;
+    const collisionMembers = new Set<string>();
+    for (const group of collisions.values()) {
+      for (const name of group) {
+        collisionMembers.add(name);
+      }
+    }
+
+    if (collisions.size > 0) {
+      console.log(
+        `  ${framework.name}: ${collisions.size} case-collision group(s) — merging into shared files`
+      );
+    }
+
     // Emit class files
     const generatedClasses: string[] = [];
     const classWritePromises: Promise<void>[] = [];
 
+    // First: emit merged files for collision groups
+    for (const [canonical, group] of collisions) {
+      const groupClasses: ObjCClass[] = [];
+      for (const name of group) {
+        const cls = fwClasses.get(name);
+        if (cls) {
+          groupClasses.push(cls);
+          generatedClasses.push(name);
+        }
+      }
+      if (groupClasses.length === 0) continue;
+
+      const content = emitMergedClassFile(
+        groupClasses,
+        framework,
+        frameworks,
+        allKnownClasses,
+        allParsedClasses,
+        allKnownProtocols,
+        globalClassToFile
+      );
+      classWritePromises.push(
+        writeFile(join(frameworkDir, `${canonical}.ts`), content)
+      );
+    }
+
+    // Then: emit single-class files for non-colliding classes
     for (const className of framework.classes) {
+      if (collisionMembers.has(className)) continue;
       const cls = fwClasses.get(className);
       if (!cls) continue;
 
@@ -441,7 +501,8 @@ async function main(): Promise<void> {
         frameworks,
         allKnownClasses,
         allParsedClasses,
-        allKnownProtocols
+        allKnownProtocols,
+        globalClassToFile
       );
       classWritePromises.push(
         writeFile(join(frameworkDir, `${className}.ts`), content)
@@ -462,7 +523,8 @@ async function main(): Promise<void> {
         framework,
         frameworks,
         allKnownClasses,
-        allKnownProtocols
+        allKnownProtocols,
+        globalClassToFile
       );
       protoWritePromises.push(
         writeFile(join(frameworkDir, `${protoName}.ts`), content)
@@ -474,7 +536,7 @@ async function main(): Promise<void> {
     await Promise.all([...classWritePromises, ...protoWritePromises]);
 
     // Emit framework index
-    const indexContent = emitFrameworkIndex(framework, generatedClasses, generatedProtocols);
+    const indexContent = emitFrameworkIndex(framework, generatedClasses, generatedProtocols, collisions);
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
