@@ -1,8 +1,8 @@
 /**
  * Main generator CLI — orchestrates the full pipeline:
- * 1. Run clang on each header file
- * 2. Parse the AST to extract class/method/property data
- * 3. Map ObjC types to TypeScript types
+ * 1. Discover frameworks and scan headers for class/protocol names
+ * 2. Parse headers in parallel via worker threads (clang AST dump + parsing)
+ * 3. Collect results and build shared type-mapping state
  * 4. Emit .ts declaration files
  */
 
@@ -11,8 +11,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, type FrameworkConfig } from "./frameworks.ts";
 import { discoverFramework } from "./discover.ts";
-import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
-import { parseAST, parseProtocols, type ObjCClass } from "./ast-parser.ts";
+import type { ObjCClass, ObjCProtocol } from "./ast-parser.ts";
 import { setKnownClasses, setKnownProtocols, setProtocolConformers } from "./type-mapper.ts";
 import {
   emitClassFile,
@@ -22,8 +21,26 @@ import {
   emitDelegatesFile,
   emitStructsFile,
 } from "./emitter.ts";
+import { WorkerPool } from "./worker-pool.ts";
 
 const SRC_DIR = join(import.meta.dir, "..", "src");
+
+/** Task descriptor for class header parsing */
+interface ClassParseTask {
+  frameworkName: string;
+  headerPath: string;
+  targets: string[];
+  fallbackPreIncludes: string[];
+  isExtra: boolean;
+}
+
+/** Task descriptor for protocol header parsing */
+interface ProtocolParseTask {
+  frameworkName: string;
+  headerPath: string;
+  targets: string[];
+  fallbackPreIncludes: string[];
+}
 
 async function main(): Promise<void> {
   console.log("=== objcjs-types generator ===\n");
@@ -36,6 +53,10 @@ async function main(): Promise<void> {
   if (isFiltered) {
     console.log(`Regenerating frameworks: ${filterNames.join(", ")}\n`);
   }
+
+  // ========================================
+  // Phase 1: Discovery
+  // ========================================
 
   // --- Framework discovery: find all ObjC frameworks in the SDK ---
   console.log("Discovering frameworks from SDK...");
@@ -121,158 +142,297 @@ async function main(): Promise<void> {
     ? frameworks.filter((fw) => filterSet.has(fw.name))
     : frameworks;
 
-  // Track protocol → conforming classes (built progressively as classes are parsed)
-  const protocolConformers = new Map<string, Set<string>>();
+  // ========================================
+  // Phase 2: Build parse tasks
+  // ========================================
 
-  // Track all parsed classes across frameworks (for cross-framework references)
-  const allParsedClasses = new Map<string, ObjCClass>();
+  const classTasks: ClassParseTask[] = [];
+  const protocolTasks: ProtocolParseTask[] = [];
 
-  // Track generated protocols per framework (for delegates.ts generation)
-  const generatedProtocolsByFramework = new Map<string, string[]>();
+  for (const fw of frameworksToProcess) {
+    const fallbackPreIncludes = [
+      "Foundation/Foundation.h",
+      ...(fw.preIncludes ?? []),
+    ];
 
-  // Process each framework (filtered if CLI args provided)
-  for (const framework of frameworksToProcess) {
-    console.log(`\n--- Processing ${framework.name} ---`);
-
-    const frameworkDir = join(SRC_DIR, framework.name);
-    await mkdir(frameworkDir, { recursive: true });
-
+    // --- Class header tasks ---
     // Group classes by their header file to avoid duplicate parsing
     const headerToClasses = new Map<string, string[]>();
-    for (const className of framework.classes) {
-      const headerPath = getHeaderPath(framework, className);
+    for (const className of fw.classes) {
+      const headerPath = getHeaderPath(fw, className);
       if (!headerToClasses.has(headerPath)) {
         headerToClasses.set(headerPath, []);
       }
       headerToClasses.get(headerPath)!.push(className);
     }
 
-    // Parse each unique header
-    const frameworkClasses = new Map<string, ObjCClass>();
-    let headerCount = 0;
-
     for (const [headerPath, classNames] of headerToClasses) {
       if (!existsSync(headerPath)) {
         console.log(`  [SKIP] Header not found: ${headerPath}`);
         continue;
       }
-
-      headerCount++;
-      const targetSet = new Set(classNames);
-      const shortPath = headerPath.split("/Headers/")[1] ?? headerPath;
-      process.stdout.write(
-        `  [${headerCount}/${headerToClasses.size}] Parsing ${shortPath}...`
-      );
-
-      try {
-        let ast = await clangASTDump(headerPath);
-        let parsed = parseAST(ast, targetSet);
-
-        // Fallback: if no classes found, retry without -fmodules using pre-includes.
-        // Some headers (e.g., WebKit) need Foundation macros pre-loaded to parse correctly.
-        if (parsed.size === 0) {
-          const preIncludes = [
-            "Foundation/Foundation.h",
-            ...framework.preIncludes ?? [],
-          ];
-          ast = await clangASTDumpWithPreIncludes(headerPath, preIncludes);
-          parsed = parseAST(ast, targetSet);
-        }
-
-        for (const [name, cls] of parsed) {
-          frameworkClasses.set(name, cls);
-          allParsedClasses.set(name, cls);
-        }
-
-        const found = classNames.filter((n) => parsed.has(n));
-        const missed = classNames.filter((n) => !parsed.has(n));
-
-        console.log(
-          ` found ${found.length}/${classNames.length} classes`
-        );
-        if (missed.length > 0) {
-          console.log(`    Missing: ${missed.join(", ")}`);
-        }
-      } catch (error) {
-        console.log(` ERROR: ${error}`);
-      }
+      classTasks.push({
+        frameworkName: fw.name,
+        headerPath,
+        targets: classNames,
+        fallbackPreIncludes,
+        isExtra: false,
+      });
     }
 
-    // Parse extra headers (e.g., runtime NSObject.h for alloc/init/isKindOfClass: etc.)
-    if (framework.extraHeaders) {
-      for (const [className, headerPath] of Object.entries(framework.extraHeaders)) {
+    // --- Extra header tasks (e.g., runtime NSObject.h for alloc/init) ---
+    if (fw.extraHeaders) {
+      for (const [className, headerPath] of Object.entries(fw.extraHeaders)) {
         if (!existsSync(headerPath)) {
           console.log(`  [SKIP] Extra header not found: ${headerPath}`);
           continue;
         }
+        classTasks.push({
+          frameworkName: fw.name,
+          headerPath,
+          targets: [className],
+          fallbackPreIncludes: [], // Extra headers don't use fallback
+          isExtra: true,
+        });
+      }
+    }
 
-        const shortPath = headerPath.split("/SDKs/MacOSX.sdk/")[1] ?? headerPath;
-        process.stdout.write(`  [extra] Parsing ${shortPath} for ${className}...`);
+    // --- Protocol header tasks ---
+    const protoHeaderToProtocols = new Map<string, string[]>();
+    for (const protoName of fw.protocols) {
+      const headerPath = getProtocolHeaderPath(fw, protoName);
+      if (!protoHeaderToProtocols.has(headerPath)) {
+        protoHeaderToProtocols.set(headerPath, []);
+      }
+      protoHeaderToProtocols.get(headerPath)!.push(protoName);
+    }
 
-        try {
-          const ast = await clangASTDump(headerPath);
-          const parsed = parseAST(ast, new Set([className]));
+    for (const [headerPath, protoNames] of protoHeaderToProtocols) {
+      if (!existsSync(headerPath)) {
+        console.log(`  [SKIP] Protocol header not found: ${headerPath}`);
+        continue;
+      }
+      protocolTasks.push({
+        frameworkName: fw.name,
+        headerPath,
+        targets: protoNames,
+        fallbackPreIncludes,
+      });
+    }
+  }
 
-          const extraCls = parsed.get(className);
-          if (extraCls) {
-            const existing = frameworkClasses.get(className);
-            if (existing) {
-              // Merge: add methods/properties from extra header that don't already exist
-              const existingInstanceSelectors = new Set(existing.instanceMethods.map((m) => m.selector));
-              const existingClassSelectors = new Set(existing.classMethods.map((m) => m.selector));
-              const existingPropertyNames = new Set(existing.properties.map((p) => p.name));
+  // ========================================
+  // Phase 3: Parallel parsing via worker pool
+  // ========================================
 
-              for (const m of extraCls.instanceMethods) {
-                if (!existingInstanceSelectors.has(m.selector)) {
-                  existing.instanceMethods.push(m);
-                }
-              }
-              for (const m of extraCls.classMethods) {
-                if (!existingClassSelectors.has(m.selector)) {
-                  existing.classMethods.push(m);
-                }
-              }
-              for (const p of extraCls.properties) {
-                if (!existingPropertyNames.has(p.name)) {
-                  existing.properties.push(p);
-                }
-              }
+  const poolSize = navigator.hardwareConcurrency ?? 4;
+  const pool = new WorkerPool(poolSize);
+  const totalTasks = classTasks.length + protocolTasks.length;
+  let completedTasks = 0;
 
-              console.log(
-                ` merged ${extraCls.instanceMethods.length} instance, ${extraCls.classMethods.length} class methods, ${extraCls.properties.length} props`
-              );
-            } else {
-              frameworkClasses.set(className, extraCls);
-              allParsedClasses.set(className, extraCls);
-              console.log(` found class`);
-            }
-          } else {
-            console.log(` class not found in AST`);
+  console.log(
+    `Parsing ${classTasks.length} class headers + ${protocolTasks.length} protocol headers ` +
+    `using ${pool.size} worker threads...`
+  );
+
+  const startTime = performance.now();
+
+  /** Update the progress counter on the current console line. */
+  const trackProgress = () => {
+    completedTasks++;
+    process.stdout.write(`\r  Progress: ${completedTasks}/${totalTasks} headers parsed`);
+  };
+
+  // Dispatch all class+extra tasks concurrently.
+  // The pool handles load balancing — tasks go to idle workers or queue automatically.
+  const classPromises = classTasks.map((task) =>
+    pool
+      .parseClasses(
+        task.headerPath,
+        task.targets,
+        task.fallbackPreIncludes.length > 0 ? task.fallbackPreIncludes : undefined
+      )
+      .then((result) => {
+        trackProgress();
+        return { task, result, error: null as string | null };
+      })
+      .catch((err) => {
+        trackProgress();
+        return { task, result: null, error: String(err) };
+      })
+  );
+
+  // Dispatch all protocol tasks concurrently
+  const protocolPromises = protocolTasks.map((task) =>
+    pool
+      .parseProtocols(
+        task.headerPath,
+        task.targets,
+        task.fallbackPreIncludes.length > 0 ? task.fallbackPreIncludes : undefined
+      )
+      .then((result) => {
+        trackProgress();
+        return { task, result, error: null as string | null };
+      })
+      .catch((err) => {
+        trackProgress();
+        return { task, result: null, error: String(err) };
+      })
+  );
+
+  // Wait for all parse tasks to complete
+  const classResults = await Promise.all(classPromises);
+  const protocolResults = await Promise.all(protocolPromises);
+
+  pool.destroy();
+
+  const parseTime = ((performance.now() - startTime) / 1000).toFixed(1);
+  process.stdout.write(`\r  Parsed ${totalTasks} headers in ${parseTime}s          \n\n`);
+
+  // ========================================
+  // Phase 4: Collect results and build shared state
+  // ========================================
+
+  // Organize parsed classes by framework
+  const frameworkClasses = new Map<string, Map<string, ObjCClass>>();
+  const allParsedClasses = new Map<string, ObjCClass>();
+
+  // First pass: regular (non-extra) class results
+  for (const { task, result, error } of classResults) {
+    if (task.isExtra) continue; // Handle in second pass
+    if (error) {
+      console.log(`  [ERROR] ${task.headerPath}: ${error}`);
+      continue;
+    }
+    if (!result) continue;
+
+    if (!frameworkClasses.has(task.frameworkName)) {
+      frameworkClasses.set(task.frameworkName, new Map());
+    }
+    const fwClasses = frameworkClasses.get(task.frameworkName)!;
+
+    for (const [name, cls] of result.classes) {
+      fwClasses.set(name, cls);
+      allParsedClasses.set(name, cls);
+    }
+  }
+
+  // Second pass: extra header results (merge into existing classes)
+  for (const { task, result, error } of classResults) {
+    if (!task.isExtra) continue;
+    if (error) {
+      console.log(`  [ERROR] Extra header ${task.headerPath}: ${error}`);
+      continue;
+    }
+    if (!result) continue;
+
+    if (!frameworkClasses.has(task.frameworkName)) {
+      frameworkClasses.set(task.frameworkName, new Map());
+    }
+    const fwClasses = frameworkClasses.get(task.frameworkName)!;
+
+    for (const [className, extraCls] of result.classes) {
+      const existing = fwClasses.get(className);
+      if (existing) {
+        // Merge: add methods/properties from extra header that don't already exist
+        const existingInstanceSelectors = new Set(existing.instanceMethods.map((m) => m.selector));
+        const existingClassSelectors = new Set(existing.classMethods.map((m) => m.selector));
+        const existingPropertyNames = new Set(existing.properties.map((p) => p.name));
+
+        for (const m of extraCls.instanceMethods) {
+          if (!existingInstanceSelectors.has(m.selector)) {
+            existing.instanceMethods.push(m);
           }
-        } catch (error) {
-          console.log(` ERROR: ${error}`);
         }
-      }
-    }
+        for (const m of extraCls.classMethods) {
+          if (!existingClassSelectors.has(m.selector)) {
+            existing.classMethods.push(m);
+          }
+        }
+        for (const p of extraCls.properties) {
+          if (!existingPropertyNames.has(p.name)) {
+            existing.properties.push(p);
+          }
+        }
 
-    // Update protocol → conforming classes map with this framework's parsed classes.
-    // This must happen before emission so that id<Protocol> types resolve to unions.
-    for (const [className, cls] of frameworkClasses) {
-      if (!allKnownClasses.has(className)) continue;
-      for (const protoName of cls.protocols) {
-        if (!protocolConformers.has(protoName)) {
-          protocolConformers.set(protoName, new Set());
-        }
-        protocolConformers.get(protoName)!.add(className);
+        console.log(
+          `  [extra] Merged ${className}: +${extraCls.instanceMethods.length} instance, ` +
+          `+${extraCls.classMethods.length} class methods, +${extraCls.properties.length} props`
+        );
+      } else {
+        fwClasses.set(className, extraCls);
+        allParsedClasses.set(className, extraCls);
+        console.log(`  [extra] Added ${className}`);
       }
     }
-    setProtocolConformers(protocolConformers);
+  }
+
+  // Organize parsed protocols by framework
+  const frameworkProtocolsParsed = new Map<string, Map<string, ObjCProtocol>>();
+  for (const { task, result, error } of protocolResults) {
+    if (error) {
+      console.log(`  [ERROR] ${task.headerPath}: ${error}`);
+      continue;
+    }
+    if (!result) continue;
+
+    if (!frameworkProtocolsParsed.has(task.frameworkName)) {
+      frameworkProtocolsParsed.set(task.frameworkName, new Map());
+    }
+    const fwProtos = frameworkProtocolsParsed.get(task.frameworkName)!;
+
+    for (const [name, proto] of result.protocols) {
+      fwProtos.set(name, proto);
+    }
+  }
+
+  // Build protocol -> conforming classes map from all parsed classes.
+  // This must happen after ALL parsing completes so every conformance is known.
+  const protocolConformers = new Map<string, Set<string>>();
+  for (const [className, cls] of allParsedClasses) {
+    if (!allKnownClasses.has(className)) continue;
+    for (const protoName of cls.protocols) {
+      if (!protocolConformers.has(protoName)) {
+        protocolConformers.set(protoName, new Set());
+      }
+      protocolConformers.get(protoName)!.add(className);
+    }
+  }
+  setProtocolConformers(protocolConformers);
+
+  // Print parse summary per framework
+  for (const fw of frameworksToProcess) {
+    const fwClasses = frameworkClasses.get(fw.name);
+    const fwProtos = frameworkProtocolsParsed.get(fw.name);
+    const classCount = fwClasses?.size ?? 0;
+    const protoCount = fwProtos?.size ?? 0;
+    console.log(
+      `  ${fw.name}: parsed ${classCount}/${fw.classes.length} classes, ` +
+      `${protoCount}/${fw.protocols.length} protocols`
+    );
+  }
+  console.log("");
+
+  // ========================================
+  // Phase 5: Emit files
+  // ========================================
+
+  const emitStart = performance.now();
+  const generatedProtocolsByFramework = new Map<string, string[]>();
+
+  for (const framework of frameworksToProcess) {
+    const frameworkDir = join(SRC_DIR, framework.name);
+    await mkdir(frameworkDir, { recursive: true });
+
+    const fwClasses = frameworkClasses.get(framework.name) ?? new Map<string, ObjCClass>();
+    const fwProtos = frameworkProtocolsParsed.get(framework.name) ?? new Map<string, ObjCProtocol>();
 
     // Emit class files
     const generatedClasses: string[] = [];
+    const classWritePromises: Promise<void>[] = [];
 
     for (const className of framework.classes) {
-      const cls = frameworkClasses.get(className);
+      const cls = fwClasses.get(className);
       if (!cls) continue;
 
       const content = emitClassFile(
@@ -283,85 +443,35 @@ async function main(): Promise<void> {
         allParsedClasses,
         allKnownProtocols
       );
-      const filePath = join(frameworkDir, `${className}.ts`);
-      await writeFile(filePath, content);
+      classWritePromises.push(
+        writeFile(join(frameworkDir, `${className}.ts`), content)
+      );
       generatedClasses.push(className);
     }
 
-    // Parse and emit protocol files
-    const frameworkProtocols = framework.protocols;
+    // Emit protocol files
     const generatedProtocols: string[] = [];
+    const protoWritePromises: Promise<void>[] = [];
 
-    if (frameworkProtocols.length > 0) {
-      // Group protocols by their header file
-      const protoHeaderToProtocols = new Map<string, string[]>();
-      for (const protoName of frameworkProtocols) {
-        const headerPath = getProtocolHeaderPath(framework, protoName);
-        if (!protoHeaderToProtocols.has(headerPath)) {
-          protoHeaderToProtocols.set(headerPath, []);
-        }
-        protoHeaderToProtocols.get(headerPath)!.push(protoName);
-      }
+    for (const protoName of framework.protocols) {
+      const proto = fwProtos.get(protoName);
+      if (!proto) continue;
 
-      const targetProtoSet = new Set(frameworkProtocols);
-      let protoHeaderCount = 0;
-
-      for (const [headerPath, protoNames] of protoHeaderToProtocols) {
-        if (!existsSync(headerPath)) {
-          console.log(`  [SKIP] Protocol header not found: ${headerPath}`);
-          continue;
-        }
-
-        protoHeaderCount++;
-        const shortPath = headerPath.split("/Headers/")[1] ?? headerPath;
-        process.stdout.write(
-          `  [proto ${protoHeaderCount}/${protoHeaderToProtocols.size}] Parsing ${shortPath}...`
-        );
-
-        try {
-          let ast = await clangASTDump(headerPath);
-          let parsed = parseProtocols(ast, targetProtoSet);
-
-          // Fallback: retry without -fmodules if no protocols found
-          if (parsed.size === 0) {
-            const preIncludes = [
-              "Foundation/Foundation.h",
-              ...framework.preIncludes ?? [],
-            ];
-            ast = await clangASTDumpWithPreIncludes(headerPath, preIncludes);
-            parsed = parseProtocols(ast, targetProtoSet);
-          }
-
-          const found = protoNames.filter((n) => parsed.has(n));
-          const missed = protoNames.filter((n) => !parsed.has(n));
-
-          // Emit protocol files — only for protocols expected from this header
-          // (the AST may contain protocols from included headers too)
-          for (const name of found) {
-            const proto = parsed.get(name)!;
-            const content = emitProtocolFile(
-              proto,
-              framework,
-              frameworks,
-              allKnownClasses,
-              allKnownProtocols
-            );
-            const filePath = join(frameworkDir, `${name}.ts`);
-            await writeFile(filePath, content);
-            generatedProtocols.push(name);
-          }
-
-          console.log(
-            ` found ${found.length}/${protoNames.length} protocols`
-          );
-          if (missed.length > 0) {
-            console.log(`    Missing: ${missed.join(", ")}`);
-          }
-        } catch (error) {
-          console.log(` ERROR: ${error}`);
-        }
-      }
+      const content = emitProtocolFile(
+        proto,
+        framework,
+        frameworks,
+        allKnownClasses,
+        allKnownProtocols
+      );
+      protoWritePromises.push(
+        writeFile(join(frameworkDir, `${protoName}.ts`), content)
+      );
+      generatedProtocols.push(protoName);
     }
+
+    // Wait for all file writes in this framework to complete
+    await Promise.all([...classWritePromises, ...protoWritePromises]);
 
     // Emit framework index
     const indexContent = emitFrameworkIndex(framework, generatedClasses, generatedProtocols);
@@ -369,7 +479,7 @@ async function main(): Promise<void> {
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
     console.log(
-      `  Generated ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + index.ts`
+      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + index.ts`
     );
   }
 
@@ -388,7 +498,10 @@ async function main(): Promise<void> {
     await writeFile(join(SRC_DIR, "index.ts"), topIndex);
   }
 
-  console.log(`\n=== Generation complete${isFiltered ? " (partial)" : ""} ===`);
+  const emitTime = ((performance.now() - emitStart) / 1000).toFixed(1);
+  const totalTime = ((performance.now() - startTime) / 1000).toFixed(1);
+  console.log(`\n  Emitted files in ${emitTime}s`);
+  console.log(`\n=== Generation complete${isFiltered ? " (partial)" : ""} (${totalTime}s total) ===`);
 
   // Print summary
   let totalClasses = 0;
