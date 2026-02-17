@@ -12,7 +12,7 @@ export declare class _NSSound extends _NSObject {
   static new(): _NSSound;
   init(): _NSSound;
   // Class methods
-  static soundNamed$(name: number): _NSSound | null;
+  static soundNamed$(name: _NSString): _NSSound | null;
   static canInitWithPasteboard$(pasteboard: _NSPasteboard): boolean;
   static soundUnfilteredFileTypes(): _NSArray;
   static soundUnfilteredPasteboardTypes(): _NSArray;
@@ -22,7 +22,7 @@ export declare class _NSSound extends _NSObject {
   initWithContentsOfURL$byReference$(url: _NSURL, byRef: boolean): _NSSound | null;
   initWithContentsOfFile$byReference$(path: _NSString, byRef: boolean): _NSSound | null;
   initWithData$(data: _NSData): _NSSound | null;
-  setName$(string_: number | null): boolean;
+  setName$(string_: _NSString | null): boolean;
   initWithPasteboard$(pasteboard: _NSPasteboard): _NSSound | null;
   writeToPasteboard$(pasteboard: _NSPasteboard): void;
   play(): boolean;
@@ -33,7 +33,7 @@ export declare class _NSSound extends _NSObject {
   channelMapping(): _NSArray;
 
   // Properties
-  name(): number | null;
+  name(): _NSString | null;
   playing(): boolean;
   delegate(): NobjcObject;
   setDelegate$(value: NobjcObject): void;

@@ -4,16 +4,17 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSToolbar extends _NSObject {
   static alloc(): _NSToolbar;
   static new(): _NSToolbar;
   // Instance methods
-  initWithIdentifier$(identifier: number): _NSToolbar;
+  initWithIdentifier$(identifier: _NSString): _NSToolbar;
   init(): _NSToolbar;
-  insertItemWithItemIdentifier$atIndex$(itemIdentifier: number, index: number): void;
+  insertItemWithItemIdentifier$atIndex$(itemIdentifier: _NSString, index: number): void;
   removeItemAtIndex$(index: number): void;
-  removeItemWithItemIdentifier$(itemIdentifier: number): void;
+  removeItemWithItemIdentifier$(itemIdentifier: _NSString): void;
   runCustomizationPalette$(sender: NobjcObject): void;
   validateVisibleItems(): void;
   setConfigurationFromDictionary$(configDict: _NSDictionary): void;
@@ -26,13 +27,13 @@ export declare class _NSToolbar extends _NSObject {
   customizationPaletteIsRunning(): boolean;
   displayMode(): number;
   setDisplayMode$(value: number): void;
-  selectedItemIdentifier(): number | null;
-  setSelectedItemIdentifier$(value: number | null): void;
+  selectedItemIdentifier(): _NSString | null;
+  setSelectedItemIdentifier$(value: _NSString | null): void;
   allowsUserCustomization(): boolean;
   setAllowsUserCustomization$(value: boolean): void;
   allowsDisplayModeCustomization(): boolean;
   setAllowsDisplayModeCustomization$(value: boolean): void;
-  identifier(): number;
+  identifier(): _NSString;
   items(): _NSArray;
   visibleItems(): _NSArray | null;
   itemIdentifiers(): _NSArray;
@@ -45,8 +46,8 @@ export declare class _NSToolbar extends _NSObject {
   setAllowsExtensionItems$(value: boolean): void;
   sizeMode(): number;
   setSizeMode$(value: number): void;
-  centeredItemIdentifier(): number | null;
-  setCenteredItemIdentifier$(value: number | null): void;
+  centeredItemIdentifier(): _NSString | null;
+  setCenteredItemIdentifier$(value: _NSString | null): void;
   fullScreenAccessoryView(): NobjcObject;
   setFullScreenAccessoryView$(value: NobjcObject): void;
   fullScreenAccessoryViewMinHeight(): number;

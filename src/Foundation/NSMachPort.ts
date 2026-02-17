@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSPort } from "./NSPort.js";
 import type { _NSRunLoop } from "./NSRunLoop.js";
+import type { _NSString } from "./NSString.js";
 
 export declare class _NSMachPort extends _NSPort {
   static alloc(): _NSMachPort;
@@ -16,8 +17,8 @@ export declare class _NSMachPort extends _NSPort {
   setDelegate$(anObject: NobjcObject): void;
   delegate(): NobjcObject;
   initWithMachPort$options$(machPort: number, f: number): _NSMachPort;
-  scheduleInRunLoop$forMode$(runLoop: _NSRunLoop, mode: number): void;
-  removeFromRunLoop$forMode$(runLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(runLoop: _NSRunLoop, mode: _NSString): void;
+  removeFromRunLoop$forMode$(runLoop: _NSRunLoop, mode: _NSString): void;
 
   // Properties
   machPort(): number;

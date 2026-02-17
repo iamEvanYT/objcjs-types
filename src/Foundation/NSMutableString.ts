@@ -18,6 +18,6 @@ export declare class _NSMutableString extends _NSString {
   appendFormat$(format: _NSString): void;
   setString$(aString: _NSString): void;
   replaceOccurrencesOfString$withString$options$range$(target: _NSString, replacement: _NSString, options: number, searchRange: NSRange): number;
-  applyTransform$reverse$range$updatedRange$(transform: number, reverse: boolean, range: NSRange, resultingRange: number | null): boolean;
+  applyTransform$reverse$range$updatedRange$(transform: _NSString, reverse: boolean, range: NSRange, resultingRange: NobjcObject): boolean;
   initWithCapacity$(capacity: number): _NSMutableString;
 }

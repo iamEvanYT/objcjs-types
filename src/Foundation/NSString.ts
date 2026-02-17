@@ -85,7 +85,7 @@ export declare class _NSString extends _NSObject {
   canBeConvertedToEncoding$(encoding: number): boolean;
   cStringUsingEncoding$(encoding: number): string | null;
   getCString$maxLength$encoding$(buffer: string, maxBufferCount: number, encoding: number): boolean;
-  getBytes$maxLength$usedLength$encoding$options$range$remainingRange$(buffer: NobjcObject, maxBufferCount: number, usedBufferCount: NobjcObject, encoding: number, options: number, range: NSRange, leftover: number | null): boolean;
+  getBytes$maxLength$usedLength$encoding$options$range$remainingRange$(buffer: NobjcObject, maxBufferCount: number, usedBufferCount: NobjcObject, encoding: number, options: number, range: NSRange, leftover: NobjcObject): boolean;
   maximumLengthOfBytesUsingEncoding$(enc: number): number;
   lengthOfBytesUsingEncoding$(enc: number): number;
   componentsSeparatedByString$(separator: _NSString): _NSArray;
@@ -96,7 +96,7 @@ export declare class _NSString extends _NSObject {
   stringByReplacingOccurrencesOfString$withString$options$range$(target: _NSString, replacement: _NSString, options: number, searchRange: NSRange): _NSString;
   stringByReplacingOccurrencesOfString$withString$(target: _NSString, replacement: _NSString): _NSString;
   stringByReplacingCharactersInRange$withString$(range: NSRange, replacement: _NSString): _NSString;
-  stringByApplyingTransform$reverse$(transform: number, reverse: boolean): _NSString | null;
+  stringByApplyingTransform$reverse$(transform: _NSString, reverse: boolean): _NSString | null;
   writeToURL$atomically$encoding$error$(url: _NSURL, useAuxiliaryFile: boolean, enc: number, error: NobjcObject): boolean;
   writeToFile$atomically$encoding$error$(path: _NSString, useAuxiliaryFile: boolean, enc: number, error: NobjcObject): boolean;
   initWithCharactersNoCopy$length$freeWhenDone$(characters: NobjcObject, length: number, freeBuffer: boolean): _NSString;
@@ -128,7 +128,7 @@ export declare class _NSString extends _NSObject {
   cStringLength(): number;
   getCString$(bytes: string): void;
   getCString$maxLength$(bytes: string, maxLength: number): void;
-  getCString$maxLength$range$remainingRange$(bytes: string, maxLength: number, aRange: NSRange, leftoverRange: number | null): void;
+  getCString$maxLength$range$remainingRange$(bytes: string, maxLength: number, aRange: NSRange, leftoverRange: NobjcObject): void;
   writeToFile$atomically$(path: _NSString, useAuxiliaryFile: boolean): boolean;
   writeToURL$atomically$(url: _NSURL, atomically: boolean): boolean;
   initWithContentsOfFile$(path: _NSString): NobjcObject;

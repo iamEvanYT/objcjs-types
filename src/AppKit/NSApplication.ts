@@ -57,13 +57,13 @@ export declare class _NSApplication extends _NSResponder {
   orderFrontCharacterPalette$(sender: NobjcObject): void;
   sendEvent$(event: _NSEvent): void;
   postEvent$atStart$(event: _NSEvent, atStart: boolean): void;
-  nextEventMatchingMask$untilDate$inMode$dequeue$(mask: number, expiration: _NSDate | null, mode: number, deqFlag: boolean): _NSEvent | null;
+  nextEventMatchingMask$untilDate$inMode$dequeue$(mask: number, expiration: _NSDate | null, mode: _NSString, deqFlag: boolean): _NSEvent | null;
   discardEventsMatchingMask$beforeEvent$(mask: number, lastEvent: _NSEvent | null): void;
   sendAction$to$from$(action: string, target: NobjcObject, sender: NobjcObject): boolean;
   targetForAction$(action: string): NobjcObject;
   targetForAction$to$from$(action: string, target: NobjcObject, sender: NobjcObject): NobjcObject;
   tryToPerform$with$(action: string, object_: NobjcObject): boolean;
-  validRequestorForSendType$returnType$(sendType: number | null, returnType: number | null): NobjcObject;
+  validRequestorForSendType$returnType$(sendType: _NSString | null, returnType: _NSString | null): NobjcObject;
   arrangeInFront$(sender: NobjcObject): void;
   removeWindowsItem$(win: _NSWindow): void;
   addWindowsItem$title$filename$(win: _NSWindow, string_: _NSString, isFilename: boolean): void;

@@ -11,22 +11,22 @@ export declare class _NSColorList extends _NSObject {
   static new(): _NSColorList;
   init(): _NSColorList;
   // Class methods
-  static colorListNamed$(name: number): _NSColorList | null;
+  static colorListNamed$(name: _NSString): _NSColorList | null;
   static availableColorLists(): _NSArray;
 
   // Instance methods
-  initWithName$(name: number): _NSColorList;
-  initWithName$fromFile$(name: number, path: _NSString | null): _NSColorList | null;
-  setColor$forKey$(color: _NSColor, key: number): void;
-  insertColor$key$atIndex$(color: _NSColor, key: number, loc: number): void;
-  removeColorWithKey$(key: number): void;
-  colorWithKey$(key: number): _NSColor | null;
+  initWithName$(name: _NSString): _NSColorList;
+  initWithName$fromFile$(name: _NSString, path: _NSString | null): _NSColorList | null;
+  setColor$forKey$(color: _NSColor, key: _NSString): void;
+  insertColor$key$atIndex$(color: _NSColor, key: _NSString, loc: number): void;
+  removeColorWithKey$(key: _NSString): void;
+  colorWithKey$(key: _NSString): _NSColor | null;
   writeToURL$error$(url: _NSURL | null, errPtr: NobjcObject): boolean;
   writeToFile$(path: _NSString | null): boolean;
   removeFile(): void;
 
   // Properties
-  name(): number | null;
+  name(): _NSString | null;
   allKeys(): _NSArray;
   editable(): boolean;
 }

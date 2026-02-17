@@ -2,14 +2,15 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSToolbarItem } from "./NSToolbarItem.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSToolbarItemGroup extends _NSToolbarItem {
   static alloc(): _NSToolbarItemGroup;
   static new(): _NSToolbarItemGroup;
   init(): _NSToolbarItemGroup;
   // Class methods
-  static groupWithItemIdentifier$titles$selectionMode$labels$target$action$(itemIdentifier: number, titles: _NSArray, selectionMode: number, labels: _NSArray | null, target: NobjcObject, action: string | null): _NSToolbarItemGroup;
-  static groupWithItemIdentifier$images$selectionMode$labels$target$action$(itemIdentifier: number, images: _NSArray, selectionMode: number, labels: _NSArray | null, target: NobjcObject, action: string | null): _NSToolbarItemGroup;
+  static groupWithItemIdentifier$titles$selectionMode$labels$target$action$(itemIdentifier: _NSString, titles: _NSArray, selectionMode: number, labels: _NSArray | null, target: NobjcObject, action: string | null): _NSToolbarItemGroup;
+  static groupWithItemIdentifier$images$selectionMode$labels$target$action$(itemIdentifier: _NSString, images: _NSArray, selectionMode: number, labels: _NSArray | null, target: NobjcObject, action: string | null): _NSToolbarItemGroup;
 
   // Instance methods
   setSelected$atIndex$(selected: boolean, index: number): void;

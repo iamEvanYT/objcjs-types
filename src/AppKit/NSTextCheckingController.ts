@@ -27,7 +27,7 @@ export declare class _NSTextCheckingController extends _NSObject {
   ignoreSpelling$(sender: NobjcObject): void;
   updateCandidates(): void;
   validAnnotations(): _NSArray;
-  menuAtIndex$clickedOnSelection$effectiveRange$(location: number, clickedOnSelection: boolean, effectiveRange: number): _NSMenu | null;
+  menuAtIndex$clickedOnSelection$effectiveRange$(location: number, clickedOnSelection: boolean, effectiveRange: NobjcObject): _NSMenu | null;
 
   // Properties
   client(): NobjcObject;

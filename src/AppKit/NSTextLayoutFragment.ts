@@ -20,7 +20,7 @@ export declare class _NSTextLayoutFragment extends _NSObject {
   textLineFragmentForVerticalOffset$requiresExactMatch$(verticalOffset: number, requiresExactMatch: boolean): _NSTextLineFragment | null;
   textLineFragmentForTextLocation$isUpstreamAffinity$(textLocation: NobjcObject, isUpstreamAffinity: boolean): _NSTextLineFragment | null;
   invalidateLayout(): void;
-  drawAtPoint$inContext$(point: CGPoint, context: number): void;
+  drawAtPoint$inContext$(point: CGPoint, context: NobjcObject): void;
   frameForTextAttachmentAtLocation$(location: NobjcObject): CGRect;
 
   // Properties

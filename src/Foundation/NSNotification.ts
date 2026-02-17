@@ -3,21 +3,22 @@ import type { NobjcObject } from "objc-js";
 import type { _NSCoder } from "./NSCoder.js";
 import type { _NSDictionary } from "./NSDictionary.js";
 import type { _NSObject } from "./NSObject.js";
+import type { _NSString } from "./NSString.js";
 
 export declare class _NSNotification extends _NSObject {
   static alloc(): _NSNotification;
   static new(): _NSNotification;
   // Class methods
-  static notificationWithName$object$(aName: number, anObject: NobjcObject): _NSNotification;
-  static notificationWithName$object$userInfo$(aName: number, anObject: NobjcObject, aUserInfo: _NSDictionary | null): _NSNotification;
+  static notificationWithName$object$(aName: _NSString, anObject: NobjcObject): _NSNotification;
+  static notificationWithName$object$userInfo$(aName: _NSString, anObject: NobjcObject, aUserInfo: _NSDictionary | null): _NSNotification;
 
   // Instance methods
-  initWithName$object$userInfo$(name: number, object_: NobjcObject, userInfo: _NSDictionary | null): _NSNotification;
+  initWithName$object$userInfo$(name: _NSString, object_: NobjcObject, userInfo: _NSDictionary | null): _NSNotification;
   initWithCoder$(coder: _NSCoder): _NSNotification | null;
   init(): _NSNotification;
 
   // Properties
-  name(): number;
+  name(): _NSString;
   object(): NobjcObject;
   userInfo(): _NSDictionary | null;
 }

@@ -9,8 +9,8 @@ export declare class _NSStepperTouchBarItem extends _NSTouchBarItem {
   static new(): _NSStepperTouchBarItem;
   init(): _NSStepperTouchBarItem;
   // Class methods
-  static stepperTouchBarItemWithIdentifier$formatter$(identifier: number, formatter: _NSFormatter): _NSStepperTouchBarItem;
-  static stepperTouchBarItemWithIdentifier$drawingHandler$(identifier: number, drawingHandler: (...args: any[]) => any): _NSStepperTouchBarItem;
+  static stepperTouchBarItemWithIdentifier$formatter$(identifier: _NSString, formatter: _NSFormatter): _NSStepperTouchBarItem;
+  static stepperTouchBarItemWithIdentifier$drawingHandler$(identifier: _NSString, drawingHandler: (...args: any[]) => any): _NSStepperTouchBarItem;
 
   // Properties
   maxValue(): number;

@@ -21,7 +21,7 @@ export declare class _NSIndexSet extends _NSObject {
   indexLessThanIndex$(value: number): number;
   indexGreaterThanOrEqualToIndex$(value: number): number;
   indexLessThanOrEqualToIndex$(value: number): number;
-  getIndexes$maxCount$inIndexRange$(indexBuffer: NobjcObject, bufferSize: number, range: number | null): number;
+  getIndexes$maxCount$inIndexRange$(indexBuffer: NobjcObject, bufferSize: number, range: NobjcObject): number;
   countOfIndexesInRange$(range: NSRange): number;
   containsIndex$(value: number): boolean;
   containsIndexesInRange$(range: NSRange): boolean;

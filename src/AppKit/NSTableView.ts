@@ -16,6 +16,7 @@ import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSEnumerator } from "../Foundation/NSEnumerator.js";
 import type { _NSIndexSet } from "../Foundation/NSIndexSet.js";
 import type { _NSNotification } from "../Foundation/NSNotification.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { CGPoint, CGRect, CGSize, NSRange } from "../structs.js";
 
 export declare class _NSTableView extends _NSControl {
@@ -29,8 +30,8 @@ export declare class _NSTableView extends _NSControl {
   addTableColumn$(tableColumn: _NSTableColumn): void;
   removeTableColumn$(tableColumn: _NSTableColumn): void;
   moveColumn$toColumn$(oldIndex: number, newIndex: number): void;
-  columnWithIdentifier$(identifier: number): number;
-  tableColumnWithIdentifier$(identifier: number): _NSTableColumn | null;
+  columnWithIdentifier$(identifier: _NSString): number;
+  tableColumnWithIdentifier$(identifier: _NSString): _NSTableColumn | null;
   tile(): void;
   sizeToFit(): void;
   sizeLastColumnToFit(): void;
@@ -42,7 +43,7 @@ export declare class _NSTableView extends _NSControl {
   setIndicatorImage$inTableColumn$(image: _NSImage | null, tableColumn: _NSTableColumn): void;
   indicatorImageInTableColumn$(tableColumn: _NSTableColumn): _NSImage | null;
   canDragRowsWithIndexes$atPoint$(rowIndexes: _NSIndexSet, mouseDownPoint: CGPoint): boolean;
-  dragImageForRowsWithIndexes$tableColumns$event$offset$(dragRows: _NSIndexSet, tableColumns: _NSArray, dragEvent: _NSEvent, dragImageOffset: number): _NSImage;
+  dragImageForRowsWithIndexes$tableColumns$event$offset$(dragRows: _NSIndexSet, tableColumns: _NSArray, dragEvent: _NSEvent, dragImageOffset: NobjcObject): _NSImage;
   setDraggingSourceOperationMask$forLocal$(mask: number, isLocal: boolean): void;
   setDropRow$dropOperation$(row: number, dropOperation: number): void;
   selectAll$(sender: NobjcObject): void;
@@ -69,7 +70,7 @@ export declare class _NSTableView extends _NSControl {
   rowViewAtRow$makeIfNecessary$(row: number, makeIfNecessary: boolean): _NSTableRowView | null;
   rowForView$(view: _NSView): number;
   columnForView$(view: _NSView): number;
-  makeViewWithIdentifier$owner$(identifier: number, owner: NobjcObject): _NSView | null;
+  makeViewWithIdentifier$owner$(identifier: _NSString, owner: NobjcObject): _NSView | null;
   enumerateAvailableRowViewsUsingBlock$(handler: (...args: any[]) => any): void;
   beginUpdates(): void;
   endUpdates(): void;
@@ -78,7 +79,7 @@ export declare class _NSTableView extends _NSControl {
   moveRowAtIndex$toIndex$(oldIndex: number, newIndex: number): void;
   hideRowsAtIndexes$withAnimation$(indexes: _NSIndexSet, rowAnimation: number): void;
   unhideRowsAtIndexes$withAnimation$(indexes: _NSIndexSet, rowAnimation: number): void;
-  registerNib$forIdentifier$(nib: _NSNib | null, identifier: number): void;
+  registerNib$forIdentifier$(nib: _NSNib | null, identifier: _NSString): void;
   didAddRowView$forRow$(rowView: _NSTableRowView, row: number): void;
   didRemoveRowView$forRow$(rowView: _NSTableRowView, row: number): void;
   setDrawsGrid$(flag: boolean): void;
@@ -87,7 +88,7 @@ export declare class _NSTableView extends _NSControl {
   selectRow$byExtendingSelection$(row: number, extend: boolean): void;
   selectedColumnEnumerator(): _NSEnumerator;
   selectedRowEnumerator(): _NSEnumerator;
-  dragImageForRows$event$dragImageOffset$(dragRows: _NSArray, dragEvent: _NSEvent, dragImageOffset: number): _NSImage | null;
+  dragImageForRows$event$dragImageOffset$(dragRows: _NSArray, dragEvent: _NSEvent, dragImageOffset: NobjcObject): _NSImage | null;
   setAutoresizesAllColumnsToFit$(flag: boolean): void;
   autoresizesAllColumnsToFit(): boolean;
   columnsInRect$(rect: CGRect): NSRange;

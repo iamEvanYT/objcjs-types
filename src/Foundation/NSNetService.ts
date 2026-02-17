@@ -18,8 +18,8 @@ export declare class _NSNetService extends _NSObject {
   // Instance methods
   initWithDomain$type$name$port$(domain: _NSString, type: _NSString, name: _NSString, port: number): _NSNetService;
   initWithDomain$type$name$(domain: _NSString, type: _NSString, name: _NSString): _NSNetService;
-  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
-  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
+  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
   publish(): void;
   publishWithOptions$(options: number): void;
   resolve(): void;

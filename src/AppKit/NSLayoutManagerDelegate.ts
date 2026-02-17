@@ -20,5 +20,5 @@ export interface _NSLayoutManagerDelegate {
   layoutManagerDidInvalidateLayout$?(sender: _NSLayoutManager): void;
   layoutManager$didCompleteLayoutForTextContainer$atEnd$?(layoutManager: _NSLayoutManager, textContainer: _NSTextContainer | null, layoutFinishedFlag: boolean): void;
   layoutManager$textContainer$didChangeGeometryFromSize$?(layoutManager: _NSLayoutManager, textContainer: _NSTextContainer, oldSize: CGSize): void;
-  layoutManager$shouldUseTemporaryAttributes$forDrawingToScreen$atCharacterIndex$effectiveRange$?(layoutManager: _NSLayoutManager, attrs: _NSDictionary, toScreen: boolean, charIndex: number, effectiveCharRange: number | null): _NSDictionary | null;
+  layoutManager$shouldUseTemporaryAttributes$forDrawingToScreen$atCharacterIndex$effectiveRange$?(layoutManager: _NSLayoutManager, attrs: _NSDictionary, toScreen: boolean, charIndex: number, effectiveCharRange: NobjcObject): _NSDictionary | null;
 }

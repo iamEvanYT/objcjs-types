@@ -12,8 +12,8 @@ export declare class _NSWindowController extends _NSResponder {
   // Instance methods
   initWithWindow$(window: _NSWindow | null): _NSWindowController;
   initWithCoder$(coder: _NSCoder): _NSWindowController | null;
-  initWithWindowNibName$(windowNibName: number): _NSWindowController;
-  initWithWindowNibName$owner$(windowNibName: number, owner: NobjcObject): _NSWindowController;
+  initWithWindowNibName$(windowNibName: _NSString): _NSWindowController;
+  initWithWindowNibName$owner$(windowNibName: _NSString, owner: NobjcObject): _NSWindowController;
   initWithWindowNibPath$owner$(windowNibPath: _NSString, owner: NobjcObject): _NSWindowController;
   setDocumentEdited$(dirtyFlag: boolean): void;
   synchronizeWindowTitleWithDocumentName(): void;
@@ -26,7 +26,7 @@ export declare class _NSWindowController extends _NSResponder {
   dismissController$(sender: NobjcObject): void;
 
   // Properties
-  windowNibName(): number | null;
+  windowNibName(): _NSString | null;
   windowNibPath(): _NSString | null;
   owner(): NobjcObject;
   windowFrameAutosaveName(): number;

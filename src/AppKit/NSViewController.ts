@@ -12,7 +12,7 @@ export declare class _NSViewController extends _NSResponder {
   static new(): _NSViewController;
   init(): _NSViewController;
   // Instance methods
-  initWithNibName$bundle$(nibNameOrNil: number | null, nibBundleOrNil: _NSBundle | null): _NSViewController;
+  initWithNibName$bundle$(nibNameOrNil: _NSString | null, nibBundleOrNil: _NSBundle | null): _NSViewController;
   initWithCoder$(coder: _NSCoder): _NSViewController | null;
   loadView(): void;
   loadViewIfNeeded(): void;
@@ -43,7 +43,7 @@ export declare class _NSViewController extends _NSResponder {
   viewWillTransitionToSize$(newSize: CGSize): void;
 
   // Properties
-  nibName(): number | null;
+  nibName(): _NSString | null;
   nibBundle(): _NSBundle | null;
   representedObject(): NobjcObject;
   setRepresentedObject$(value: NobjcObject): void;

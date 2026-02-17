@@ -15,7 +15,7 @@ export declare class _NSTextLineFragment extends _NSObject {
   initWithAttributedString$range$(attributedString: _NSAttributedString, range: NSRange): _NSTextLineFragment;
   initWithCoder$(aDecoder: _NSCoder): _NSTextLineFragment | null;
   initWithString$attributes$range$(string_: _NSString, attributes: _NSDictionary, range: NSRange): _NSTextLineFragment;
-  drawAtPoint$inContext$(point: CGPoint, context: number): void;
+  drawAtPoint$inContext$(point: CGPoint, context: NobjcObject): void;
   locationForCharacterAtIndex$(index: number): CGPoint;
   characterIndexForPoint$(point: CGPoint): number;
   fractionOfDistanceThroughGlyphForPoint$(point: CGPoint): number;

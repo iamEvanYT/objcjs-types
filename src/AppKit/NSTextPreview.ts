@@ -9,11 +9,11 @@ export declare class _NSTextPreview extends _NSObject {
   static new(): _NSTextPreview;
   init(): _NSTextPreview;
   // Instance methods
-  initWithSnapshotImage$presentationFrame$candidateRects$(snapshotImage: number, presentationFrame: CGRect, candidateRects: _NSArray): _NSTextPreview;
-  initWithSnapshotImage$presentationFrame$(snapshotImage: number, presentationFrame: CGRect): _NSTextPreview;
+  initWithSnapshotImage$presentationFrame$candidateRects$(snapshotImage: NobjcObject, presentationFrame: CGRect, candidateRects: _NSArray): _NSTextPreview;
+  initWithSnapshotImage$presentationFrame$(snapshotImage: NobjcObject, presentationFrame: CGRect): _NSTextPreview;
 
   // Properties
-  previewImage(): number;
+  previewImage(): NobjcObject;
   presentationFrame(): CGRect;
   candidateRects(): _NSArray;
 }

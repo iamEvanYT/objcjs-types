@@ -15,7 +15,7 @@ export declare class _NSEvent extends _NSObject {
   init(): _NSEvent;
   // Class methods
   static eventWithEventRef$(eventRef: NobjcObject): _NSEvent | null;
-  static eventWithCGEvent$(cgEvent: number): _NSEvent | null;
+  static eventWithCGEvent$(cgEvent: NobjcObject): _NSEvent | null;
   static startPeriodicEventsAfterDelay$withPeriod$(delay: number, period: number): void;
   static stopPeriodicEvents(): void;
   static mouseEventWithType$location$modifierFlags$timestamp$windowNumber$context$eventNumber$clickCount$pressure$(type: number, location: CGPoint, flags: number, time: number, wNum: number, unusedPassNil: _NSGraphicsContext | null, eNum: number, cNum: number, pressure: number): _NSEvent | null;

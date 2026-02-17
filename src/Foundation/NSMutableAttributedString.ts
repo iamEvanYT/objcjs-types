@@ -13,9 +13,9 @@ export declare class _NSMutableAttributedString extends _NSAttributedString {
   // Instance methods
   replaceCharactersInRange$withString$(range: NSRange, str: _NSString): void;
   setAttributes$range$(attrs: _NSDictionary | null, range: NSRange): void;
-  addAttribute$value$range$(name: number, value: NobjcObject, range: NSRange): void;
+  addAttribute$value$range$(name: _NSString, value: NobjcObject, range: NSRange): void;
   addAttributes$range$(attrs: _NSDictionary, range: NSRange): void;
-  removeAttribute$range$(name: number, range: NSRange): void;
+  removeAttribute$range$(name: _NSString, range: NSRange): void;
   replaceCharactersInRange$withAttributedString$(range: NSRange, attrString: _NSAttributedString): void;
   insertAttributedString$atIndex$(attrString: _NSAttributedString, loc: number): void;
   appendAttributedString$(attrString: _NSAttributedString): void;

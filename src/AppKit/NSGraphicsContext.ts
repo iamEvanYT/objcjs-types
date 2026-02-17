@@ -13,7 +13,7 @@ export declare class _NSGraphicsContext extends _NSObject {
   // Class methods
   static graphicsContextWithAttributes$(attributes: _NSDictionary): _NSGraphicsContext | null;
   static graphicsContextWithBitmapImageRep$(bitmapRep: _NSBitmapImageRep): _NSGraphicsContext | null;
-  static graphicsContextWithCGContext$flipped$(graphicsPort: number, initialFlippedState: boolean): _NSGraphicsContext;
+  static graphicsContextWithCGContext$flipped$(graphicsPort: NobjcObject, initialFlippedState: boolean): _NSGraphicsContext;
   static currentContextDrawingToScreen(): boolean;
   static saveGraphicsState(): void;
   static restoreGraphicsState(): void;

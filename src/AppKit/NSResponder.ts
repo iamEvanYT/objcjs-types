@@ -18,7 +18,7 @@ export declare class _NSResponder extends _NSObject {
   initWithCoder$(coder: _NSCoder): _NSResponder | null;
   tryToPerform$with$(action: string, object_: NobjcObject): boolean;
   performKeyEquivalent$(event: _NSEvent): boolean;
-  validRequestorForSendType$returnType$(sendType: number | null, returnType: number | null): NobjcObject;
+  validRequestorForSendType$returnType$(sendType: _NSString | null, returnType: _NSString | null): NobjcObject;
   mouseDown$(event: _NSEvent): void;
   rightMouseDown$(event: _NSEvent): void;
   otherMouseDown$(event: _NSEvent): void;

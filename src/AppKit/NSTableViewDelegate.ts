@@ -21,7 +21,7 @@ export interface _NSTableViewDelegate extends _NSControlTextEditingDelegate {
   tableView$didRemoveRowView$forRow$?(tableView: _NSTableView, rowView: _NSTableRowView, row: number): void;
   tableView$willDisplayCell$forTableColumn$row$?(tableView: _NSTableView, cell: NobjcObject, tableColumn: _NSTableColumn | null, row: number): void;
   tableView$shouldEditTableColumn$row$?(tableView: _NSTableView, tableColumn: _NSTableColumn | null, row: number): boolean;
-  tableView$toolTipForCell$rect$tableColumn$row$mouseLocation$?(tableView: _NSTableView, cell: _NSCell, rect: number, tableColumn: _NSTableColumn | null, row: number, mouseLocation: CGPoint): _NSString;
+  tableView$toolTipForCell$rect$tableColumn$row$mouseLocation$?(tableView: _NSTableView, cell: _NSCell, rect: NobjcObject, tableColumn: _NSTableColumn | null, row: number, mouseLocation: CGPoint): _NSString;
   tableView$shouldShowCellExpansionForTableColumn$row$?(tableView: _NSTableView, tableColumn: _NSTableColumn | null, row: number): boolean;
   tableView$shouldTrackCell$forTableColumn$row$?(tableView: _NSTableView, cell: _NSCell, tableColumn: _NSTableColumn | null, row: number): boolean;
   tableView$dataCellForTableColumn$row$?(tableView: _NSTableView, tableColumn: _NSTableColumn | null, row: number): _NSCell | null;

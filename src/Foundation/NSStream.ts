@@ -20,8 +20,8 @@ export declare class _NSStream extends _NSObject {
   close(): void;
   propertyForKey$(key: number): NobjcObject;
   setProperty$forKey$(property: NobjcObject, key: number): boolean;
-  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
-  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
+  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
 
   // Properties
   delegate(): NobjcObject;

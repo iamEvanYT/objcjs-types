@@ -11,11 +11,11 @@ export declare class _NSToolbarItem extends _NSObject {
   static new(): _NSToolbarItem;
   init(): _NSToolbarItem;
   // Instance methods
-  initWithItemIdentifier$(itemIdentifier: number): _NSToolbarItem;
+  initWithItemIdentifier$(itemIdentifier: _NSString): _NSToolbarItem;
   validate(): void;
 
   // Properties
-  itemIdentifier(): number;
+  itemIdentifier(): _NSString;
   toolbar(): _NSToolbar | null;
   label(): _NSString;
   setLabel$(value: _NSString): void;

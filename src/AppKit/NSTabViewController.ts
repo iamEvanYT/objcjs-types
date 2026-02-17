@@ -6,6 +6,7 @@ import type { _NSToolbar } from "./NSToolbar.js";
 import type { _NSToolbarItem } from "./NSToolbarItem.js";
 import type { _NSViewController } from "./NSViewController.js";
 import type { _NSArray } from "../Foundation/NSArray.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSTabViewController extends _NSViewController {
   static alloc(): _NSTabViewController;
@@ -20,7 +21,7 @@ export declare class _NSTabViewController extends _NSViewController {
   tabView$willSelectTabViewItem$(tabView: _NSTabView, tabViewItem: _NSTabViewItem | null): void;
   tabView$didSelectTabViewItem$(tabView: _NSTabView, tabViewItem: _NSTabViewItem | null): void;
   tabView$shouldSelectTabViewItem$(tabView: _NSTabView, tabViewItem: _NSTabViewItem | null): boolean;
-  toolbar$itemForItemIdentifier$willBeInsertedIntoToolbar$(toolbar: _NSToolbar, itemIdentifier: number, flag: boolean): _NSToolbarItem | null;
+  toolbar$itemForItemIdentifier$willBeInsertedIntoToolbar$(toolbar: _NSToolbar, itemIdentifier: _NSString, flag: boolean): _NSToolbarItem | null;
   toolbarDefaultItemIdentifiers$(toolbar: _NSToolbar): _NSArray;
   toolbarAllowedItemIdentifiers$(toolbar: _NSToolbar): _NSArray;
   toolbarSelectableItemIdentifiers$(toolbar: _NSToolbar): _NSArray;

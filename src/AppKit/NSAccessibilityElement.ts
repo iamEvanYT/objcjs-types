@@ -9,7 +9,7 @@ export declare class _NSAccessibilityElement extends _NSObject {
   static new(): _NSAccessibilityElement;
   init(): _NSAccessibilityElement;
   // Class methods
-  static accessibilityElementWithRole$frame$label$parent$(role: number, frame: CGRect, label: _NSString | null, parent: NobjcObject): NobjcObject;
+  static accessibilityElementWithRole$frame$label$parent$(role: _NSString, frame: CGRect, label: _NSString | null, parent: NobjcObject): NobjcObject;
 
   // Instance methods
   accessibilityAddChildElement$(childElement: _NSAccessibilityElement): void;

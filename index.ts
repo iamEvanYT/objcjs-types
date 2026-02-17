@@ -9,11 +9,6 @@ import {
 
 console.log("Hello via Bun!");
 
-// Load AppKit framework with full path
-const AppKit = new NobjcLibrary(
-  "/System/Library/Frameworks/AppKit.framework/AppKit"
-);
-
 // Create a CGRect structure for the window frame
 const rect = CGRect(100, 100, 800, 600);
 

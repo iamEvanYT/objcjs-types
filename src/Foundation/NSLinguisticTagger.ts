@@ -14,24 +14,24 @@ export declare class _NSLinguisticTagger extends _NSObject {
   static availableTagSchemesForUnit$language$(unit: number, language: _NSString): _NSArray;
   static availableTagSchemesForLanguage$(language: _NSString): _NSArray;
   static dominantLanguageForString$(string_: _NSString): _NSString | null;
-  static tagForString$atIndex$unit$scheme$orthography$tokenRange$(string_: _NSString, charIndex: number, unit: number, scheme: number, orthography: _NSOrthography | null, tokenRange: number | null): number | null;
+  static tagForString$atIndex$unit$scheme$orthography$tokenRange$(string_: _NSString, charIndex: number, unit: number, scheme: number, orthography: _NSOrthography | null, tokenRange: NobjcObject): number | null;
   static tagsForString$range$unit$scheme$options$orthography$tokenRanges$(string_: _NSString, range: NSRange, unit: number, scheme: number, options: number, orthography: _NSOrthography | null, tokenRanges: NobjcObject): _NSArray;
   static enumerateTagsForString$range$unit$scheme$options$orthography$usingBlock$(string_: _NSString, range: NSRange, unit: number, scheme: number, options: number, orthography: _NSOrthography | null, block: (...args: any[]) => any | null): void;
 
   // Instance methods
   initWithTagSchemes$options$(tagSchemes: _NSArray, opts: number): _NSLinguisticTagger;
   setOrthography$range$(orthography: _NSOrthography | null, range: NSRange): void;
-  orthographyAtIndex$effectiveRange$(charIndex: number, effectiveRange: number | null): _NSOrthography | null;
+  orthographyAtIndex$effectiveRange$(charIndex: number, effectiveRange: NobjcObject): _NSOrthography | null;
   stringEditedInRange$changeInLength$(newRange: NSRange, delta: number): void;
   tokenRangeAtIndex$unit$(charIndex: number, unit: number): NSRange;
   sentenceRangeForRange$(range: NSRange): NSRange;
   enumerateTagsInRange$unit$scheme$options$usingBlock$(range: NSRange, unit: number, scheme: number, options: number, block: (...args: any[]) => any | null): void;
-  tagAtIndex$unit$scheme$tokenRange$(charIndex: number, unit: number, scheme: number, tokenRange: number | null): number | null;
+  tagAtIndex$unit$scheme$tokenRange$(charIndex: number, unit: number, scheme: number, tokenRange: NobjcObject): number | null;
   tagsInRange$unit$scheme$options$tokenRanges$(range: NSRange, unit: number, scheme: number, options: number, tokenRanges: NobjcObject): _NSArray;
   enumerateTagsInRange$scheme$options$usingBlock$(range: NSRange, tagScheme: number, opts: number, block: (...args: any[]) => any | null): void;
-  tagAtIndex$scheme$tokenRange$sentenceRange$(charIndex: number, scheme: number, tokenRange: number | null, sentenceRange: number | null): number | null;
+  tagAtIndex$scheme$tokenRange$sentenceRange$(charIndex: number, scheme: number, tokenRange: NobjcObject, sentenceRange: NobjcObject): number | null;
   tagsInRange$scheme$options$tokenRanges$(range: NSRange, tagScheme: _NSString, opts: number, tokenRanges: NobjcObject): _NSArray;
-  possibleTagsAtIndex$scheme$tokenRange$sentenceRange$scores$(charIndex: number, tagScheme: _NSString, tokenRange: number | null, sentenceRange: number | null, scores: NobjcObject): _NSArray | null;
+  possibleTagsAtIndex$scheme$tokenRange$sentenceRange$scores$(charIndex: number, tagScheme: _NSString, tokenRange: NobjcObject, sentenceRange: NobjcObject, scores: NobjcObject): _NSArray | null;
 
   // Properties
   tagSchemes(): _NSArray;

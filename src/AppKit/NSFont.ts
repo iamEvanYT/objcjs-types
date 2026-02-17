@@ -46,16 +46,16 @@ export declare class _NSFont extends _NSObject {
   fontWithSize$(fontSize: number): _NSFont;
   boundingRectForCGGlyph$(glyph: number): CGRect;
   advancementForCGGlyph$(glyph: number): CGSize;
-  getBoundingRects$forCGGlyphs$count$(bounds: number, glyphs: NobjcObject, glyphCount: number): void;
-  getAdvancements$forCGGlyphs$count$(advancements: number, glyphs: NobjcObject, glyphCount: number): void;
+  getBoundingRects$forCGGlyphs$count$(bounds: NobjcObject, glyphs: NobjcObject, glyphCount: number): void;
+  getAdvancements$forCGGlyphs$count$(advancements: NobjcObject, glyphs: NobjcObject, glyphCount: number): void;
   set(): void;
   setInContext$(graphicsContext: _NSGraphicsContext): void;
   glyphWithName$(name: _NSString): number;
   boundingRectForGlyph$(glyph: number): CGRect;
   advancementForGlyph$(glyph: number): CGSize;
-  getBoundingRects$forGlyphs$count$(bounds: number, glyphs: NobjcObject, glyphCount: number): void;
-  getAdvancements$forGlyphs$count$(advancements: number, glyphs: NobjcObject, glyphCount: number): void;
-  getAdvancements$forPackedGlyphs$length$(advancements: number, packedGlyphs: NobjcObject, length: number): void;
+  getBoundingRects$forGlyphs$count$(bounds: NobjcObject, glyphs: NobjcObject, glyphCount: number): void;
+  getAdvancements$forGlyphs$count$(advancements: NobjcObject, glyphs: NobjcObject, glyphCount: number): void;
+  getAdvancements$forPackedGlyphs$length$(advancements: NobjcObject, packedGlyphs: NobjcObject, length: number): void;
   screenFontWithRenderingMode$(renderingMode: number): _NSFont;
 
   // Properties

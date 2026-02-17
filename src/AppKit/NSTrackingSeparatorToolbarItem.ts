@@ -2,13 +2,14 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSSplitView } from "./NSSplitView.js";
 import type { _NSToolbarItem } from "./NSToolbarItem.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSTrackingSeparatorToolbarItem extends _NSToolbarItem {
   static alloc(): _NSTrackingSeparatorToolbarItem;
   static new(): _NSTrackingSeparatorToolbarItem;
   init(): _NSTrackingSeparatorToolbarItem;
   // Class methods
-  static trackingSeparatorToolbarItemWithIdentifier$splitView$dividerIndex$(identifier: number, splitView: _NSSplitView, dividerIndex: number): _NSTrackingSeparatorToolbarItem;
+  static trackingSeparatorToolbarItemWithIdentifier$splitView$dividerIndex$(identifier: _NSString, splitView: _NSSplitView, dividerIndex: number): _NSTrackingSeparatorToolbarItem;
 
   // Properties
   splitView(): NobjcObject;

@@ -29,7 +29,7 @@ export interface _NSOutlineViewDelegate extends _NSControlTextEditingDelegate {
   outlineView$mouseDownInHeaderOfTableColumn$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn): void;
   outlineView$didClickTableColumn$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn): void;
   outlineView$didDragTableColumn$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn): void;
-  outlineView$toolTipForCell$rect$tableColumn$item$mouseLocation$?(outlineView: _NSOutlineView, cell: _NSCell, rect: number, tableColumn: _NSTableColumn | null, item: NobjcObject, mouseLocation: CGPoint): _NSString;
+  outlineView$toolTipForCell$rect$tableColumn$item$mouseLocation$?(outlineView: _NSOutlineView, cell: _NSCell, rect: NobjcObject, tableColumn: _NSTableColumn | null, item: NobjcObject, mouseLocation: CGPoint): _NSString;
   outlineView$heightOfRowByItem$?(outlineView: _NSOutlineView, item: NobjcObject): number;
   outlineView$tintConfigurationForItem$?(outlineView: _NSOutlineView, item: NobjcObject): _NSTintConfiguration | null;
   outlineView$typeSelectStringForTableColumn$item$?(outlineView: _NSOutlineView, tableColumn: _NSTableColumn | null, item: NobjcObject): _NSString | null;

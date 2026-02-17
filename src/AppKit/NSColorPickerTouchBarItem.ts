@@ -10,10 +10,10 @@ export declare class _NSColorPickerTouchBarItem extends _NSTouchBarItem {
   static new(): _NSColorPickerTouchBarItem;
   init(): _NSColorPickerTouchBarItem;
   // Class methods
-  static colorPickerWithIdentifier$(identifier: number): _NSColorPickerTouchBarItem;
-  static textColorPickerWithIdentifier$(identifier: number): _NSColorPickerTouchBarItem;
-  static strokeColorPickerWithIdentifier$(identifier: number): _NSColorPickerTouchBarItem;
-  static colorPickerWithIdentifier$buttonImage$(identifier: number, image: _NSImage): _NSColorPickerTouchBarItem;
+  static colorPickerWithIdentifier$(identifier: _NSString): _NSColorPickerTouchBarItem;
+  static textColorPickerWithIdentifier$(identifier: _NSString): _NSColorPickerTouchBarItem;
+  static strokeColorPickerWithIdentifier$(identifier: _NSString): _NSColorPickerTouchBarItem;
+  static colorPickerWithIdentifier$buttonImage$(identifier: _NSString, image: _NSImage): _NSColorPickerTouchBarItem;
 
   // Properties
   color(): _NSColor;

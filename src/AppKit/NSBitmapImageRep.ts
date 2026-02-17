@@ -26,7 +26,7 @@ export declare class _NSBitmapImageRep extends _NSImageRep {
   initWithFocusedViewRect$(rect: CGRect): _NSBitmapImageRep | null;
   initWithBitmapDataPlanes$pixelsWide$pixelsHigh$bitsPerSample$samplesPerPixel$hasAlpha$isPlanar$colorSpaceName$bytesPerRow$bitsPerPixel$(planes: NobjcObject, width: number, height: number, bps: number, spp: number, alpha: boolean, isPlanar: boolean, colorSpaceName: number, rBytes: number, pBits: number): _NSBitmapImageRep | null;
   initWithBitmapDataPlanes$pixelsWide$pixelsHigh$bitsPerSample$samplesPerPixel$hasAlpha$isPlanar$colorSpaceName$bitmapFormat$bytesPerRow$bitsPerPixel$(planes: NobjcObject, width: number, height: number, bps: number, spp: number, alpha: boolean, isPlanar: boolean, colorSpaceName: number, bitmapFormat: number, rBytes: number, pBits: number): _NSBitmapImageRep | null;
-  initWithCGImage$(cgImage: number): _NSBitmapImageRep;
+  initWithCGImage$(cgImage: NobjcObject): _NSBitmapImageRep;
   initWithCIImage$(ciImage: NobjcObject): _NSBitmapImageRep;
   initWithData$(data: _NSData): _NSBitmapImageRep | null;
   getBitmapDataPlanes$(data: NobjcObject): void;

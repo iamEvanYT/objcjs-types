@@ -24,8 +24,8 @@ export interface _NSCollectionViewDelegate {
   collectionView$writeItemsAtIndexes$toPasteboard$?(collectionView: _NSCollectionView, indexes: _NSIndexSet, pasteboard: _NSPasteboard): boolean;
   collectionView$namesOfPromisedFilesDroppedAtDestination$forDraggedItemsAtIndexPaths$?(collectionView: _NSCollectionView, dropURL: _NSURL, indexPaths: _NSSet): _NSArray;
   collectionView$namesOfPromisedFilesDroppedAtDestination$forDraggedItemsAtIndexes$?(collectionView: _NSCollectionView, dropURL: _NSURL, indexes: _NSIndexSet): _NSArray;
-  collectionView$draggingImageForItemsAtIndexPaths$withEvent$offset$?(collectionView: _NSCollectionView, indexPaths: _NSSet, event: _NSEvent, dragImageOffset: number): _NSImage;
-  collectionView$draggingImageForItemsAtIndexes$withEvent$offset$?(collectionView: _NSCollectionView, indexes: _NSIndexSet, event: _NSEvent, dragImageOffset: number): _NSImage;
+  collectionView$draggingImageForItemsAtIndexPaths$withEvent$offset$?(collectionView: _NSCollectionView, indexPaths: _NSSet, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage;
+  collectionView$draggingImageForItemsAtIndexes$withEvent$offset$?(collectionView: _NSCollectionView, indexes: _NSIndexSet, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage;
   collectionView$validateDrop$proposedIndexPath$dropOperation$?(collectionView: _NSCollectionView, draggingInfo: NobjcObject, proposedDropIndexPath: NobjcObject, proposedDropOperation: NobjcObject): number;
   collectionView$validateDrop$proposedIndex$dropOperation$?(collectionView: _NSCollectionView, draggingInfo: NobjcObject, proposedDropIndex: NobjcObject, proposedDropOperation: NobjcObject): number;
   collectionView$acceptDrop$indexPath$dropOperation$?(collectionView: _NSCollectionView, draggingInfo: NobjcObject, indexPath: _NSIndexPath, dropOperation: number): boolean;

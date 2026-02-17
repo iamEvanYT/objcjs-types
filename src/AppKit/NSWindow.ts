@@ -70,7 +70,7 @@ export declare class _NSWindow extends _NSResponder {
   deminiaturize$(sender: NobjcObject): void;
   zoom$(sender: NobjcObject): void;
   tryToPerform$with$(action: string, object_: NobjcObject): boolean;
-  validRequestorForSendType$returnType$(sendType: number | null, returnType: number | null): NobjcObject;
+  validRequestorForSendType$returnType$(sendType: _NSString | null, returnType: _NSString | null): NobjcObject;
   setContentBorderThickness$forEdge$(thickness: number, edge: number): void;
   contentBorderThicknessForEdge$(edge: number): number;
   setAutorecalculatesContentBorderThickness$forEdge$(flag: boolean, edge: number): void;
@@ -139,9 +139,9 @@ export declare class _NSWindow extends _NSResponder {
   transferWindowSharingToWindow$completionHandler$(window: _NSWindow, completionHandler: (...args: any[]) => any | null): void;
   requestSharingOfWindow$completionHandler$(window: _NSWindow, completionHandler: (...args: any[]) => any | null): void;
   requestSharingOfWindowUsingPreview$title$completionHandler$(image: _NSImage, title: _NSString, completionHandler: (...args: any[]) => any | null): void;
-  trackEventsMatchingMask$timeout$mode$handler$(mask: number, timeout: number, mode: number, trackingHandler: (...args: any[]) => any | null): void;
+  trackEventsMatchingMask$timeout$mode$handler$(mask: number, timeout: number, mode: _NSString, trackingHandler: (...args: any[]) => any | null): void;
   nextEventMatchingMask$(mask: number): _NSEvent | null;
-  nextEventMatchingMask$untilDate$inMode$dequeue$(mask: number, expiration: _NSDate | null, mode: number, deqFlag: boolean): _NSEvent | null;
+  nextEventMatchingMask$untilDate$inMode$dequeue$(mask: number, expiration: _NSDate | null, mode: _NSString, deqFlag: boolean): _NSEvent | null;
   discardEventsMatchingMask$beforeEvent$(mask: number, lastEvent: _NSEvent | null): void;
   postEvent$atStart$(event: _NSEvent, flag: boolean): void;
   sendEvent$(event: _NSEvent): void;

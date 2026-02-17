@@ -38,7 +38,7 @@ export interface _NSBrowserDelegate {
   browser$writeRowsWithIndexes$inColumn$toPasteboard$?(browser: _NSBrowser, rowIndexes: _NSIndexSet, column: number, pasteboard: _NSPasteboard): boolean;
   browser$namesOfPromisedFilesDroppedAtDestination$forDraggedRowsWithIndexes$inColumn$?(browser: _NSBrowser, dropDestination: _NSURL, rowIndexes: _NSIndexSet, column: number): _NSArray;
   browser$canDragRowsWithIndexes$inColumn$withEvent$?(browser: _NSBrowser, rowIndexes: _NSIndexSet, column: number, event: _NSEvent): boolean;
-  browser$draggingImageForRowsWithIndexes$inColumn$withEvent$offset$?(browser: _NSBrowser, rowIndexes: _NSIndexSet, column: number, event: _NSEvent, dragImageOffset: number): _NSImage | null;
+  browser$draggingImageForRowsWithIndexes$inColumn$withEvent$offset$?(browser: _NSBrowser, rowIndexes: _NSIndexSet, column: number, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage | null;
   browser$validateDrop$proposedRow$column$dropOperation$?(browser: _NSBrowser, info: NobjcObject, row: NobjcObject, column: NobjcObject, dropOperation: NobjcObject): number;
   browser$acceptDrop$atRow$column$dropOperation$?(browser: _NSBrowser, info: NobjcObject, row: number, column: number, dropOperation: number): boolean;
   browser$typeSelectStringForRow$inColumn$?(browser: _NSBrowser, row: number, column: number): _NSString | null;

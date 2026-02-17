@@ -10,6 +10,7 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSIndexPath } from "../Foundation/NSIndexPath.js";
 import type { _NSIndexSet } from "../Foundation/NSIndexSet.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { CGPoint, CGRect, CGSize } from "../structs.js";
 
 export declare class _NSCollectionView extends _NSView {
@@ -27,12 +28,12 @@ export declare class _NSCollectionView extends _NSView {
   deselectItemsAtIndexPaths$(indexPaths: _NSSet): void;
   selectAll$(sender: NobjcObject): void;
   deselectAll$(sender: NobjcObject): void;
-  registerClass$forItemWithIdentifier$(itemClass: NobjcObject, identifier: number): void;
-  registerNib$forItemWithIdentifier$(nib: _NSNib | null, identifier: number): void;
-  registerClass$forSupplementaryViewOfKind$withIdentifier$(viewClass: NobjcObject, kind: number, identifier: number): void;
-  registerNib$forSupplementaryViewOfKind$withIdentifier$(nib: _NSNib | null, kind: number, identifier: number): void;
-  makeItemWithIdentifier$forIndexPath$(identifier: number, indexPath: _NSIndexPath): _NSCollectionViewItem;
-  makeSupplementaryViewOfKind$withIdentifier$forIndexPath$(elementKind: number, identifier: number, indexPath: _NSIndexPath): _NSView;
+  registerClass$forItemWithIdentifier$(itemClass: NobjcObject, identifier: _NSString): void;
+  registerNib$forItemWithIdentifier$(nib: _NSNib | null, identifier: _NSString): void;
+  registerClass$forSupplementaryViewOfKind$withIdentifier$(viewClass: NobjcObject, kind: number, identifier: _NSString): void;
+  registerNib$forSupplementaryViewOfKind$withIdentifier$(nib: _NSNib | null, kind: number, identifier: _NSString): void;
+  makeItemWithIdentifier$forIndexPath$(identifier: _NSString, indexPath: _NSIndexPath): _NSCollectionViewItem;
+  makeSupplementaryViewOfKind$withIdentifier$forIndexPath$(elementKind: number, identifier: _NSString, indexPath: _NSIndexPath): _NSView;
   itemAtIndex$(index: number): _NSCollectionViewItem | null;
   itemAtIndexPath$(indexPath: _NSIndexPath): _NSCollectionViewItem | null;
   visibleItems(): _NSArray;
@@ -54,8 +55,8 @@ export declare class _NSCollectionView extends _NSView {
   toggleSectionCollapse$(sender: NobjcObject): void;
   scrollToItemsAtIndexPaths$scrollPosition$(indexPaths: _NSSet, scrollPosition: number): void;
   setDraggingSourceOperationMask$forLocal$(dragOperationMask: number, localDestination: boolean): void;
-  draggingImageForItemsAtIndexPaths$withEvent$offset$(indexPaths: _NSSet, event: _NSEvent, dragImageOffset: number): _NSImage;
-  draggingImageForItemsAtIndexes$withEvent$offset$(indexes: _NSIndexSet, event: _NSEvent, dragImageOffset: number): _NSImage;
+  draggingImageForItemsAtIndexPaths$withEvent$offset$(indexPaths: _NSSet, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage;
+  draggingImageForItemsAtIndexes$withEvent$offset$(indexes: _NSIndexSet, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage;
   newItemForRepresentedObject$(object_: NobjcObject): _NSCollectionViewItem;
 
   // Properties

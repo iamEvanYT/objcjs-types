@@ -4,6 +4,7 @@ import type { _NSBundle } from "../Foundation/NSBundle.js";
 import type { _NSData } from "../Foundation/NSData.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSURL } from "../Foundation/NSURL.js";
 
 export declare class _NSNib extends _NSObject {
@@ -11,7 +12,7 @@ export declare class _NSNib extends _NSObject {
   static new(): _NSNib;
   init(): _NSNib;
   // Instance methods
-  initWithNibNamed$bundle$(nibName: number, bundle: _NSBundle | null): _NSNib | null;
+  initWithNibNamed$bundle$(nibName: _NSString, bundle: _NSBundle | null): _NSNib | null;
   initWithNibData$bundle$(nibData: _NSData, bundle: _NSBundle | null): _NSNib;
   instantiateWithOwner$topLevelObjects$(owner: NobjcObject, topLevelObjects: NobjcObject): boolean;
   initWithContentsOfURL$(nibFileURL: _NSURL): NobjcObject;

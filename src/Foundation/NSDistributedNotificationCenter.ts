@@ -13,9 +13,9 @@ export declare class _NSDistributedNotificationCenter extends _NSNotificationCen
   static defaultCenter(): _NSDistributedNotificationCenter;
 
   // Instance methods
-  addObserver$selector$name$object$suspensionBehavior$(observer: NobjcObject, selector: string, name: number | null, object_: _NSString | null, suspensionBehavior: number): void;
-  postNotificationName$object$userInfo$deliverImmediately$(name: number, object_: _NSString | null, userInfo: _NSDictionary | null, deliverImmediately: boolean): void;
-  postNotificationName$object$userInfo$options$(name: number, object_: _NSString | null, userInfo: _NSDictionary | null, options: number): void;
+  addObserver$selector$name$object$suspensionBehavior$(observer: NobjcObject, selector: string, name: _NSString | null, object_: _NSString | null, suspensionBehavior: number): void;
+  postNotificationName$object$userInfo$deliverImmediately$(name: _NSString, object_: _NSString | null, userInfo: _NSDictionary | null, deliverImmediately: boolean): void;
+  postNotificationName$object$userInfo$options$(name: _NSString, object_: _NSString | null, userInfo: _NSDictionary | null, options: number): void;
 
   // Properties
   suspended(): boolean;

@@ -12,7 +12,7 @@ export declare class _NSTableColumn extends _NSObject {
   static new(): _NSTableColumn;
   init(): _NSTableColumn;
   // Instance methods
-  initWithIdentifier$(identifier: number): _NSTableColumn;
+  initWithIdentifier$(identifier: _NSString): _NSTableColumn;
   initWithCoder$(coder: _NSCoder): _NSTableColumn;
   sizeToFit(): void;
   setResizable$(flag: boolean): void;
@@ -20,8 +20,8 @@ export declare class _NSTableColumn extends _NSObject {
   dataCellForRow$(row: number): NobjcObject;
 
   // Properties
-  identifier(): number;
-  setIdentifier$(value: number): void;
+  identifier(): _NSString;
+  setIdentifier$(value: _NSString): void;
   tableView(): _NSTableView | null;
   setTableView$(value: _NSTableView | null): void;
   width(): number;

@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSNumber } from "./NSNumber.js";
 import type { _NSString } from "./NSString.js";
+import type { NSDecimal } from "../structs.js";
 
 export declare class _NSDecimalNumber extends _NSNumber {
   static alloc(): _NSDecimalNumber;
@@ -9,7 +10,7 @@ export declare class _NSDecimalNumber extends _NSNumber {
   init(): _NSDecimalNumber;
   // Class methods
   static decimalNumberWithMantissa$exponent$isNegative$(mantissa: number, exponent: number, flag: boolean): _NSDecimalNumber;
-  static decimalNumberWithDecimal$(dcm: number): _NSDecimalNumber;
+  static decimalNumberWithDecimal$(dcm: NSDecimal): _NSDecimalNumber;
   static decimalNumberWithString$(numberValue: _NSString | null): _NSDecimalNumber;
   static decimalNumberWithString$locale$(numberValue: _NSString | null, locale: NobjcObject): _NSDecimalNumber;
   static zero(): _NSDecimalNumber;
@@ -22,7 +23,7 @@ export declare class _NSDecimalNumber extends _NSNumber {
 
   // Instance methods
   initWithMantissa$exponent$isNegative$(mantissa: number, exponent: number, flag: boolean): _NSDecimalNumber;
-  initWithDecimal$(dcm: number): _NSDecimalNumber;
+  initWithDecimal$(dcm: NSDecimal): _NSDecimalNumber;
   initWithString$(numberValue: _NSString | null): _NSDecimalNumber;
   initWithString$locale$(numberValue: _NSString | null, locale: NobjcObject): _NSDecimalNumber;
   descriptionWithLocale$(locale: NobjcObject): _NSString;
@@ -42,7 +43,7 @@ export declare class _NSDecimalNumber extends _NSNumber {
   compare$(decimalNumber: _NSNumber): number;
 
   // Properties
-  decimalValue(): number;
+  decimalValue(): NSDecimal;
   objCType(): NobjcObject;
   doubleValue(): number;
 }

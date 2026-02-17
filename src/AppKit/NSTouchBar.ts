@@ -4,6 +4,7 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSSet } from "../Foundation/NSSet.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSTouchBarItem } from "./NSTouchBarItem.js";
 
 export declare class _NSTouchBar extends _NSObject {
@@ -16,7 +17,7 @@ export declare class _NSTouchBar extends _NSObject {
   // Instance methods
   init(): _NSTouchBar;
   initWithCoder$(coder: _NSCoder): _NSTouchBar | null;
-  itemForIdentifier$(identifier: number): _NSTouchBarItem | null;
+  itemForIdentifier$(identifier: _NSString): _NSTouchBarItem | null;
 
   // Properties
   customizationIdentifier(): number | null;
@@ -28,10 +29,10 @@ export declare class _NSTouchBar extends _NSObject {
   defaultItemIdentifiers(): _NSArray;
   setDefaultItemIdentifiers$(value: _NSArray): void;
   itemIdentifiers(): _NSArray;
-  principalItemIdentifier(): number | null;
-  setPrincipalItemIdentifier$(value: number | null): void;
-  escapeKeyReplacementItemIdentifier(): number | null;
-  setEscapeKeyReplacementItemIdentifier$(value: number | null): void;
+  principalItemIdentifier(): _NSString | null;
+  setPrincipalItemIdentifier$(value: _NSString | null): void;
+  escapeKeyReplacementItemIdentifier(): _NSString | null;
+  setEscapeKeyReplacementItemIdentifier$(value: _NSString | null): void;
   templateItems(): _NSSet;
   setTemplateItems$(value: _NSSet): void;
   delegate(): NobjcObject;

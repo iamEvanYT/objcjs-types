@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSAttributedString } from "../Foundation/NSAttributedString.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSCandidateListTouchBarItem } from "./NSCandidateListTouchBarItem.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSTextInputClient } from "./NSTextInputClient.js";
@@ -10,12 +11,12 @@ import type { NSRange } from "../structs.js";
 
 export interface _NSTextCheckingClient extends _NSTextInputClient, _NSTextInputTraits {
   // Instance methods
-  annotatedSubstringForProposedRange$actualRange$?(range: NSRange, actualRange: number | null): _NSAttributedString | null;
+  annotatedSubstringForProposedRange$actualRange$?(range: NSRange, actualRange: NobjcObject): _NSAttributedString | null;
   setAnnotations$range$?(annotations: _NSDictionary, range: NSRange): void;
   addAnnotations$range$?(annotations: _NSDictionary, range: NSRange): void;
-  removeAnnotation$range$?(annotationName: number, range: NSRange): void;
+  removeAnnotation$range$?(annotationName: _NSString, range: NSRange): void;
   replaceCharactersInRange$withAnnotatedString$?(range: NSRange, annotatedString: _NSAttributedString): void;
   selectAndShowRange$?(range: NSRange): void;
-  viewForRange$firstRect$actualRange$?(range: NSRange, firstRect: number | null, actualRange: number | null): _NSView | null;
+  viewForRange$firstRect$actualRange$?(range: NSRange, firstRect: NobjcObject, actualRange: NobjcObject): _NSView | null;
   candidateListTouchBarItem?(): _NSCandidateListTouchBarItem | null;
 }

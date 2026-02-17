@@ -2,9 +2,10 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSPasteboard } from "./NSPasteboard.js";
 import type { _NSPasteboardItem } from "./NSPasteboardItem.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export interface _NSPasteboardItemDataProvider {
   // Instance methods
-  pasteboard$item$provideDataForType$?(pasteboard: _NSPasteboard | null, item: _NSPasteboardItem, type: number): void;
+  pasteboard$item$provideDataForType$?(pasteboard: _NSPasteboard | null, item: _NSPasteboardItem, type: _NSString): void;
   pasteboardFinishedWithDataProvider$?(pasteboard: _NSPasteboard): void;
 }

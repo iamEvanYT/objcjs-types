@@ -28,7 +28,7 @@ export declare class _NSTextCheckingResult extends _NSObject {
   static replacementCheckingResultWithRange$replacementString$(range: NSRange, replacementString: _NSString): _NSTextCheckingResult;
   static correctionCheckingResultWithRange$replacementString$(range: NSRange, replacementString: _NSString): _NSTextCheckingResult;
   static correctionCheckingResultWithRange$replacementString$alternativeStrings$(range: NSRange, replacementString: _NSString, alternativeStrings: _NSArray): _NSTextCheckingResult;
-  static regularExpressionCheckingResultWithRanges$count$regularExpression$(ranges: number, count: number, regularExpression: _NSRegularExpression): _NSTextCheckingResult;
+  static regularExpressionCheckingResultWithRanges$count$regularExpression$(ranges: NobjcObject, count: number, regularExpression: _NSRegularExpression): _NSTextCheckingResult;
   static phoneNumberCheckingResultWithRange$phoneNumber$(range: NSRange, phoneNumber: _NSString): _NSTextCheckingResult;
   static transitInformationCheckingResultWithRange$components$(range: NSRange, components: _NSDictionary): _NSTextCheckingResult;
 

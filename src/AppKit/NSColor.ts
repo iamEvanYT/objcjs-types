@@ -22,10 +22,10 @@ export declare class _NSColor extends _NSObject {
   static colorWithRed$green$blue$alpha$(red: number, green: number, blue: number, alpha: number): _NSColor;
   static colorWithHue$saturation$brightness$alpha$(hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
   static colorWithColorSpace$hue$saturation$brightness$alpha$(space: _NSColorSpace, hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
-  static colorWithCatalogName$colorName$(listName: number, colorName: number): _NSColor | null;
-  static colorNamed$bundle$(name: number, bundle: _NSBundle | null): _NSColor | null;
-  static colorNamed$(name: number): _NSColor | null;
-  static colorWithName$dynamicProvider$(colorName: number | null, dynamicProvider: (...args: any[]) => any): _NSColor;
+  static colorWithCatalogName$colorName$(listName: _NSString, colorName: _NSString): _NSColor | null;
+  static colorNamed$bundle$(name: _NSString, bundle: _NSBundle | null): _NSColor | null;
+  static colorNamed$(name: _NSString): _NSColor | null;
+  static colorWithName$dynamicProvider$(colorName: _NSString | null, dynamicProvider: (...args: any[]) => any): _NSColor;
   static colorWithDeviceWhite$alpha$(white: number, alpha: number): _NSColor;
   static colorWithDeviceRed$green$blue$alpha$(red: number, green: number, blue: number, alpha: number): _NSColor;
   static colorWithDeviceHue$saturation$brightness$alpha$(hue: number, saturation: number, brightness: number, alpha: number): _NSColor;
@@ -38,7 +38,7 @@ export declare class _NSColor extends _NSObject {
   static colorWithRed$green$blue$alpha$linearExposure$(red: number, green: number, blue: number, alpha: number, linearExposure: number): _NSColor;
   static colorForControlTint$(controlTint: number): _NSColor;
   static colorFromPasteboard$(pasteBoard: _NSPasteboard): _NSColor | null;
-  static colorWithCGColor$(cgColor: number): _NSColor | null;
+  static colorWithCGColor$(cgColor: NobjcObject): _NSColor | null;
   static colorWithCIColor$(color: NobjcObject): _NSColor;
   static blackColor(): _NSColor;
   static darkGrayColor(): _NSColor;
@@ -154,8 +154,8 @@ export declare class _NSColor extends _NSObject {
   // Properties
   type(): number;
   standardDynamicRangeColor(): NobjcObject;
-  catalogNameComponent(): number;
-  colorNameComponent(): number;
+  catalogNameComponent(): _NSString;
+  colorNameComponent(): _NSString;
   localizedCatalogNameComponent(): _NSString;
   localizedColorNameComponent(): _NSString;
   redComponent(): number;

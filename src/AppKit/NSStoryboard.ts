@@ -2,18 +2,19 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSBundle } from "../Foundation/NSBundle.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSStoryboard extends _NSObject {
   static alloc(): _NSStoryboard;
   static new(): _NSStoryboard;
   init(): _NSStoryboard;
   // Class methods
-  static storyboardWithName$bundle$(name: number, storyboardBundleOrNil: _NSBundle | null): _NSStoryboard;
+  static storyboardWithName$bundle$(name: _NSString, storyboardBundleOrNil: _NSBundle | null): _NSStoryboard;
   static mainStoryboard(): NobjcObject;
 
   // Instance methods
   instantiateInitialController(): NobjcObject;
   instantiateInitialControllerWithCreator$(block: number | null): NobjcObject;
-  instantiateControllerWithIdentifier$(identifier: number): NobjcObject;
-  instantiateControllerWithIdentifier$creator$(identifier: number, block: number | null): NobjcObject;
+  instantiateControllerWithIdentifier$(identifier: _NSString): NobjcObject;
+  instantiateControllerWithIdentifier$creator$(identifier: _NSString, block: number | null): NobjcObject;
 }

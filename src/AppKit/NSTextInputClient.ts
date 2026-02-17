@@ -14,9 +14,9 @@ export interface _NSTextInputClient {
   selectedRange?(): NSRange;
   markedRange?(): NSRange;
   hasMarkedText?(): boolean;
-  attributedSubstringForProposedRange$actualRange$?(range: NSRange, actualRange: number | null): _NSAttributedString | null;
+  attributedSubstringForProposedRange$actualRange$?(range: NSRange, actualRange: NobjcObject): _NSAttributedString | null;
   validAttributesForMarkedText?(): _NSArray;
-  firstRectForCharacterRange$actualRange$?(range: NSRange, actualRange: number | null): CGRect;
+  firstRectForCharacterRange$actualRange$?(range: NSRange, actualRange: NobjcObject): CGRect;
   characterIndexForPoint$?(point: CGPoint): number;
   attributedString?(): _NSAttributedString;
   fractionOfDistanceThroughGlyphForPoint$?(point: CGPoint): number;

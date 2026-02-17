@@ -4,6 +4,7 @@ import type { _NSData } from "./NSData.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSOperationQueue } from "./NSOperationQueue.js";
 import type { _NSRunLoop } from "./NSRunLoop.js";
+import type { _NSString } from "./NSString.js";
 import type { _NSURLRequest } from "./NSURLRequest.js";
 
 export declare class _NSURLConnection extends _NSObject {
@@ -21,8 +22,8 @@ export declare class _NSURLConnection extends _NSObject {
   initWithRequest$delegate$(request: _NSURLRequest, delegate: NobjcObject): _NSURLConnection | null;
   start(): void;
   cancel(): void;
-  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
-  unscheduleFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
+  unscheduleFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
   setDelegateQueue$(queue: _NSOperationQueue | null): void;
 
   // Properties

@@ -18,7 +18,7 @@ export declare class _NSImageRep extends _NSObject {
   static registerImageRepClass$(imageRepClass: NobjcObject): void;
   static unregisterImageRepClass$(imageRepClass: NobjcObject): void;
   static imageRepClassForFileType$(type: _NSString): NobjcObject;
-  static imageRepClassForPasteboardType$(type: number): NobjcObject;
+  static imageRepClassForPasteboardType$(type: _NSString): NobjcObject;
   static imageRepClassForType$(type: _NSString): NobjcObject;
   static imageRepClassForData$(data: _NSData): NobjcObject;
   static canInitWithData$(data: _NSData): boolean;
@@ -44,7 +44,7 @@ export declare class _NSImageRep extends _NSObject {
   drawAtPoint$(point: CGPoint): boolean;
   drawInRect$(rect: CGRect): boolean;
   drawInRect$fromRect$operation$fraction$respectFlipped$hints$(dstSpacePortionRect: CGRect, srcSpacePortionRect: CGRect, op: number, requestedAlpha: number, respectContextIsFlipped: boolean, hints: _NSDictionary | null): boolean;
-  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, context: _NSGraphicsContext | null, hints: _NSDictionary | null): number | null;
+  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, context: _NSGraphicsContext | null, hints: _NSDictionary | null): NobjcObject;
 
   // Properties
   size(): CGSize;

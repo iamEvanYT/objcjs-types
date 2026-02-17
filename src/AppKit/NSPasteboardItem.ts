@@ -11,14 +11,14 @@ export declare class _NSPasteboardItem extends _NSObject {
   static new(): _NSPasteboardItem;
   init(): _NSPasteboardItem;
   // Instance methods
-  availableTypeFromArray$(types: _NSArray): number | null;
+  availableTypeFromArray$(types: _NSArray): _NSString | null;
   setDataProvider$forTypes$(dataProvider: NobjcObject, types: _NSArray): boolean;
-  setData$forType$(data: _NSData, type: number): boolean;
-  setString$forType$(string_: _NSString, type: number): boolean;
-  setPropertyList$forType$(propertyList: NobjcObject, type: number): boolean;
-  dataForType$(type: number): _NSData | null;
-  stringForType$(type: number): _NSString | null;
-  propertyListForType$(type: number): NobjcObject;
+  setData$forType$(data: _NSData, type: _NSString): boolean;
+  setString$forType$(string_: _NSString, type: _NSString): boolean;
+  setPropertyList$forType$(propertyList: NobjcObject, type: _NSString): boolean;
+  dataForType$(type: _NSString): _NSData | null;
+  stringForType$(type: _NSString): _NSString | null;
+  propertyListForType$(type: _NSString): NobjcObject;
   detectPatternsForPatterns$completionHandler$(patterns: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   detectValuesForPatterns$completionHandler$(patterns: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   detectMetadataForTypes$completionHandler$(types: _NSSet, completionHandler: (...args: any[]) => any | null): void;

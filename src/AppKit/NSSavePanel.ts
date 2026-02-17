@@ -31,8 +31,8 @@ export declare class _NSSavePanel extends _NSPanel {
 
   // Properties
   URL(): _NSURL | null;
-  identifier(): number | null;
-  setIdentifier$(value: number | null): void;
+  identifier(): _NSString | null;
+  setIdentifier$(value: _NSString | null): void;
   directoryURL(): NobjcObject;
   setDirectoryURL$(value: NobjcObject): void;
   allowedContentTypes(): NobjcObject;

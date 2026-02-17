@@ -184,7 +184,7 @@ export declare class _NSDocument extends _NSObject {
   setUndoManager$(value: _NSUndoManager | null): void;
   hasUndoManager(): boolean;
   setHasUndoManager$(value: boolean): void;
-  windowNibName(): number | null;
+  windowNibName(): _NSString | null;
   windowControllers(): _NSArray;
   displayName(): _NSString;
   setDisplayName$(value: _NSString): void;

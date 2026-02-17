@@ -20,6 +20,7 @@ import {
   emitFrameworkIndex,
   emitTopLevelIndex,
   emitDelegatesFile,
+  emitStructsFile,
 } from "./emitter.ts";
 
 const SRC_DIR = join(import.meta.dir, "..", "src");
@@ -319,6 +320,10 @@ async function main(): Promise<void> {
       `  Generated ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + index.ts`
     );
   }
+
+  // Emit structs file
+  const structsContent = emitStructsFile();
+  await writeFile(join(SRC_DIR, "structs.ts"), structsContent);
 
   // Emit delegates file (ProtocolMap + createDelegate)
   const delegatesContent = emitDelegatesFile(frameworks, generatedProtocolsByFramework);

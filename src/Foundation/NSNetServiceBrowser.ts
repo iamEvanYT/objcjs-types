@@ -9,8 +9,8 @@ export declare class _NSNetServiceBrowser extends _NSObject {
   static new(): _NSNetServiceBrowser;
   // Instance methods
   init(): _NSNetServiceBrowser;
-  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
-  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
+  removeFromRunLoop$forMode$(aRunLoop: _NSRunLoop, mode: _NSString): void;
   searchForBrowsableDomains(): void;
   searchForRegistrationDomains(): void;
   searchForServicesOfType$inDomain$(type: _NSString, domainString: _NSString): void;

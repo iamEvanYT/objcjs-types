@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSLayoutDimension } from "./NSLayoutDimension.js";
 import type { _NSLayoutXAxisAnchor } from "./NSLayoutXAxisAnchor.js";
 import type { _NSLayoutYAxisAnchor } from "./NSLayoutYAxisAnchor.js";
@@ -19,8 +20,8 @@ export declare class _NSLayoutGuide extends _NSObject {
   frame(): CGRect;
   owningView(): _NSView | null;
   setOwningView$(value: _NSView | null): void;
-  identifier(): number;
-  setIdentifier$(value: number): void;
+  identifier(): _NSString;
+  setIdentifier$(value: _NSString): void;
   leadingAnchor(): _NSLayoutXAxisAnchor;
   trailingAnchor(): _NSLayoutXAxisAnchor;
   leftAnchor(): _NSLayoutXAxisAnchor;

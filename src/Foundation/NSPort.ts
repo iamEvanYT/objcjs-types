@@ -5,6 +5,7 @@ import type { _NSDate } from "./NSDate.js";
 import type { _NSMutableArray } from "./NSMutableArray.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSRunLoop } from "./NSRunLoop.js";
+import type { _NSString } from "./NSString.js";
 
 export declare class _NSPort extends _NSObject {
   static alloc(): _NSPort;
@@ -17,12 +18,12 @@ export declare class _NSPort extends _NSObject {
   invalidate(): void;
   setDelegate$(anObject: NobjcObject): void;
   delegate(): NobjcObject;
-  scheduleInRunLoop$forMode$(runLoop: _NSRunLoop, mode: number): void;
-  removeFromRunLoop$forMode$(runLoop: _NSRunLoop, mode: number): void;
+  scheduleInRunLoop$forMode$(runLoop: _NSRunLoop, mode: _NSString): void;
+  removeFromRunLoop$forMode$(runLoop: _NSRunLoop, mode: _NSString): void;
   sendBeforeDate$components$from$reserved$(limitDate: _NSDate, components: _NSMutableArray | null, receivePort: _NSPort | null, headerSpaceReserved: number): boolean;
   sendBeforeDate$msgid$components$from$reserved$(limitDate: _NSDate, msgID: number, components: _NSMutableArray | null, receivePort: _NSPort | null, headerSpaceReserved: number): boolean;
-  addConnection$toRunLoop$forMode$(conn: _NSConnection, runLoop: _NSRunLoop, mode: number): void;
-  removeConnection$fromRunLoop$forMode$(conn: _NSConnection, runLoop: _NSRunLoop, mode: number): void;
+  addConnection$toRunLoop$forMode$(conn: _NSConnection, runLoop: _NSRunLoop, mode: _NSString): void;
+  removeConnection$fromRunLoop$forMode$(conn: _NSConnection, runLoop: _NSRunLoop, mode: _NSString): void;
 
   // Properties
   valid(): boolean;

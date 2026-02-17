@@ -7,13 +7,13 @@ import type { NSRange } from "../structs.js";
 
 export interface _NSTextFinderClient {
   // Instance methods
-  stringAtIndex$effectiveRange$endsWithSearchBoundary$?(characterIndex: number, outRange: number, outFlag: NobjcObject): _NSString;
+  stringAtIndex$effectiveRange$endsWithSearchBoundary$?(characterIndex: number, outRange: NobjcObject, outFlag: NobjcObject): _NSString;
   stringLength?(): number;
   scrollRangeToVisible$?(range: NSRange): void;
   shouldReplaceCharactersInRanges$withStrings$?(ranges: _NSArray, strings: _NSArray): boolean;
   replaceCharactersInRange$withString$?(range: NSRange, string_: _NSString): void;
   didReplaceCharacters?(): void;
-  contentViewAtIndex$effectiveCharacterRange$?(index: number, outRange: number): _NSView;
+  contentViewAtIndex$effectiveCharacterRange$?(index: number, outRange: NobjcObject): _NSView;
   rectsForCharacterRange$?(range: NSRange): _NSArray | null;
   drawCharactersInRange$forContentView$?(range: NSRange, view: _NSView): void;
 

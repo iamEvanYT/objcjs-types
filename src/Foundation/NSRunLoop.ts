@@ -4,6 +4,7 @@ import type { _NSArray } from "./NSArray.js";
 import type { _NSDate } from "./NSDate.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSPort } from "./NSPort.js";
+import type { _NSString } from "./NSString.js";
 import type { _NSTimer } from "./NSTimer.js";
 
 export declare class _NSRunLoop extends _NSObject {
@@ -15,15 +16,15 @@ export declare class _NSRunLoop extends _NSObject {
   static mainRunLoop(): _NSRunLoop;
 
   // Instance methods
-  getCFRunLoop(): number;
-  addTimer$forMode$(timer: _NSTimer, mode: number): void;
-  addPort$forMode$(aPort: _NSPort, mode: number): void;
-  removePort$forMode$(aPort: _NSPort, mode: number): void;
-  limitDateForMode$(mode: number): _NSDate | null;
-  acceptInputForMode$beforeDate$(mode: number, limitDate: _NSDate): void;
+  getCFRunLoop(): NobjcObject;
+  addTimer$forMode$(timer: _NSTimer, mode: _NSString): void;
+  addPort$forMode$(aPort: _NSPort, mode: _NSString): void;
+  removePort$forMode$(aPort: _NSPort, mode: _NSString): void;
+  limitDateForMode$(mode: _NSString): _NSDate | null;
+  acceptInputForMode$beforeDate$(mode: _NSString, limitDate: _NSDate): void;
   run(): void;
   runUntilDate$(limitDate: _NSDate): void;
-  runMode$beforeDate$(mode: number, limitDate: _NSDate): boolean;
+  runMode$beforeDate$(mode: _NSString, limitDate: _NSDate): boolean;
   configureAsServer(): void;
   performInModes$block$(modes: _NSArray, block: (...args: any[]) => any): void;
   performBlock$(block: (...args: any[]) => any): void;
@@ -32,5 +33,5 @@ export declare class _NSRunLoop extends _NSObject {
   cancelPerformSelectorsWithTarget$(target: NobjcObject): void;
 
   // Properties
-  currentMode(): number | null;
+  currentMode(): _NSString | null;
 }

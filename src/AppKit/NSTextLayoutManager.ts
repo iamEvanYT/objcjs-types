@@ -6,6 +6,7 @@ import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSDictionary } from "../Foundation/NSDictionary.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
 import type { _NSOperationQueue } from "../Foundation/NSOperationQueue.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSTextContainer } from "./NSTextContainer.js";
 import type { _NSTextContentManager } from "./NSTextContentManager.js";
 import type { _NSTextLayoutFragment } from "./NSTextLayoutFragment.js";
@@ -32,8 +33,8 @@ export declare class _NSTextLayoutManager extends _NSObject {
   enumerateTextLayoutFragmentsFromLocation$options$usingBlock$(location: NobjcObject, options: number, block: (...args: any[]) => any): NobjcObject;
   enumerateRenderingAttributesFromLocation$reverse$usingBlock$(location: NobjcObject, reverse: boolean, block: (...args: any[]) => any): void;
   setRenderingAttributes$forTextRange$(renderingAttributes: _NSDictionary, textRange: _NSTextRange): void;
-  addRenderingAttribute$value$forTextRange$(renderingAttribute: number, value: NobjcObject, textRange: _NSTextRange): void;
-  removeRenderingAttribute$forTextRange$(renderingAttribute: number, textRange: _NSTextRange): void;
+  addRenderingAttribute$value$forTextRange$(renderingAttribute: _NSString, value: NobjcObject, textRange: _NSTextRange): void;
+  removeRenderingAttribute$forTextRange$(renderingAttribute: _NSString, textRange: _NSTextRange): void;
   invalidateRenderingAttributesForTextRange$(textRange: _NSTextRange): void;
   renderingAttributesForLink$atLocation$(link: NobjcObject, location: NobjcObject): _NSDictionary;
   enumerateTextSegmentsInRange$type$options$usingBlock$(textRange: _NSTextRange, type: number, options: number, block: (...args: any[]) => any | null): void;

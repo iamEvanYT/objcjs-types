@@ -14,7 +14,7 @@ export declare class _NSBezierPath extends _NSObject {
   static bezierPathWithRect$(rect: CGRect): _NSBezierPath;
   static bezierPathWithOvalInRect$(rect: CGRect): _NSBezierPath;
   static bezierPathWithRoundedRect$xRadius$yRadius$(rect: CGRect, xRadius: number, yRadius: number): _NSBezierPath;
-  static bezierPathWithCGPath$(cgPath: number): _NSBezierPath;
+  static bezierPathWithCGPath$(cgPath: NobjcObject): _NSBezierPath;
   static fillRect$(rect: CGRect): void;
   static strokeRect$(rect: CGRect): void;
   static clipRect$(rect: CGRect): void;
@@ -51,12 +51,12 @@ export declare class _NSBezierPath extends _NSObject {
   addClip(): void;
   setClip(): void;
   transformUsingAffineTransform$(transform: _NSAffineTransform): void;
-  elementAtIndex$associatedPoints$(index: number, points: number | null): number;
+  elementAtIndex$associatedPoints$(index: number, points: NobjcObject): number;
   elementAtIndex$(index: number): number;
-  setAssociatedPoints$atIndex$(points: number | null, index: number): void;
+  setAssociatedPoints$atIndex$(points: NobjcObject, index: number): void;
   appendBezierPath$(path: _NSBezierPath): void;
   appendBezierPathWithRect$(rect: CGRect): void;
-  appendBezierPathWithPoints$count$(points: number, count: number): void;
+  appendBezierPathWithPoints$count$(points: NobjcObject, count: number): void;
   appendBezierPathWithOvalInRect$(rect: CGRect): void;
   appendBezierPathWithArcWithCenter$radius$startAngle$endAngle$clockwise$(center: CGPoint, radius: number, startAngle: number, endAngle: number, clockwise: boolean): void;
   appendBezierPathWithArcWithCenter$radius$startAngle$endAngle$(center: CGPoint, radius: number, startAngle: number, endAngle: number): void;

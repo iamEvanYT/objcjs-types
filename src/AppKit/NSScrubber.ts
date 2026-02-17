@@ -8,6 +8,7 @@ import type { _NSScrubberSelectionStyle } from "./NSScrubberSelectionStyle.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSIndexSet } from "../Foundation/NSIndexSet.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { CGRect } from "../structs.js";
 
 export declare class _NSScrubber extends _NSView {
@@ -25,9 +26,9 @@ export declare class _NSScrubber extends _NSView {
   moveItemAtIndex$toIndex$(oldIndex: number, newIndex: number): void;
   scrollItemAtIndex$toAlignment$(index: number, alignment: number): void;
   itemViewForItemAtIndex$(index: number): _NSScrubberItemView | null;
-  registerClass$forItemIdentifier$(itemViewClass: NobjcObject, itemIdentifier: number): void;
-  registerNib$forItemIdentifier$(nib: _NSNib | null, itemIdentifier: number): void;
-  makeItemWithIdentifier$owner$(itemIdentifier: number, owner: NobjcObject): _NSScrubberItemView | null;
+  registerClass$forItemIdentifier$(itemViewClass: NobjcObject, itemIdentifier: _NSString): void;
+  registerNib$forItemIdentifier$(nib: _NSNib | null, itemIdentifier: _NSString): void;
+  makeItemWithIdentifier$owner$(itemIdentifier: _NSString, owner: NobjcObject): _NSScrubberItemView | null;
 
   // Properties
   dataSource(): NobjcObject;

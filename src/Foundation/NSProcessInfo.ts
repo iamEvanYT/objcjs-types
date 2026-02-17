@@ -4,6 +4,7 @@ import type { _NSArray } from "./NSArray.js";
 import type { _NSDictionary } from "./NSDictionary.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSString } from "./NSString.js";
+import type { NSOperatingSystemVersion } from "../structs.js";
 
 export declare class _NSProcessInfo extends _NSObject {
   static alloc(): _NSProcessInfo;
@@ -15,7 +16,7 @@ export declare class _NSProcessInfo extends _NSObject {
   // Instance methods
   operatingSystem(): number;
   operatingSystemName(): _NSString;
-  isOperatingSystemAtLeastVersion$(version: number): boolean;
+  isOperatingSystemAtLeastVersion$(version: NSOperatingSystemVersion): boolean;
   disableSuddenTermination(): void;
   enableSuddenTermination(): void;
   disableAutomaticTermination$(reason: _NSString): void;
@@ -34,7 +35,7 @@ export declare class _NSProcessInfo extends _NSObject {
   processIdentifier(): number;
   globallyUniqueString(): _NSString;
   operatingSystemVersionString(): _NSString;
-  operatingSystemVersion(): number;
+  operatingSystemVersion(): NSOperatingSystemVersion;
   processorCount(): number;
   activeProcessorCount(): number;
   physicalMemory(): number;

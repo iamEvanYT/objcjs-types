@@ -11,9 +11,9 @@ export declare class _NSGroupTouchBarItem extends _NSTouchBarItem {
   static new(): _NSGroupTouchBarItem;
   init(): _NSGroupTouchBarItem;
   // Class methods
-  static groupItemWithIdentifier$items$(identifier: number, items: _NSArray): _NSGroupTouchBarItem;
-  static groupItemWithIdentifier$items$allowedCompressionOptions$(identifier: number, items: _NSArray, allowedCompressionOptions: _NSUserInterfaceCompressionOptions): _NSGroupTouchBarItem;
-  static alertStyleGroupItemWithIdentifier$(identifier: number): _NSGroupTouchBarItem;
+  static groupItemWithIdentifier$items$(identifier: _NSString, items: _NSArray): _NSGroupTouchBarItem;
+  static groupItemWithIdentifier$items$allowedCompressionOptions$(identifier: _NSString, items: _NSArray, allowedCompressionOptions: _NSUserInterfaceCompressionOptions): _NSGroupTouchBarItem;
+  static alertStyleGroupItemWithIdentifier$(identifier: _NSString): _NSGroupTouchBarItem;
 
   // Properties
   groupTouchBar(): _NSTouchBar;

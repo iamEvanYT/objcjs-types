@@ -21,7 +21,7 @@ export declare class _NSImage extends _NSObject {
   static new(): _NSImage;
   init(): _NSImage;
   // Class methods
-  static imageNamed$(name: number): _NSImage | null;
+  static imageNamed$(name: _NSString): _NSImage | null;
   static imageWithSystemSymbolName$accessibilityDescription$(name: _NSString, description: _NSString | null): _NSImage | null;
   static imageWithSystemSymbolName$variableValue$accessibilityDescription$(name: _NSString, value: number, description: _NSString | null): _NSImage | null;
   static imageWithSymbolName$variableValue$(name: _NSString, value: number): _NSImage | null;
@@ -45,8 +45,8 @@ export declare class _NSImage extends _NSObject {
   initByReferencingURL$(url: _NSURL): _NSImage;
   initWithPasteboard$(pasteboard: _NSPasteboard): _NSImage | null;
   initWithDataIgnoringOrientation$(data: _NSData): _NSImage | null;
-  setName$(string_: number | null): boolean;
-  name(): number | null;
+  setName$(string_: _NSString | null): boolean;
+  name(): _NSString | null;
   drawAtPoint$fromRect$operation$fraction$(point: CGPoint, fromRect: CGRect, op: number, delta: number): void;
   drawInRect$fromRect$operation$fraction$(rect: CGRect, fromRect: CGRect, op: number, delta: number): void;
   drawInRect$fromRect$operation$fraction$respectFlipped$hints$(dstSpacePortionRect: CGRect, srcSpacePortionRect: CGRect, op: number, requestedAlpha: number, respectContextIsFlipped: boolean, hints: _NSDictionary | null): void;
@@ -57,8 +57,8 @@ export declare class _NSImage extends _NSObject {
   addRepresentations$(imageReps: _NSArray): void;
   addRepresentation$(imageRep: _NSImageRep): void;
   removeRepresentation$(imageRep: _NSImageRep): void;
-  initWithCGImage$size$(cgImage: number, size: CGSize): _NSImage;
-  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, referenceContext: _NSGraphicsContext | null, hints: _NSDictionary | null): number | null;
+  initWithCGImage$size$(cgImage: NobjcObject, size: CGSize): _NSImage;
+  CGImageForProposedRect$context$hints$(proposedDestRect: NobjcObject, referenceContext: _NSGraphicsContext | null, hints: _NSDictionary | null): NobjcObject;
   bestRepresentationForRect$context$hints$(rect: CGRect, referenceContext: _NSGraphicsContext | null, hints: _NSDictionary | null): _NSImageRep | null;
   hitTestRect$withImageDestinationRect$context$hints$flipped$(testRectDestSpace: CGRect, imageRectDestSpace: CGRect, context: _NSGraphicsContext | null, hints: _NSDictionary | null, flipped: boolean): boolean;
   recommendedLayerContentsScale$(preferredContentsScale: number): number;

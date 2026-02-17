@@ -16,9 +16,9 @@ export declare class _NSPasteboard extends _NSObject {
   // Class methods
   static pasteboardWithName$(name: number): _NSPasteboard;
   static pasteboardWithUniqueName(): _NSPasteboard;
-  static typesFilterableTo$(type: number): _NSArray;
+  static typesFilterableTo$(type: _NSString): _NSArray;
   static pasteboardByFilteringFile$(filename: _NSString): _NSPasteboard;
-  static pasteboardByFilteringData$ofType$(data: _NSData, type: number): _NSPasteboard;
+  static pasteboardByFilteringData$ofType$(data: _NSData, type: _NSString): _NSPasteboard;
   static pasteboardByFilteringTypesInPasteboard$(pboard: _NSPasteboard): _NSPasteboard;
   static generalPasteboard(): _NSPasteboard;
 
@@ -33,18 +33,18 @@ export declare class _NSPasteboard extends _NSObject {
   canReadObjectForClasses$options$(classArray: _NSArray, options: _NSDictionary | null): boolean;
   declareTypes$owner$(newTypes: _NSArray, newOwner: NobjcObject): number;
   addTypes$owner$(newTypes: _NSArray, newOwner: NobjcObject): number;
-  availableTypeFromArray$(types: _NSArray): number | null;
-  setData$forType$(data: _NSData | null, dataType: number): boolean;
-  setPropertyList$forType$(plist: NobjcObject, dataType: number): boolean;
-  setString$forType$(string_: _NSString, dataType: number): boolean;
-  dataForType$(dataType: number): _NSData | null;
-  propertyListForType$(dataType: number): NobjcObject;
-  stringForType$(dataType: number): _NSString | null;
+  availableTypeFromArray$(types: _NSArray): _NSString | null;
+  setData$forType$(data: _NSData | null, dataType: _NSString): boolean;
+  setPropertyList$forType$(plist: NobjcObject, dataType: _NSString): boolean;
+  setString$forType$(string_: _NSString, dataType: _NSString): boolean;
+  dataForType$(dataType: _NSString): _NSData | null;
+  propertyListForType$(dataType: _NSString): NobjcObject;
+  stringForType$(dataType: _NSString): _NSString | null;
   detectPatternsForPatterns$completionHandler$(patterns: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   detectValuesForPatterns$completionHandler$(patterns: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   detectMetadataForTypes$completionHandler$(types: _NSSet, completionHandler: (...args: any[]) => any | null): void;
   writeFileContents$(filename: _NSString): boolean;
-  readFileContentsType$toFile$(type: number | null, filename: _NSString): _NSString | null;
+  readFileContentsType$toFile$(type: _NSString | null, filename: _NSString): _NSString | null;
   writeFileWrapper$(wrapper: _NSFileWrapper): boolean;
   readFileWrapper(): _NSFileWrapper | null;
 

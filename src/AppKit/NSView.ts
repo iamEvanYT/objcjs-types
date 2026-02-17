@@ -138,7 +138,7 @@ export declare class _NSView extends _NSResponder {
   writePDFInsideRect$toPasteboard$(rect: CGRect, pasteboard: _NSPasteboard): void;
   dataWithPDFInsideRect$(rect: CGRect): _NSData;
   print$(sender: NobjcObject): void;
-  knowsPageRange$(range: number): boolean;
+  knowsPageRange$(range: NobjcObject): boolean;
   adjustPageWidthNew$left$right$limit$(newRight: NobjcObject, oldLeft: number, oldRight: number, rightLimit: number): void;
   adjustPageHeightNew$top$bottom$limit$(newBottom: NobjcObject, oldTop: number, oldBottom: number, bottomLimit: number): void;
   rectForPage$(page: number): CGRect;

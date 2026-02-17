@@ -4,6 +4,7 @@ import type { _NSDictionary } from "./NSDictionary.js";
 import type { _NSNotification } from "./NSNotification.js";
 import type { _NSObject } from "./NSObject.js";
 import type { _NSOperationQueue } from "./NSOperationQueue.js";
+import type { _NSString } from "./NSString.js";
 
 export declare class _NSNotificationCenter extends _NSObject {
   static alloc(): _NSNotificationCenter;
@@ -13,11 +14,11 @@ export declare class _NSNotificationCenter extends _NSObject {
   static defaultCenter(): _NSNotificationCenter;
 
   // Instance methods
-  addObserver$selector$name$object$(observer: NobjcObject, aSelector: string, aName: number | null, anObject: NobjcObject): void;
+  addObserver$selector$name$object$(observer: NobjcObject, aSelector: string, aName: _NSString | null, anObject: NobjcObject): void;
   postNotification$(notification: _NSNotification): void;
-  postNotificationName$object$(aName: number, anObject: NobjcObject): void;
-  postNotificationName$object$userInfo$(aName: number, anObject: NobjcObject, aUserInfo: _NSDictionary | null): void;
+  postNotificationName$object$(aName: _NSString, anObject: NobjcObject): void;
+  postNotificationName$object$userInfo$(aName: _NSString, anObject: NobjcObject, aUserInfo: _NSDictionary | null): void;
   removeObserver$(observer: NobjcObject): void;
-  removeObserver$name$object$(observer: NobjcObject, aName: number | null, anObject: NobjcObject): void;
-  addObserverForName$object$queue$usingBlock$(name: number | null, obj: NobjcObject, queue: _NSOperationQueue | null, block: (...args: any[]) => any): NobjcObject;
+  removeObserver$name$object$(observer: NobjcObject, aName: _NSString | null, anObject: NobjcObject): void;
+  addObserverForName$object$queue$usingBlock$(name: _NSString | null, obj: NobjcObject, queue: _NSOperationQueue | null, block: (...args: any[]) => any): NobjcObject;
 }

@@ -10,9 +10,9 @@ export declare class _NSButtonTouchBarItem extends _NSTouchBarItem {
   static new(): _NSButtonTouchBarItem;
   init(): _NSButtonTouchBarItem;
   // Class methods
-  static buttonTouchBarItemWithIdentifier$title$target$action$(identifier: number, title: _NSString, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
-  static buttonTouchBarItemWithIdentifier$image$target$action$(identifier: number, image: _NSImage, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
-  static buttonTouchBarItemWithIdentifier$title$image$target$action$(identifier: number, title: _NSString, image: _NSImage, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
+  static buttonTouchBarItemWithIdentifier$title$target$action$(identifier: _NSString, title: _NSString, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
+  static buttonTouchBarItemWithIdentifier$image$target$action$(identifier: _NSString, image: _NSImage, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
+  static buttonTouchBarItemWithIdentifier$title$image$target$action$(identifier: _NSString, title: _NSString, image: _NSImage, target: NobjcObject, action: string | null): _NSButtonTouchBarItem;
 
   // Properties
   title(): _NSString;

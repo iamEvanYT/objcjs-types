@@ -16,5 +16,5 @@ export declare class _NSFormatter extends _NSObject {
   editingStringForObjectValue$(obj: NobjcObject): _NSString | null;
   getObjectValue$forString$errorDescription$(obj: NobjcObject, string_: _NSString, error: NobjcObject): boolean;
   isPartialStringValid$newEditingString$errorDescription$(partialString: _NSString, newString: NobjcObject, error: NobjcObject): boolean;
-  isPartialStringValid$proposedSelectedRange$originalString$originalSelectedRange$errorDescription$(partialStringPtr: NobjcObject, proposedSelRangePtr: number | null, origString: _NSString, origSelRange: NSRange, error: NobjcObject): boolean;
+  isPartialStringValid$proposedSelectedRange$originalString$originalSelectedRange$errorDescription$(partialStringPtr: NobjcObject, proposedSelRangePtr: NobjcObject, origString: _NSString, origSelRange: NSRange, error: NobjcObject): boolean;
 }

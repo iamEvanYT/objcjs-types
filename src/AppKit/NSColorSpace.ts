@@ -27,7 +27,7 @@ export declare class _NSColorSpace extends _NSObject {
   // Instance methods
   initWithICCProfileData$(iccData: _NSData): _NSColorSpace | null;
   initWithColorSyncProfile$(prof: NobjcObject): _NSColorSpace | null;
-  initWithCGColorSpace$(cgColorSpace: number): _NSColorSpace | null;
+  initWithCGColorSpace$(cgColorSpace: NobjcObject): _NSColorSpace | null;
 
   // Properties
   ICCProfileData(): _NSData | null;

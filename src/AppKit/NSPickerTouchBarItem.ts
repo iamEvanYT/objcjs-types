@@ -11,8 +11,8 @@ export declare class _NSPickerTouchBarItem extends _NSTouchBarItem {
   static new(): _NSPickerTouchBarItem;
   init(): _NSPickerTouchBarItem;
   // Class methods
-  static pickerTouchBarItemWithIdentifier$labels$selectionMode$target$action$(identifier: number, labels: _NSArray, selectionMode: number, target: NobjcObject, action: string | null): _NSPickerTouchBarItem;
-  static pickerTouchBarItemWithIdentifier$images$selectionMode$target$action$(identifier: number, images: _NSArray, selectionMode: number, target: NobjcObject, action: string | null): _NSPickerTouchBarItem;
+  static pickerTouchBarItemWithIdentifier$labels$selectionMode$target$action$(identifier: _NSString, labels: _NSArray, selectionMode: number, target: NobjcObject, action: string | null): _NSPickerTouchBarItem;
+  static pickerTouchBarItemWithIdentifier$images$selectionMode$target$action$(identifier: _NSString, images: _NSArray, selectionMode: number, target: NobjcObject, action: string | null): _NSPickerTouchBarItem;
 
   // Instance methods
   setImage$atIndex$(image: _NSImage | null, index: number): void;

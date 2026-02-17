@@ -16,7 +16,7 @@ export declare class _NSTextContainer extends _NSObject {
   lineFragmentRectForProposedRect$atIndex$writingDirection$remainingRect$(proposedRect: CGRect, characterIndex: number, baseWritingDirection: number, remainingRect: NobjcObject): CGRect;
   replaceLayoutManager$(newLayoutManager: _NSLayoutManager): void;
   initWithContainerSize$(aContainerSize: CGSize): _NSTextContainer;
-  lineFragmentRectForProposedRect$sweepDirection$movementDirection$remainingRect$(proposedRect: CGRect, sweepDirection: number, movementDirection: number, remainingRect: number | null): CGRect;
+  lineFragmentRectForProposedRect$sweepDirection$movementDirection$remainingRect$(proposedRect: CGRect, sweepDirection: number, movementDirection: number, remainingRect: NobjcObject): CGRect;
   containsPoint$(point: CGPoint): boolean;
 
   // Properties

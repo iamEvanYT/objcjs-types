@@ -23,7 +23,7 @@ export interface _NSTextViewDelegate extends _NSTextDelegate {
   textView$doubleClickedOnCell$inRect$atIndex$?(textView: _NSTextView, cell: NobjcObject, cellFrame: CGRect, charIndex: number): void;
   textView$draggedCell$inRect$event$atIndex$?(view: _NSTextView, cell: NobjcObject, rect: CGRect, event: _NSEvent, charIndex: number): void;
   textView$writablePasteboardTypesForCell$atIndex$?(view: _NSTextView, cell: NobjcObject, charIndex: number): _NSArray;
-  textView$writeCell$atIndex$toPasteboard$type$?(view: _NSTextView, cell: NobjcObject, charIndex: number, pboard: _NSPasteboard, type: number): boolean;
+  textView$writeCell$atIndex$toPasteboard$type$?(view: _NSTextView, cell: NobjcObject, charIndex: number, pboard: _NSPasteboard, type: _NSString): boolean;
   textView$willChangeSelectionFromCharacterRange$toCharacterRange$?(textView: _NSTextView, oldSelectedCharRange: NSRange, newSelectedCharRange: NSRange): NSRange;
   textView$willChangeSelectionFromCharacterRanges$toCharacterRanges$?(textView: _NSTextView, oldSelectedCharRanges: _NSArray, newSelectedCharRanges: _NSArray): _NSArray;
   textView$shouldChangeTextInRanges$replacementStrings$?(textView: _NSTextView, affectedRanges: _NSArray, replacementStrings: _NSArray | null): boolean;

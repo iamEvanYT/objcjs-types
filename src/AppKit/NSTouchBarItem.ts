@@ -2,6 +2,7 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSString } from "../Foundation/NSString.js";
 import type { _NSView } from "./NSView.js";
 import type { _NSViewController } from "./NSViewController.js";
 
@@ -10,7 +11,7 @@ export declare class _NSTouchBarItem extends _NSObject {
   static new(): _NSTouchBarItem;
   init(): _NSTouchBarItem;
   // Instance methods
-  initWithIdentifier$(identifier: number): _NSTouchBarItem;
+  initWithIdentifier$(identifier: _NSString): _NSTouchBarItem;
   initWithCoder$(coder: _NSCoder): _NSTouchBarItem | null;
 
   // Properties

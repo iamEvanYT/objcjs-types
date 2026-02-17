@@ -20,17 +20,17 @@ export declare class _NSAttributedString extends _NSObject {
   static localizedAttributedStringWithFormat$options$context$(format: _NSAttributedString, options: number, context: _NSDictionary): _NSAttributedString;
 
   // Instance methods
-  attributesAtIndex$effectiveRange$(location: number, range: number | null): _NSDictionary;
-  attribute$atIndex$effectiveRange$(attrName: number, location: number, range: number | null): NobjcObject;
+  attributesAtIndex$effectiveRange$(location: number, range: NobjcObject): _NSDictionary;
+  attribute$atIndex$effectiveRange$(attrName: _NSString, location: number, range: NobjcObject): NobjcObject;
   attributedSubstringFromRange$(range: NSRange): _NSAttributedString;
-  attributesAtIndex$longestEffectiveRange$inRange$(location: number, range: number | null, rangeLimit: NSRange): _NSDictionary;
-  attribute$atIndex$longestEffectiveRange$inRange$(attrName: number, location: number, range: number | null, rangeLimit: NSRange): NobjcObject;
+  attributesAtIndex$longestEffectiveRange$inRange$(location: number, range: NobjcObject, rangeLimit: NSRange): _NSDictionary;
+  attribute$atIndex$longestEffectiveRange$inRange$(attrName: _NSString, location: number, range: NobjcObject, rangeLimit: NSRange): NobjcObject;
   isEqualToAttributedString$(other: _NSAttributedString): boolean;
   initWithString$(str: _NSString): _NSAttributedString;
   initWithString$attributes$(str: _NSString, attrs: _NSDictionary | null): _NSAttributedString;
   initWithAttributedString$(attrStr: _NSAttributedString): _NSAttributedString;
   enumerateAttributesInRange$options$usingBlock$(enumerationRange: NSRange, opts: number, block: (...args: any[]) => any): void;
-  enumerateAttribute$inRange$options$usingBlock$(attrName: number, enumerationRange: NSRange, opts: number, block: (...args: any[]) => any | null): void;
+  enumerateAttribute$inRange$options$usingBlock$(attrName: _NSString, enumerationRange: NSRange, opts: number, block: (...args: any[]) => any | null): void;
   initWithContentsOfMarkdownFileAtURL$options$baseURL$error$(markdownFile: _NSURL, options: _NSAttributedStringMarkdownParsingOptions | null, baseURL: _NSURL | null, error: NobjcObject): _NSAttributedString | null;
   initWithMarkdown$options$baseURL$error$(markdown: _NSData, options: _NSAttributedStringMarkdownParsingOptions | null, baseURL: _NSURL | null, error: NobjcObject): _NSAttributedString | null;
   initWithMarkdownString$options$baseURL$error$(markdownString: _NSString, options: _NSAttributedStringMarkdownParsingOptions | null, baseURL: _NSURL | null, error: NobjcObject): _NSAttributedString | null;

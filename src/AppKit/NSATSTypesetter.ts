@@ -16,14 +16,17 @@ export declare class _NSATSTypesetter extends _NSTypesetter {
   static sharedTypesetter(): _NSATSTypesetter;
 
   // Instance methods
-  lineFragmentRectForProposedRect$remainingRect$(proposedRect: CGRect, remainingRect: number): CGRect;
+  lineFragmentRectForProposedRect$remainingRect$(proposedRect: CGRect, remainingRect: NobjcObject): CGRect;
   substituteFontForFont$(originalFont: _NSFont): _NSFont;
   textTabForGlyphLocation$writingDirection$maxLocation$(glyphLocation: number, direction: number, maxLocation: number): _NSTextTab | null;
   setParagraphGlyphRange$separatorGlyphRange$(paragraphRange: NSRange, paragraphSeparatorRange: NSRange): void;
+  layoutParagraphAtPoint$(lineFragmentOrigin: NobjcObject): number;
   lineSpacingAfterGlyphAtIndex$withProposedLineFragmentRect$(glyphIndex: number, rect: CGRect): number;
   paragraphSpacingBeforeGlyphAtIndex$withProposedLineFragmentRect$(glyphIndex: number, rect: CGRect): number;
   paragraphSpacingAfterGlyphAtIndex$withProposedLineFragmentRect$(glyphIndex: number, rect: CGRect): number;
   setHardInvalidation$forGlyphRange$(flag: boolean, glyphRange: NSRange): void;
+  getLineFragmentRect$usedRect$forParagraphSeparatorGlyphRange$atProposedOrigin$(lineFragmentRect: NobjcObject, lineFragmentUsedRect: NobjcObject, paragraphSeparatorGlyphRange: NSRange, lineOrigin: CGPoint): void;
+  willSetLineFragmentRect$forGlyphRange$usedRect$baselineOffset$(lineRect: NobjcObject, glyphRange: NSRange, usedRect: NobjcObject, baselineOffset: NobjcObject): void;
   shouldBreakLineByWordBeforeCharacterAtIndex$(charIndex: number): boolean;
   shouldBreakLineByHyphenatingBeforeCharacterAtIndex$(charIndex: number): boolean;
   hyphenationFactorForGlyphAtIndex$(glyphIndex: number): number;

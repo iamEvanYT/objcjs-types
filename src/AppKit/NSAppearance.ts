@@ -4,22 +4,23 @@ import type { _NSArray } from "../Foundation/NSArray.js";
 import type { _NSBundle } from "../Foundation/NSBundle.js";
 import type { _NSCoder } from "../Foundation/NSCoder.js";
 import type { _NSObject } from "../Foundation/NSObject.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export declare class _NSAppearance extends _NSObject {
   static alloc(): _NSAppearance;
   static new(): _NSAppearance;
   init(): _NSAppearance;
   // Class methods
-  static appearanceNamed$(name: number): _NSAppearance | null;
+  static appearanceNamed$(name: _NSString): _NSAppearance | null;
   static currentAppearance(): NobjcObject;
   static setCurrentAppearance$(value: NobjcObject): void;
   static currentDrawingAppearance(): NobjcObject;
 
   // Instance methods
   performAsCurrentDrawingAppearance$(block: (...args: any[]) => any): void;
-  initWithAppearanceNamed$bundle$(name: number, bundle: _NSBundle | null): _NSAppearance | null;
+  initWithAppearanceNamed$bundle$(name: _NSString, bundle: _NSBundle | null): _NSAppearance | null;
   initWithCoder$(coder: _NSCoder): _NSAppearance | null;
-  bestMatchFromAppearancesWithNames$(appearances: _NSArray): number | null;
+  bestMatchFromAppearancesWithNames$(appearances: _NSArray): _NSString | null;
 
   // Properties
   name(): NobjcObject;

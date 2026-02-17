@@ -65,7 +65,7 @@ export declare class _NSBrowser extends _NSControl {
   setDefaultColumnWidth$(columnWidth: number): void;
   defaultColumnWidth(): number;
   canDragRowsWithIndexes$inColumn$withEvent$(rowIndexes: _NSIndexSet, column: number, event: _NSEvent): boolean;
-  draggingImageForRowsWithIndexes$inColumn$withEvent$offset$(rowIndexes: _NSIndexSet, column: number, event: _NSEvent, dragImageOffset: number | null): _NSImage | null;
+  draggingImageForRowsWithIndexes$inColumn$withEvent$offset$(rowIndexes: _NSIndexSet, column: number, event: _NSEvent, dragImageOffset: NobjcObject): _NSImage | null;
   setDraggingSourceOperationMask$forLocal$(mask: number, isLocal: boolean): void;
   editItemAtIndexPath$withEvent$select$(indexPath: _NSIndexPath, event: _NSEvent | null, select: boolean): void;
   setAcceptsArrowKeys$(flag: boolean): void;

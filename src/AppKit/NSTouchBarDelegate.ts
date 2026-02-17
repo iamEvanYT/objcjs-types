@@ -2,8 +2,9 @@
 import type { NobjcObject } from "objc-js";
 import type { _NSTouchBar } from "./NSTouchBar.js";
 import type { _NSTouchBarItem } from "./NSTouchBarItem.js";
+import type { _NSString } from "../Foundation/NSString.js";
 
 export interface _NSTouchBarDelegate {
   // Instance methods
-  touchBar$makeItemForIdentifier$?(touchBar: _NSTouchBar, identifier: number): _NSTouchBarItem | null;
+  touchBar$makeItemForIdentifier$?(touchBar: _NSTouchBar, identifier: _NSString): _NSTouchBarItem | null;
 }
