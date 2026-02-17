@@ -1,0 +1,214 @@
+/**
+ * Main generator CLI — orchestrates the full pipeline:
+ * 1. Run clang on each header file
+ * 2. Parse the AST to extract class/method/property data
+ * 3. Map ObjC types to TypeScript types
+ * 4. Emit .ts declaration files
+ */
+
+import { mkdir, writeFile } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
+import { FRAMEWORKS, getHeaderPath } from "./frameworks.ts";
+import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
+import { parseAST, type ObjCClass } from "./ast-parser.ts";
+import { setKnownClasses } from "./type-mapper.ts";
+import {
+  emitClassFile,
+  emitFrameworkIndex,
+  emitTopLevelIndex,
+} from "./emitter.ts";
+
+const SRC_DIR = join(import.meta.dir, "..", "src");
+
+async function main(): Promise<void> {
+  console.log("=== objcjs-types generator ===\n");
+
+  // Collect all known classes across all frameworks
+  const allKnownClasses = new Set<string>();
+  for (const fw of FRAMEWORKS) {
+    for (const cls of fw.classes) {
+      allKnownClasses.add(cls);
+    }
+  }
+  setKnownClasses(allKnownClasses);
+
+  // Track all parsed classes across frameworks (for cross-framework references)
+  const allParsedClasses = new Map<string, ObjCClass>();
+
+  // Process each framework
+  for (const framework of FRAMEWORKS) {
+    console.log(`\n--- Processing ${framework.name} ---`);
+
+    const frameworkDir = join(SRC_DIR, framework.name);
+    await mkdir(frameworkDir, { recursive: true });
+
+    // Group classes by their header file to avoid duplicate parsing
+    const headerToClasses = new Map<string, string[]>();
+    for (const className of framework.classes) {
+      const headerPath = getHeaderPath(framework, className);
+      if (!headerToClasses.has(headerPath)) {
+        headerToClasses.set(headerPath, []);
+      }
+      headerToClasses.get(headerPath)!.push(className);
+    }
+
+    // Parse each unique header
+    const frameworkClasses = new Map<string, ObjCClass>();
+    let headerCount = 0;
+
+    for (const [headerPath, classNames] of headerToClasses) {
+      if (!existsSync(headerPath)) {
+        console.log(`  [SKIP] Header not found: ${headerPath}`);
+        continue;
+      }
+
+      headerCount++;
+      const targetSet = new Set(classNames);
+      const shortPath = headerPath.split("/Headers/")[1] ?? headerPath;
+      process.stdout.write(
+        `  [${headerCount}/${headerToClasses.size}] Parsing ${shortPath}...`
+      );
+
+      try {
+        let ast = await clangASTDump(headerPath);
+        let parsed = parseAST(ast, targetSet);
+
+        // Fallback: if no classes found, retry without -fmodules using pre-includes.
+        // Some headers (e.g., WebKit) need Foundation macros pre-loaded to parse correctly.
+        if (parsed.size === 0) {
+          const preIncludes = [
+            "Foundation/Foundation.h",
+            ...framework.preIncludes ?? [],
+          ];
+          ast = await clangASTDumpWithPreIncludes(headerPath, preIncludes);
+          parsed = parseAST(ast, targetSet);
+        }
+
+        for (const [name, cls] of parsed) {
+          frameworkClasses.set(name, cls);
+          allParsedClasses.set(name, cls);
+        }
+
+        const found = classNames.filter((n) => parsed.has(n));
+        const missed = classNames.filter((n) => !parsed.has(n));
+
+        console.log(
+          ` found ${found.length}/${classNames.length} classes`
+        );
+        if (missed.length > 0) {
+          console.log(`    Missing: ${missed.join(", ")}`);
+        }
+      } catch (error) {
+        console.log(` ERROR: ${error}`);
+      }
+    }
+
+    // Parse extra headers (e.g., runtime NSObject.h for alloc/init/isKindOfClass: etc.)
+    if (framework.extraHeaders) {
+      for (const [className, headerPath] of Object.entries(framework.extraHeaders)) {
+        if (!existsSync(headerPath)) {
+          console.log(`  [SKIP] Extra header not found: ${headerPath}`);
+          continue;
+        }
+
+        const shortPath = headerPath.split("/SDKs/MacOSX.sdk/")[1] ?? headerPath;
+        process.stdout.write(`  [extra] Parsing ${shortPath} for ${className}...`);
+
+        try {
+          const ast = await clangASTDump(headerPath);
+          const parsed = parseAST(ast, new Set([className]));
+
+          const extraCls = parsed.get(className);
+          if (extraCls) {
+            const existing = frameworkClasses.get(className);
+            if (existing) {
+              // Merge: add methods/properties from extra header that don't already exist
+              const existingInstanceSelectors = new Set(existing.instanceMethods.map((m) => m.selector));
+              const existingClassSelectors = new Set(existing.classMethods.map((m) => m.selector));
+              const existingPropertyNames = new Set(existing.properties.map((p) => p.name));
+
+              for (const m of extraCls.instanceMethods) {
+                if (!existingInstanceSelectors.has(m.selector)) {
+                  existing.instanceMethods.push(m);
+                }
+              }
+              for (const m of extraCls.classMethods) {
+                if (!existingClassSelectors.has(m.selector)) {
+                  existing.classMethods.push(m);
+                }
+              }
+              for (const p of extraCls.properties) {
+                if (!existingPropertyNames.has(p.name)) {
+                  existing.properties.push(p);
+                }
+              }
+
+              console.log(
+                ` merged ${extraCls.instanceMethods.length} instance, ${extraCls.classMethods.length} class methods, ${extraCls.properties.length} props`
+              );
+            } else {
+              frameworkClasses.set(className, extraCls);
+              allParsedClasses.set(className, extraCls);
+              console.log(` found class`);
+            }
+          } else {
+            console.log(` class not found in AST`);
+          }
+        } catch (error) {
+          console.log(` ERROR: ${error}`);
+        }
+      }
+    }
+
+    // Emit class files
+    const generatedClasses: string[] = [];
+
+    for (const className of framework.classes) {
+      const cls = frameworkClasses.get(className);
+      if (!cls) continue;
+
+      const content = emitClassFile(
+        cls,
+        framework,
+        FRAMEWORKS,
+        allKnownClasses,
+        allParsedClasses
+      );
+      const filePath = join(frameworkDir, `${className}.ts`);
+      await writeFile(filePath, content);
+      generatedClasses.push(className);
+    }
+
+    // Emit framework index
+    const indexContent = emitFrameworkIndex(framework, generatedClasses);
+    await writeFile(join(frameworkDir, "index.ts"), indexContent);
+
+    console.log(
+      `  Generated ${generatedClasses.length} class files + index.ts`
+    );
+  }
+
+  // Emit top-level index
+  const topIndex = emitTopLevelIndex(FRAMEWORKS.map((f) => f.name));
+  await writeFile(join(SRC_DIR, "index.ts"), topIndex);
+
+  console.log("\n=== Generation complete ===");
+
+  // Print summary
+  let total = 0;
+  for (const fw of FRAMEWORKS) {
+    const dir = join(SRC_DIR, fw.name);
+    const count = fw.classes.filter((c) =>
+      existsSync(join(dir, `${c}.ts`))
+    ).length;
+    console.log(`  ${fw.name}: ${count} classes`);
+    total += count;
+  }
+  console.log(`  Total: ${total} classes`);
+}
+
+main().catch((err) => {
+  console.error("Generator failed:", err);
+  process.exit(1);
+});

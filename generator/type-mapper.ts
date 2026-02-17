@@ -1,0 +1,279 @@
+/**
+ * Maps Objective-C types (from clang AST qualType strings) to TypeScript types.
+ */
+
+/** Set of all class names we're generating types for (across all frameworks) */
+let knownClasses: Set<string> = new Set();
+
+export function setKnownClasses(classes: Set<string>): void {
+  knownClasses = classes;
+}
+
+/**
+ * Numeric ObjC types that map to `number` in TypeScript.
+ */
+const NUMERIC_TYPES = new Set([
+  "int",
+  "unsigned int",
+  "short",
+  "unsigned short",
+  "long",
+  "unsigned long",
+  "long long",
+  "unsigned long long",
+  "float",
+  "double",
+  "NSInteger",
+  "NSUInteger",
+  "CGFloat",
+  "NSTimeInterval",
+  "unichar",
+  "size_t",
+  "ssize_t",
+  "uint8_t",
+  "uint16_t",
+  "uint32_t",
+  "uint64_t",
+  "int8_t",
+  "int16_t",
+  "int32_t",
+  "int64_t",
+  "CFIndex",
+  "CFTimeInterval",
+  "CGWindowLevel",
+  "NSWindowLevel",
+  "NSModalResponse",
+  "NSComparisonResult",
+  "NSStringEncoding",
+]);
+
+/**
+ * ObjC types that map to specific TS types.
+ */
+const DIRECT_MAPPINGS: Record<string, string> = {
+  void: "void",
+  BOOL: "boolean",
+  bool: "boolean",
+  _Bool: "boolean",
+  id: "NobjcObject",
+  SEL: "string",
+  Class: "NobjcObject",
+  "char *": "string",
+  "const char *": "string",
+  "unsigned char *": "string",
+  "const unsigned char *": "string",
+};
+
+/**
+ * ObjC generic type parameters that should map to NobjcObject.
+ * These are erased at runtime; the bridge just sees "id".
+ */
+const GENERIC_TYPE_PARAMS = new Set([
+  "ObjectType",
+  "KeyType",
+  "ValueType",
+  "ElementType",
+  "ResultType",
+  "ContentType",
+]);
+
+/**
+ * Maps ObjC struct type names to their TypeScript interface names (defined in src/structs.ts).
+ * NS geometry aliases map to their CG counterparts (identical layout).
+ */
+const STRUCT_TYPE_MAP: Record<string, string> = {
+  CGPoint: "CGPoint",
+  CGSize: "CGSize",
+  CGRect: "CGRect",
+  CGVector: "CGVector",
+  NSPoint: "CGPoint",
+  NSSize: "CGSize",
+  NSRect: "CGRect",
+  NSRange: "NSRange",
+  NSEdgeInsets: "NSEdgeInsets",
+  NSDirectionalEdgeInsets: "NSDirectionalEdgeInsets",
+  CGAffineTransform: "CGAffineTransform",
+  NSAffineTransformStruct: "NSAffineTransformStruct",
+};
+
+/** The set of all TS struct type names (for use by the emitter to generate imports). */
+export const STRUCT_TS_TYPES = new Set(Object.values(STRUCT_TYPE_MAP));
+
+/**
+ * Convert an ObjC selector string to the objc-js `$` convention.
+ * e.g., "arrayByAddingObject:" -> "arrayByAddingObject$"
+ * e.g., "initWithFrame:styleMask:" -> "initWithFrame$styleMask$"
+ */
+export function selectorToJS(selector: string): string {
+  return selector.replace(/:/g, "$");
+}
+
+/**
+ * Parse the nullable status from a qualType string.
+ */
+function isNullableType(qualType: string): boolean {
+  return (
+    qualType.includes("_Nullable") ||
+    qualType.includes("nullable") ||
+    qualType.startsWith("nullable ")
+  );
+}
+
+/**
+ * Clean up a qualType string by removing annotations.
+ */
+function cleanQualType(qualType: string): string {
+  return qualType
+    .replace(/_Nonnull/g, "")
+    .replace(/_Nullable/g, "")
+    .replace(/_Null_unspecified/g, "")
+    .replace(/\b__kindof\b/g, "")
+    .replace(/\b__unsafe_unretained\b/g, "")
+    .replace(/\b__strong\b/g, "")
+    .replace(/\b__weak\b/g, "")
+    .replace(/\b__autoreleasing\b/g, "")
+    .replace(/\bNS_NOESCAPE\b/g, "")
+    .replace(/^struct\s+/, "")
+    .trim();
+}
+
+/**
+ * Extract the base class name from a pointer type like "NSArray<ObjectType> *".
+ */
+function extractClassName(cleaned: string): string | null {
+  // Match "ClassName *" or "ClassName<...> *" (with optional const prefix)
+  const match = cleaned.match(/^(?:const\s+)?(\w+)\s*(?:<[^>]*>)?\s*\*$/);
+  if (match) return match[1]!;
+
+  return null;
+}
+
+/**
+ * Map an Objective-C type string to a TypeScript type string.
+ *
+ * @param qualType The clang qualType string (e.g., "NSArray<ObjectType> * _Nonnull")
+ * @param containingClass The class this type appears in (for resolving `instancetype`)
+ * @returns The TypeScript type string
+ */
+export function mapType(qualType: string, containingClass: string): string {
+  const nullable = isNullableType(qualType);
+  const cleaned = cleanQualType(qualType);
+
+  let tsType = mapTypeInner(cleaned, containingClass);
+
+  if (nullable && tsType !== "void" && tsType !== "NobjcObject") {
+    tsType = `${tsType} | null`;
+  }
+
+  return tsType;
+}
+
+function mapTypeInner(cleaned: string, containingClass: string): string {
+  // Direct mappings
+  if (cleaned in DIRECT_MAPPINGS) {
+    return DIRECT_MAPPINGS[cleaned]!;
+  }
+
+  // Numeric types
+  if (NUMERIC_TYPES.has(cleaned)) {
+    return "number";
+  }
+
+  // ObjC generic type parameters (ObjectType, KeyType, etc.)
+  if (GENERIC_TYPE_PARAMS.has(cleaned)) {
+    return "NobjcObject";
+  }
+
+  // instancetype -> the containing class
+  if (cleaned === "instancetype" || cleaned === "instancetype _Nonnull" || cleaned === "instancetype _Nullable") {
+    return `_${containingClass}`;
+  }
+
+  // Struct types -> typed interfaces from src/structs.ts
+  if (cleaned in STRUCT_TYPE_MAP) {
+    return STRUCT_TYPE_MAP[cleaned]!;
+  }
+
+  // Block types: "void (^)(Type1, Type2)" or "ReturnType (^)(Type1, Type2)"
+  if (cleaned.includes("(^") || cleaned.includes("Block_")) {
+    return "(...args: any[]) => any";
+  }
+
+  // Function pointer types
+  if (cleaned.includes("(*)") || cleaned.includes("(*")) {
+    return "(...args: any[]) => any";
+  }
+
+  // Pointer to pointer (e.g., "NSError **") - out parameters
+  if (cleaned.match(/\w+\s*\*\s*\*/)) {
+    return "NobjcObject";
+  }
+
+  // Void pointer
+  if (cleaned === "void *" || cleaned === "const void *") {
+    return "NobjcObject";
+  }
+
+  // ObjC object pointer (e.g., "NSString *", "NSArray<ObjectType> *")
+  const className = extractClassName(cleaned);
+  if (className) {
+    // instancetype check again
+    if (className === "instancetype") {
+      return `_${containingClass}`;
+    }
+
+    // Known class -> use typed reference
+    if (knownClasses.has(className)) {
+      return `_${className}`;
+    }
+
+    // Unknown class -> NobjcObject
+    return "NobjcObject";
+  }
+
+  // Enum / typedef types that are numeric (only match known framework-prefixed types)
+  const hasFrameworkPrefix =
+    cleaned.startsWith("NS") ||
+    cleaned.startsWith("CG") ||
+    cleaned.startsWith("WK") ||
+    cleaned.startsWith("CF") ||
+    cleaned.startsWith("CA") ||
+    cleaned.startsWith("UI") ||
+    cleaned.startsWith("CL") ||
+    cleaned.startsWith("AV") ||
+    cleaned.startsWith("MK") ||
+    cleaned.startsWith("SK");
+
+  if (hasFrameworkPrefix && !cleaned.includes("*")) {
+    // This is likely an enum, options, or typedef to a numeric type
+    return "number";
+  }
+
+  // Array type (C array parameters like "const ObjectType [_Nonnull]")
+  if (cleaned.includes("[")) {
+    return "NobjcObject";
+  }
+
+  // Fallback: unknown type -> NobjcObject
+  return "NobjcObject";
+}
+
+/**
+ * Map a return type, handling instancetype specially.
+ */
+export function mapReturnType(
+  qualType: string,
+  containingClass: string
+): string {
+  return mapType(qualType, containingClass);
+}
+
+/**
+ * Map a parameter type.
+ */
+export function mapParamType(
+  qualType: string,
+  containingClass: string
+): string {
+  return mapType(qualType, containingClass);
+}
