@@ -47,12 +47,13 @@ function collectReferencedStructs(cls: ObjCClass): Set<string> {
 }
 
 /**
- * Given an ObjCClass, determine which other class names it references
- * (for import statements). Only includes classes we're generating.
+ * Given an ObjCClass, determine which other class/protocol names it references
+ * (for import statements). Only includes classes/protocols we're generating.
  */
 function collectReferencedClasses(
   cls: ObjCClass,
-  allKnownClasses: Set<string>
+  allKnownClasses: Set<string>,
+  allKnownProtocols?: Set<string>
 ): Set<string> {
   const refs = new Set<string>();
 
@@ -67,7 +68,8 @@ function collectReferencedClasses(
     let match;
     while ((match = regex.exec(typeStr)) !== null) {
       const name = match[1]!;
-      if (allKnownClasses.has(name) && name !== cls.name) {
+      if (name === cls.name) continue;
+      if (allKnownClasses.has(name) || allKnownProtocols?.has(name)) {
         refs.add(name);
       }
     }
@@ -105,6 +107,27 @@ function getClassFramework(
 ): string | null {
   for (const fw of frameworks) {
     if (fw.classes.includes(className)) {
+      return fw.name;
+    }
+  }
+  return null;
+}
+
+/**
+ * Determine which framework a class or protocol belongs to.
+ * Checks classes first, then protocols.
+ */
+function getEntityFramework(
+  name: string,
+  frameworks: FrameworkConfig[]
+): string | null {
+  for (const fw of frameworks) {
+    if (fw.classes.includes(name)) {
+      return fw.name;
+    }
+  }
+  for (const fw of frameworks) {
+    if (fw.protocols?.includes(name)) {
       return fw.name;
     }
   }
@@ -159,19 +182,20 @@ export function emitClassFile(
   currentFramework: FrameworkConfig,
   allFrameworks: FrameworkConfig[],
   allKnownClasses: Set<string>,
-  allParsedClasses?: Map<string, ObjCClass>
+  allParsedClasses?: Map<string, ObjCClass>,
+  allKnownProtocols?: Set<string>
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
   lines.push(`import type { NobjcObject } from "objc-js";`);
 
   // Collect referenced classes for imports
-  const refs = collectReferencedClasses(cls, allKnownClasses);
+  const refs = collectReferencedClasses(cls, allKnownClasses, allKnownProtocols);
 
   // Group refs by framework
   const importsByFramework = new Map<string, string[]>();
   for (const refClass of refs) {
-    const fw = getClassFramework(refClass, allFrameworks);
+    const fw = getEntityFramework(refClass, allFrameworks);
     if (!fw) continue;
     if (!importsByFramework.has(fw)) {
       importsByFramework.set(fw, []);
@@ -452,11 +476,12 @@ function collectProtocolReferencedStructs(proto: ObjCProtocol): Set<string> {
 }
 
 /**
- * Given an ObjCProtocol, determine which other class names it references.
+ * Given an ObjCProtocol, determine which other class/protocol names it references.
  */
 function collectProtocolReferencedClasses(
   proto: ObjCProtocol,
-  allKnownClasses: Set<string>
+  allKnownClasses: Set<string>,
+  allKnownProtocols?: Set<string>
 ): Set<string> {
   const refs = new Set<string>();
 
@@ -465,7 +490,7 @@ function collectProtocolReferencedClasses(
     let match;
     while ((match = regex.exec(typeStr)) !== null) {
       const name = match[1]!;
-      if (allKnownClasses.has(name)) {
+      if (allKnownClasses.has(name) || allKnownProtocols?.has(name)) {
         refs.add(name);
       }
     }
@@ -506,12 +531,12 @@ export function emitProtocolFile(
   lines.push(`import type { NobjcObject } from "objc-js";`);
 
   // Collect referenced classes for imports
-  const refs = collectProtocolReferencedClasses(proto, allKnownClasses);
+  const refs = collectProtocolReferencedClasses(proto, allKnownClasses, allKnownProtocols);
 
   // Group refs by framework
   const importsByFramework = new Map<string, string[]>();
   for (const refClass of refs) {
-    const fw = getClassFramework(refClass, allFrameworks);
+    const fw = getEntityFramework(refClass, allFrameworks);
     if (!fw) continue;
     if (!importsByFramework.has(fw)) {
       importsByFramework.set(fw, []);

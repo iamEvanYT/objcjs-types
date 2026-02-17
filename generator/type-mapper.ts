@@ -5,8 +5,22 @@
 /** Set of all class names we're generating types for (across all frameworks) */
 let knownClasses: Set<string> = new Set();
 
+/** Set of all known protocol names across all frameworks */
+let knownProtocols: Set<string> = new Set();
+
+/** Maps protocol name → set of known conforming class names */
+let protocolConformers: Map<string, Set<string>> = new Map();
+
 export function setKnownClasses(classes: Set<string>): void {
   knownClasses = classes;
+}
+
+export function setKnownProtocols(protocols: Set<string>): void {
+  knownProtocols = protocols;
+}
+
+export function setProtocolConformers(conformers: Map<string, Set<string>>): void {
+  protocolConformers = conformers;
 }
 
 /**
@@ -294,6 +308,32 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
   if (hasFrameworkPrefix && !cleaned.includes("*")) {
     // This is likely an enum, options, or typedef to a numeric type
     return "number";
+  }
+
+  // Protocol-qualified id: "id<ASAuthorizationCredential>" or "id<Proto1, Proto2>"
+  const protoMatch = cleaned.match(/^id<(.+)>$/);
+  if (protoMatch) {
+    const protoNames = protoMatch[1]!.split(/,\s*/);
+    const unionParts: string[] = [];
+
+    for (const protoName of protoNames) {
+      const conformers = protocolConformers.get(protoName);
+      if (conformers && conformers.size > 0) {
+        // Use union of all conforming classes
+        for (const cls of [...conformers].sort()) {
+          unionParts.push(`_${cls}`);
+        }
+      } else if (knownProtocols.has(protoName)) {
+        // Fallback to protocol interface type
+        unionParts.push(`_${protoName}`);
+      }
+    }
+
+    if (unionParts.length > 0) {
+      // Deduplicate (a class conforming to multiple listed protocols)
+      return [...new Set(unionParts)].join(" | ");
+    }
+    return "NobjcObject";
   }
 
   // Array type (C array parameters like "const ObjectType [_Nonnull]")

@@ -13,7 +13,7 @@ import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, type Frame
 import { discoverFramework } from "./discover.ts";
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
 import { parseAST, parseProtocols, type ObjCClass } from "./ast-parser.ts";
-import { setKnownClasses } from "./type-mapper.ts";
+import { setKnownClasses, setKnownProtocols, setProtocolConformers } from "./type-mapper.ts";
 import {
   emitClassFile,
   emitProtocolFile,
@@ -27,6 +27,15 @@ const SRC_DIR = join(import.meta.dir, "..", "src");
 
 async function main(): Promise<void> {
   console.log("=== objcjs-types generator ===\n");
+
+  // --- Parse CLI args: optional framework name filter ---
+  // Usage: bun run generate [Framework1 Framework2 ...]
+  // If no names given, all frameworks are regenerated.
+  const filterNames = process.argv.slice(2).map((s) => s.trim()).filter(Boolean);
+  const isFiltered = filterNames.length > 0;
+  if (isFiltered) {
+    console.log(`Regenerating frameworks: ${filterNames.join(", ")}\n`);
+  }
 
   // --- Framework discovery: find all ObjC frameworks in the SDK ---
   console.log("Discovering frameworks from SDK...");
@@ -93,6 +102,27 @@ async function main(): Promise<void> {
       allKnownProtocols.add(proto);
     }
   }
+  setKnownProtocols(allKnownProtocols);
+
+  // Validate filter names against discovered frameworks
+  if (isFiltered) {
+    const allNames = new Set(frameworks.map((fw) => fw.name));
+    const invalid = filterNames.filter((n) => !allNames.has(n));
+    if (invalid.length > 0) {
+      console.error(`Unknown framework(s): ${invalid.join(", ")}`);
+      console.error(`Available: ${[...allNames].sort().join(", ")}`);
+      process.exit(1);
+    }
+  }
+
+  // Determine which frameworks to process (parse + emit)
+  const filterSet = new Set(filterNames);
+  const frameworksToProcess = isFiltered
+    ? frameworks.filter((fw) => filterSet.has(fw.name))
+    : frameworks;
+
+  // Track protocol → conforming classes (built progressively as classes are parsed)
+  const protocolConformers = new Map<string, Set<string>>();
 
   // Track all parsed classes across frameworks (for cross-framework references)
   const allParsedClasses = new Map<string, ObjCClass>();
@@ -100,8 +130,8 @@ async function main(): Promise<void> {
   // Track generated protocols per framework (for delegates.ts generation)
   const generatedProtocolsByFramework = new Map<string, string[]>();
 
-  // Process each framework
-  for (const framework of frameworks) {
+  // Process each framework (filtered if CLI args provided)
+  for (const framework of frameworksToProcess) {
     console.log(`\n--- Processing ${framework.name} ---`);
 
     const frameworkDir = join(SRC_DIR, framework.name);
@@ -225,6 +255,19 @@ async function main(): Promise<void> {
       }
     }
 
+    // Update protocol → conforming classes map with this framework's parsed classes.
+    // This must happen before emission so that id<Protocol> types resolve to unions.
+    for (const [className, cls] of frameworkClasses) {
+      if (!allKnownClasses.has(className)) continue;
+      for (const protoName of cls.protocols) {
+        if (!protocolConformers.has(protoName)) {
+          protocolConformers.set(protoName, new Set());
+        }
+        protocolConformers.get(protoName)!.add(className);
+      }
+    }
+    setProtocolConformers(protocolConformers);
+
     // Emit class files
     const generatedClasses: string[] = [];
 
@@ -237,7 +280,8 @@ async function main(): Promise<void> {
         framework,
         frameworks,
         allKnownClasses,
-        allParsedClasses
+        allParsedClasses,
+        allKnownProtocols
       );
       const filePath = join(frameworkDir, `${className}.ts`);
       await writeFile(filePath, content);
@@ -329,24 +373,27 @@ async function main(): Promise<void> {
     );
   }
 
-  // Emit structs file
-  const structsContent = emitStructsFile();
-  await writeFile(join(SRC_DIR, "structs.ts"), structsContent);
+  // Emit shared files only during full regeneration (they depend on all frameworks)
+  if (!isFiltered) {
+    // Emit structs file
+    const structsContent = emitStructsFile();
+    await writeFile(join(SRC_DIR, "structs.ts"), structsContent);
 
-  // Emit delegates file (ProtocolMap + createDelegate)
-  const delegatesContent = emitDelegatesFile(frameworks, generatedProtocolsByFramework);
-  await writeFile(join(SRC_DIR, "delegates.ts"), delegatesContent);
+    // Emit delegates file (ProtocolMap + createDelegate)
+    const delegatesContent = emitDelegatesFile(frameworks, generatedProtocolsByFramework);
+    await writeFile(join(SRC_DIR, "delegates.ts"), delegatesContent);
 
-  // Emit top-level index
-  const topIndex = emitTopLevelIndex(frameworks.map((f) => f.name));
-  await writeFile(join(SRC_DIR, "index.ts"), topIndex);
+    // Emit top-level index
+    const topIndex = emitTopLevelIndex(frameworks.map((f) => f.name));
+    await writeFile(join(SRC_DIR, "index.ts"), topIndex);
+  }
 
-  console.log("\n=== Generation complete ===");
+  console.log(`\n=== Generation complete${isFiltered ? " (partial)" : ""} ===`);
 
   // Print summary
   let totalClasses = 0;
   let totalProtocols = 0;
-  for (const fw of frameworks) {
+  for (const fw of frameworksToProcess) {
     const dir = join(SRC_DIR, fw.name);
     const classCount = fw.classes.filter((c) =>
       existsSync(join(dir, `${c}.ts`))
