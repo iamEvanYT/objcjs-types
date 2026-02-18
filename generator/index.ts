@@ -169,60 +169,67 @@ async function main(): Promise<void> {
     : frameworks;
 
   // ========================================
-  // Phase 2: Build unified parse tasks
+  // Phase 2: Build batched parse tasks (one per framework)
   // ========================================
-  // Instead of separate class/protocol/enum tasks that each invoke clang,
-  // we merge all work for the same header file into a single unified task.
-  // This eliminates redundant clang invocations when a header contains
-  // classes, protocols, AND enums.
+  // Instead of spawning a separate clang process per header file, we batch
+  // ALL headers within each framework into a single clang invocation. This
+  // reduces ~3400 clang processes to ~100 (one per framework), dramatically
+  // cutting startup overhead and parse time.
 
-  /** Unified task: all parse targets for a single header file */
-  interface UnifiedParseTask {
+  /** Batched task: all parse targets for an entire framework */
+  interface BatchTask {
     frameworkName: string;
-    headerPath: string;
+    headerPaths: string[];
     classTargets: string[];
     protocolTargets: string[];
     integerEnumTargets: string[];
     stringEnumTargets: string[];
-    fallbackPreIncludes: string[];
-    isExtra: boolean;
+    preIncludes: string[];
   }
 
-  const unifiedTasks: UnifiedParseTask[] = [];
-  // Track extra header tasks separately — they have different merge semantics
-  const extraTasks: UnifiedParseTask[] = [];
+  /** Extra header tasks are still per-header (they're outside the framework) */
+  interface ExtraHeaderTask {
+    frameworkName: string;
+    headerPath: string;
+    classTargets: string[];
+  }
+
+  const batchTasks: BatchTask[] = [];
+  const extraTasks: ExtraHeaderTask[] = [];
 
   for (const fw of frameworksToProcess) {
-    const fallbackPreIncludes = [
+    const preIncludes = [
       "Foundation/Foundation.h",
       ...(fw.preIncludes ?? []),
     ];
 
-    // Collect all targets grouped by header path for this framework
-    const headerTargets = new Map<string, {
-      classTargets: string[];
-      protocolTargets: string[];
-      integerEnumTargets: string[];
-      stringEnumTargets: string[];
-    }>();
+    // Include ALL .h files from the framework's Headers/ directory.
+    // This is critical because ObjC categories extending a class (e.g., NSObject)
+    // can be declared in headers that don't contain any class/protocol/enum
+    // declarations themselves (e.g., NSKeyValueCoding.h). With -fmodules, clang
+    // automatically pulls in all transitive module content, but without modules
+    // we must explicitly include every header.
+    const allFrameworkHeaders = (await readdir(fw.headersPath))
+      .filter((f) => f.endsWith(".h"))
+      .map((f) => join(fw.headersPath, f));
 
-    function getOrCreateHeaderTargets(headerPath: string) {
-      let entry = headerTargets.get(headerPath);
-      if (!entry) {
-        entry = { classTargets: [], protocolTargets: [], integerEnumTargets: [], stringEnumTargets: [] };
-        headerTargets.set(headerPath, entry);
-      }
-      return entry;
-    }
+    const classTargets: string[] = [];
+    const protocolTargets: string[] = [];
+    const integerEnumTargets: string[] = [];
+    const stringEnumTargets: string[] = [];
 
     // --- Class targets ---
     for (const className of fw.classes) {
       const headerPath = getHeaderPath(fw, className);
       if (!existsSync(headerPath)) {
-        console.log(`  [SKIP] Header not found: ${headerPath}`);
+        // Extra-header-only classes (e.g., NSObject from /usr/include/objc/NSObject.h)
+        // may not have a framework header — that's fine, they'll be parsed from extraHeaders
+        if (!(fw.extraHeaders && className in fw.extraHeaders)) {
+          console.log(`  [SKIP] Header not found: ${headerPath}`);
+        }
         continue;
       }
-      getOrCreateHeaderTargets(headerPath).classTargets.push(className);
+      classTargets.push(className);
     }
 
     // --- Protocol targets ---
@@ -232,7 +239,7 @@ async function main(): Promise<void> {
         console.log(`  [SKIP] Protocol header not found: ${headerPath}`);
         continue;
       }
-      getOrCreateHeaderTargets(headerPath).protocolTargets.push(protoName);
+      protocolTargets.push(protoName);
     }
 
     // --- Integer enum targets ---
@@ -242,7 +249,7 @@ async function main(): Promise<void> {
         console.log(`  [SKIP] Enum header not found: ${headerPath}`);
         continue;
       }
-      getOrCreateHeaderTargets(headerPath).integerEnumTargets.push(enumName);
+      integerEnumTargets.push(enumName);
     }
 
     // --- String enum targets ---
@@ -252,25 +259,23 @@ async function main(): Promise<void> {
         console.log(`  [SKIP] Enum header not found: ${headerPath}`);
         continue;
       }
-      getOrCreateHeaderTargets(headerPath).stringEnumTargets.push(enumName);
+      stringEnumTargets.push(enumName);
     }
 
-    // Build unified tasks from merged targets
-    for (const [headerPath, targets] of headerTargets) {
-      unifiedTasks.push({
+    // Only create a batch task if there are targets to parse
+    if (allFrameworkHeaders.length > 0 && (classTargets.length > 0 || protocolTargets.length > 0 || integerEnumTargets.length > 0 || stringEnumTargets.length > 0)) {
+      batchTasks.push({
         frameworkName: fw.name,
-        headerPath,
-        classTargets: targets.classTargets,
-        protocolTargets: targets.protocolTargets,
-        integerEnumTargets: targets.integerEnumTargets,
-        stringEnumTargets: targets.stringEnumTargets,
-        fallbackPreIncludes,
-        isExtra: false,
+        headerPaths: allFrameworkHeaders,
+        classTargets,
+        protocolTargets,
+        integerEnumTargets,
+        stringEnumTargets,
+        preIncludes,
       });
     }
 
     // --- Extra header tasks (e.g., runtime NSObject.h for alloc/init) ---
-    // These are always separate since they have different merge semantics
     if (fw.extraHeaders) {
       for (const [className, headerPath] of Object.entries(fw.extraHeaders)) {
         if (!existsSync(headerPath)) {
@@ -281,17 +286,10 @@ async function main(): Promise<void> {
           frameworkName: fw.name,
           headerPath,
           classTargets: [className],
-          protocolTargets: [],
-          integerEnumTargets: [],
-          stringEnumTargets: [],
-          fallbackPreIncludes: [], // Extra headers don't use fallback
-          isExtra: true,
         });
       }
     }
   }
-
-  const allTasks = [...unifiedTasks, ...extraTasks];
 
   // ========================================
   // Phase 3: Parallel parsing via worker pool
@@ -299,49 +297,73 @@ async function main(): Promise<void> {
 
   const poolSize = navigator.hardwareConcurrency ?? 4;
   const pool = new WorkerPool(poolSize);
-  const totalTasks = allTasks.length;
+  const totalBatchTasks = batchTasks.length;
+  const totalExtraTasks = extraTasks.length;
+  const totalTasks = totalBatchTasks + totalExtraTasks;
   let completedTasks = 0;
 
+  const totalHeaders = batchTasks.reduce((sum, t) => sum + t.headerPaths.length, 0) + totalExtraTasks;
   console.log(
-    `Parsing ${totalTasks} headers (unified) using ${pool.size} worker threads...`
+    `Parsing ${totalHeaders} headers via ${totalBatchTasks} batched framework tasks + ${totalExtraTasks} extra tasks using ${pool.size} worker threads...`
   );
 
   const startTime = performance.now();
 
   /** Update the progress counter on the current console line. */
-  const trackProgress = () => {
+  const trackProgress = (label: string) => {
     completedTasks++;
-    process.stdout.write(`\r  Progress: ${completedTasks}/${totalTasks} headers parsed`);
+    process.stdout.write(`\r  Progress: ${completedTasks}/${totalTasks} tasks (${label})`);
   };
 
-  // Dispatch all unified tasks concurrently.
-  const taskPromises = allTasks.map((task) =>
+  // Dispatch batched framework tasks
+  const batchPromises = batchTasks.map((task) =>
     pool
-      .parseAll(
-        task.headerPath,
+      .parseBatch(
+        task.headerPaths,
         task.classTargets,
         task.protocolTargets,
         task.integerEnumTargets,
         task.stringEnumTargets,
-        task.fallbackPreIncludes.length > 0 ? task.fallbackPreIncludes : undefined
+        task.preIncludes
       )
       .then((result) => {
-        trackProgress();
-        return { task, result, error: null as string | null };
+        trackProgress(task.frameworkName);
+        return { task, result, error: null as string | null, isExtra: false as const };
       })
       .catch((err) => {
-        trackProgress();
-        return { task, result: null as UnifiedParseResult | null, error: String(err) };
+        trackProgress(task.frameworkName);
+        return { task, result: null as UnifiedParseResult | null, error: String(err), isExtra: false as const };
+      })
+  );
+
+  // Dispatch extra header tasks (still per-header, using parseAll)
+  const extraPromises = extraTasks.map((task) =>
+    pool
+      .parseAll(
+        task.headerPath,
+        task.classTargets,
+        [], // no protocols
+        [], // no integer enums
+        [], // no string enums
+        undefined // no fallback pre-includes for extra headers
+      )
+      .then((result) => {
+        trackProgress(`extra:${task.classTargets[0]}`);
+        return { task, result, error: null as string | null, isExtra: true as const };
+      })
+      .catch((err) => {
+        trackProgress(`extra:${task.classTargets[0]}`);
+        return { task, result: null as UnifiedParseResult | null, error: String(err), isExtra: true as const };
       })
   );
 
   // Wait for all parse tasks to complete
-  const allResults = await Promise.all(taskPromises);
+  const allResults = await Promise.all([...batchPromises, ...extraPromises]);
 
   pool.destroy();
 
   const parseTime = ((performance.now() - startTime) / 1000).toFixed(1);
-  process.stdout.write(`\r  Parsed ${totalTasks} headers in ${parseTime}s          \n\n`);
+  process.stdout.write(`\r  Parsed ${totalHeaders} headers in ${parseTime}s          \n\n`);
 
   // ========================================
   // Phase 4: Collect results and build shared state
@@ -352,21 +374,21 @@ async function main(): Promise<void> {
   const allParsedClasses = new Map<string, ObjCClass>();
 
   // First pass: regular (non-extra) results
-  for (const { task, result, error } of allResults) {
-    if (task.isExtra) continue; // Handle in second pass
-    if (error) {
-      console.log(`  [ERROR] ${task.headerPath}: ${error}`);
+  for (const entry of allResults) {
+    if (entry.isExtra) continue; // Handle in second pass
+    if (entry.error) {
+      console.log(`  [ERROR] ${entry.task.frameworkName}: ${entry.error}`);
       continue;
     }
-    if (!result) continue;
+    if (!entry.result) continue;
 
     // --- Classes ---
-    if (result.classes.size > 0) {
-      if (!frameworkClasses.has(task.frameworkName)) {
-        frameworkClasses.set(task.frameworkName, new Map());
+    if (entry.result.classes.size > 0) {
+      if (!frameworkClasses.has(entry.task.frameworkName)) {
+        frameworkClasses.set(entry.task.frameworkName, new Map());
       }
-      const fwClasses = frameworkClasses.get(task.frameworkName)!;
-      for (const [name, cls] of result.classes) {
+      const fwClasses = frameworkClasses.get(entry.task.frameworkName)!;
+      for (const [name, cls] of entry.result.classes) {
         fwClasses.set(name, cls);
         allParsedClasses.set(name, cls);
       }
@@ -374,20 +396,20 @@ async function main(): Promise<void> {
   }
 
   // Second pass: extra header results (merge into existing classes)
-  for (const { task, result, error } of allResults) {
-    if (!task.isExtra) continue;
-    if (error) {
-      console.log(`  [ERROR] Extra header ${task.headerPath}: ${error}`);
+  for (const entry of allResults) {
+    if (!entry.isExtra) continue;
+    if (entry.error) {
+      console.log(`  [ERROR] Extra header ${entry.task.headerPath}: ${entry.error}`);
       continue;
     }
-    if (!result) continue;
+    if (!entry.result) continue;
 
-    if (!frameworkClasses.has(task.frameworkName)) {
-      frameworkClasses.set(task.frameworkName, new Map());
+    if (!frameworkClasses.has(entry.task.frameworkName)) {
+      frameworkClasses.set(entry.task.frameworkName, new Map());
     }
-    const fwClasses = frameworkClasses.get(task.frameworkName)!;
+    const fwClasses = frameworkClasses.get(entry.task.frameworkName)!;
 
-    for (const [className, extraCls] of result.classes) {
+    for (const [className, extraCls] of entry.result.classes) {
       const existing = fwClasses.get(className);
       if (existing) {
         // Merge: add methods/properties from extra header that don't already exist
@@ -425,16 +447,16 @@ async function main(): Promise<void> {
 
   // Organize parsed protocols by framework
   const frameworkProtocolsParsed = new Map<string, Map<string, ObjCProtocol>>();
-  for (const { task, result, error } of allResults) {
-    if (task.isExtra) continue;
-    if (error || !result) continue;
-    if (result.protocols.size === 0) continue;
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
+    if (entry.result.protocols.size === 0) continue;
 
-    if (!frameworkProtocolsParsed.has(task.frameworkName)) {
-      frameworkProtocolsParsed.set(task.frameworkName, new Map());
+    if (!frameworkProtocolsParsed.has(entry.task.frameworkName)) {
+      frameworkProtocolsParsed.set(entry.task.frameworkName, new Map());
     }
-    const fwProtos = frameworkProtocolsParsed.get(task.frameworkName)!;
-    for (const [name, proto] of result.protocols) {
+    const fwProtos = frameworkProtocolsParsed.get(entry.task.frameworkName)!;
+    for (const [name, proto] of entry.result.protocols) {
       fwProtos.set(name, proto);
     }
   }
@@ -442,25 +464,25 @@ async function main(): Promise<void> {
   // Organize parsed enums by framework
   const frameworkIntegerEnums = new Map<string, Map<string, ObjCIntegerEnum>>();
   const frameworkStringEnums = new Map<string, Map<string, ObjCStringEnum>>();
-  for (const { task, result, error } of allResults) {
-    if (task.isExtra) continue;
-    if (error || !result) continue;
-    if (result.integerEnums.size === 0 && result.stringEnums.size === 0) continue;
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
+    if (entry.result.integerEnums.size === 0 && entry.result.stringEnums.size === 0) continue;
 
-    if (!frameworkIntegerEnums.has(task.frameworkName)) {
-      frameworkIntegerEnums.set(task.frameworkName, new Map());
+    if (!frameworkIntegerEnums.has(entry.task.frameworkName)) {
+      frameworkIntegerEnums.set(entry.task.frameworkName, new Map());
     }
-    if (!frameworkStringEnums.has(task.frameworkName)) {
-      frameworkStringEnums.set(task.frameworkName, new Map());
+    if (!frameworkStringEnums.has(entry.task.frameworkName)) {
+      frameworkStringEnums.set(entry.task.frameworkName, new Map());
     }
 
-    const fwIntEnums = frameworkIntegerEnums.get(task.frameworkName)!;
-    const fwStrEnums = frameworkStringEnums.get(task.frameworkName)!;
+    const fwIntEnums = frameworkIntegerEnums.get(entry.task.frameworkName)!;
+    const fwStrEnums = frameworkStringEnums.get(entry.task.frameworkName)!;
 
-    for (const [name, enumDef] of result.integerEnums) {
+    for (const [name, enumDef] of entry.result.integerEnums) {
       fwIntEnums.set(name, enumDef);
     }
-    for (const [name, enumDef] of result.stringEnums) {
+    for (const [name, enumDef] of entry.result.stringEnums) {
       fwStrEnums.set(name, enumDef);
     }
   }
@@ -468,18 +490,18 @@ async function main(): Promise<void> {
   // Collect all parsed structs and struct aliases across all headers
   const allParsedStructs = new Map<string, ObjCStruct>();
   const allStructAliases: ObjCStructAlias[] = [];
-  for (const { task, result, error } of allResults) {
-    if (task.isExtra) continue;
-    if (error || !result) continue;
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
 
-    for (const [name, structDef] of result.structs) {
+    for (const [name, structDef] of entry.result.structs) {
       // Keep the first definition encountered (later duplicates are typically
       // forward declarations or re-declarations of the same struct)
       if (!allParsedStructs.has(name)) {
         allParsedStructs.set(name, structDef);
       }
     }
-    for (const alias of result.structAliases) {
+    for (const alias of entry.result.structAliases) {
       // Deduplicate aliases (same alias may appear in multiple headers)
       if (!allStructAliases.some((a) => a.name === alias.name)) {
         allStructAliases.push(alias);

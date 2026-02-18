@@ -242,6 +242,46 @@ export class WorkerPool {
     };
   }
 
+  /**
+   * Parse all targets from an entire framework using a single batched clang invocation.
+   * All framework headers are included in one temp .m file, reducing clang overhead
+   * from one process per header to one process per framework.
+   *
+   * @param headerPaths - All header file paths for this framework
+   * @param classTargets - All class names to extract
+   * @param protocolTargets - All protocol names to extract
+   * @param integerEnumTargets - All integer enum names to extract
+   * @param stringEnumTargets - All string enum names to extract
+   * @param preIncludes - Pre-include headers for macro expansion (e.g., Foundation/Foundation.h)
+   */
+  async parseBatch(
+    headerPaths: string[],
+    classTargets: string[],
+    protocolTargets: string[],
+    integerEnumTargets: string[],
+    stringEnumTargets: string[],
+    preIncludes: string[]
+  ): Promise<UnifiedParseResult> {
+    const result = await this.dispatch({
+      id: this.nextId++,
+      type: "parse-batch",
+      headerPaths,
+      classTargets,
+      protocolTargets,
+      integerEnumTargets,
+      stringEnumTargets,
+      preIncludes,
+    });
+    return {
+      classes: new Map(result.classes),
+      protocols: new Map(result.protocols),
+      integerEnums: new Map(result.integerEnums),
+      stringEnums: new Map(result.stringEnums),
+      structs: new Map(result.structs ?? []),
+      structAliases: result.structAliases ?? [],
+    };
+  }
+
   /** Terminate all workers and clean up resources. */
   destroy(): void {
     for (const worker of this.workers) {

@@ -153,6 +153,57 @@ function extractDescription(node: ClangASTNode): string | undefined {
   return undefined;
 }
 
+/**
+ * Propagate loc.file throughout the AST tree.
+ *
+ * Clang's JSON AST only emits `loc.file` when the file changes from the
+ * previous node. Subsequent nodes in the same file omit the field. This
+ * function walks the tree in order and fills in the missing `file` fields
+ * so every node has a resolvable file path. This is critical for batched
+ * mode where multiple headers are parsed at once and `scanForDeprecation`
+ * needs to look up the correct header's lines.
+ *
+ * IMPORTANT: In batched mode (multiple headers #included in a temp file),
+ * clang's file context bleeds across unrelated subtrees, so propagated
+ * values may be incorrect. However, nodes whose loc.file WAS explicitly
+ * set by clang are always correct. After propagation, callers should
+ * prefer extracting file info from child AvailabilityAttr nodes (whose
+ * range.begin.expansionLoc.file is always correct) over relying on
+ * propagated loc.file values.
+ */
+export function propagateLocFile(root: ClangASTNode): void {
+  let currentFile: string | undefined;
+
+  function walk(node: ClangASTNode): void {
+    const loc = node.loc as Record<string, any> | undefined;
+    if (loc) {
+      // Direct location
+      if (typeof loc.file === "string") {
+        currentFile = loc.file;
+      } else if (currentFile && typeof loc.line === "number") {
+        loc.file = currentFile;
+      }
+      // Expansion location (for macro-expanded nodes)
+      if (loc.expansionLoc) {
+        const exp = loc.expansionLoc as Record<string, any>;
+        if (typeof exp.file === "string") {
+          currentFile = exp.file;
+        } else if (currentFile && typeof exp.line === "number") {
+          exp.file = currentFile;
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+}
+
 /** Regex patterns that indicate a deprecated API in Objective-C header source. */
 const DEPRECATION_PATTERNS = [
   { regex: /API_DEPRECATED\s*\(\s*"([^"]*)"/, group: 1 },
@@ -178,24 +229,220 @@ function getLocLine(node: ClangASTNode): number | undefined {
 }
 
 /**
+ * Get the source file path from a ClangASTNode's loc field.
+ * Handles both direct locations and expansion locations.
+ *
+ * In batched mode, loc.file may be missing or incorrectly propagated.
+ * As a fallback, checks child AvailabilityAttr nodes whose
+ * range.begin.expansionLoc.file reliably points to the correct header.
+ */
+function getLocFile(node: ClangASTNode): string | undefined {
+  const loc = node.loc as Record<string, any> | undefined;
+  if (loc) {
+    if (typeof loc.file === "string") return loc.file;
+    if (loc.expansionLoc && typeof loc.expansionLoc.file === "string") {
+      return loc.expansionLoc.file;
+    }
+  }
+
+  // Fallback: extract file from child AvailabilityAttr range
+  if (node.inner) {
+    for (const child of node.inner) {
+      if (child.kind === "AvailabilityAttr") {
+        const range = child.range as Record<string, any> | undefined;
+        if (range?.begin?.expansionLoc?.file) {
+          return range.begin.expansionLoc.file as string;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Resolve the header lines array for a given AST node.
+ * In single-header mode, returns headerLines directly.
+ * In batched mode, uses getLocFile() to look up the correct file's lines from the map.
+ * Falls back to contextFile if the node's own loc doesn't have file info.
+ */
+function resolveHeaderLines(
+  node: ClangASTNode,
+  headerLines: string[] | undefined,
+  headerLinesMap?: Map<string, string[]>,
+  contextFile?: string
+): string[] | undefined {
+  if (headerLines) return headerLines;
+  if (headerLinesMap) {
+    const file = getLocFile(node) ?? contextFile;
+    if (file) return headerLinesMap.get(file);
+  }
+  return undefined;
+}
+
+/**
+ * Scan the header source lines around a declaration to extract a doc comment.
+ * Looks backward from the declaration line for:
+ * - Block comments: `/** ... * /`, `/*! ... * /`, `/* ... * /`
+ * - Line comments: `/// ...`
+ * Also checks for inline `//` comments on the same line as the declaration.
+ *
+ * Returns the cleaned comment text, or undefined if no comment found.
+ */
+function scanForDocComment(
+  node: ClangASTNode,
+  headerLines: string[] | undefined,
+  headerLinesMap?: Map<string, string[]>,
+  contextFile?: string
+): string | undefined {
+  const lines = resolveHeaderLines(node, headerLines, headerLinesMap, contextFile);
+  if (!lines) return undefined;
+
+  const line = getLocLine(node);
+  if (!line || line < 1) return undefined;
+
+  // --- Check for inline comment on the declaration line itself ---
+  // Handles patterns like: `+ (NSExpression *)foo:(id)bar;  // Description`
+  // and enum values like: `NSConstantValueExpressionType = 0, // Description`
+  const declLine = lines[line - 1];
+  if (declLine) {
+    // Match // comment at end of line, after a ; or , or )
+    const inlineMatch = declLine.match(/[;,)]\s*\/\/\s*(.+?)\s*$/);
+    if (inlineMatch && inlineMatch[1]) {
+      const text = inlineMatch[1].trim();
+      if (text.length > 0) return text;
+    }
+  }
+
+  if (line < 2) return undefined;
+
+  // Start scanning from the line just above the declaration (0-indexed: line - 2)
+  let scanEnd = line - 2; // inclusive, 0-indexed
+
+  // Skip blank lines and preprocessor directives between comment and declaration
+  while (scanEnd >= 0) {
+    const trimmed = lines[scanEnd]!.trim();
+    if (trimmed === "" || trimmed.startsWith("#") || trimmed.startsWith("NS_HEADER_AUDIT") || trimmed.startsWith("API_AVAILABLE") || trimmed.startsWith("API_UNAVAILABLE") || trimmed.startsWith("NS_AVAILABLE") || trimmed.startsWith("NS_SWIFT_") || trimmed.startsWith("NS_REFINED_FOR_SWIFT") || trimmed.startsWith("NS_ASSUME_NONNULL") || trimmed.startsWith("__attribute__")) {
+      scanEnd--;
+      continue;
+    }
+    break;
+  }
+  if (scanEnd < 0) return undefined;
+
+  const lastLine = lines[scanEnd]!;
+
+  // --- Case 1: Block comment ending with */
+  if (lastLine.trimEnd().endsWith("*/")) {
+    // Scan backward to find the opening /* or /** or /*!
+    let scanStart = scanEnd;
+    while (scanStart >= 0) {
+      const l = lines[scanStart]!;
+      if (/\/\*/.test(l)) break;
+      scanStart--;
+    }
+    if (scanStart < 0) return undefined;
+
+    const commentLines = lines.slice(scanStart, scanEnd + 1);
+    return cleanBlockComment(commentLines);
+  }
+
+  // --- Case 2: Line comments (///, //!, or plain // used as doc comments)
+  const trimmedLast = lastLine.trimStart();
+  if (trimmedLast.startsWith("//")) {
+    let scanStart = scanEnd;
+    while (scanStart > 0) {
+      const prev = lines[scanStart - 1]!.trimStart();
+      if (prev.startsWith("//") && !prev.startsWith("//#")) {
+        scanStart--;
+      } else {
+        break;
+      }
+    }
+
+    const commentLines = lines.slice(scanStart, scanEnd + 1);
+    return cleanLineComment(commentLines);
+  }
+
+  return undefined;
+}
+
+/**
+ * Clean a block comment (/* ... * /) into plain text.
+ * Strips the comment delimiters and leading * characters.
+ */
+function cleanBlockComment(lines: string[]): string | undefined {
+  const cleaned: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i]!;
+    // Remove opening delimiter
+    if (i === 0) {
+      line = line.replace(/\/\*[*!]?\s?/, "");
+    }
+    // Remove closing delimiter
+    if (i === lines.length - 1) {
+      line = line.replace(/\s*\*\/\s*$/, "");
+    }
+    // Remove leading whitespace + optional * + optional space
+    line = line.replace(/^\s*\*?\s?/, "");
+    cleaned.push(line);
+  }
+
+  const text = cleaned
+    .map((l) => l.trimEnd())
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text || undefined;
+}
+
+/**
+ * Clean line comments (///, //!, or plain //) into plain text.
+ * Strips the leading comment prefix and trims.
+ */
+function cleanLineComment(lines: string[]): string | undefined {
+  const cleaned = lines.map((l) => {
+    const trimmed = l.trimStart();
+    // Strip ///, //!, or plain // prefix and optional single space
+    return trimmed.replace(/^\/\/[\/!]?\s?/, "");
+  });
+
+  const text = cleaned
+    .map((l) => l.trimEnd())
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text || undefined;
+}
+
+/**
  * Scan the header source lines around a declaration's location for
  * deprecation macros. Returns { isDeprecated, message } if found.
+ *
+ * Supports two modes:
+ * - Single header: `headerLines` is an array of lines from one file
+ * - Batched: `headerLinesMap` maps file paths to their lines
  */
 function scanForDeprecation(
   node: ClangASTNode,
-  headerLines: string[] | undefined
+  headerLines: string[] | undefined,
+  headerLinesMap?: Map<string, string[]>,
+  contextFile?: string
 ): { isDeprecated: boolean; message?: string } {
-  if (!headerLines) return { isDeprecated: false };
+  const lines = resolveHeaderLines(node, headerLines, headerLinesMap, contextFile);
+  if (!lines) return { isDeprecated: false };
 
   const line = getLocLine(node);
-  if (!line || line < 1 || line > headerLines.length) {
+  if (!line || line < 1 || line > lines.length) {
     return { isDeprecated: false };
   }
 
   // Scan the declaration line and a few lines after (macros can wrap to next lines)
   const startLine = Math.max(0, line - 1);
-  const endLine = Math.min(headerLines.length, line + 5);
-  const sourceChunk = headerLines.slice(startLine, endLine).join(" ");
+  const endLine = Math.min(lines.length, line + 5);
+  const sourceChunk = lines.slice(startLine, endLine).join(" ");
 
   for (const pattern of DEPRECATION_PATTERNS) {
     const match = pattern.regex.exec(sourceChunk);
@@ -217,11 +464,13 @@ function scanForDeprecation(
  *
  * @param headerLines - Split lines of the header file for deprecation scanning.
  *   Pass undefined to skip header-based deprecation detection.
+ * @param headerLinesMap - Map of file path → lines for batched mode deprecation scanning.
  */
 export function parseAST(
   root: ClangASTNode,
   targetClasses: Set<string>,
-  headerLines?: string[]
+  headerLines?: string[],
+  headerLinesMap?: Map<string, string[]>
 ): Map<string, ObjCClass> {
   const classes = new Map<string, ObjCClass>();
 
@@ -253,7 +502,7 @@ export function parseAST(
     return node.inner.some((child) => child.kind === "UnavailableAttr");
   }
 
-  function extractMethod(node: ClangASTNode): ObjCMethod | null {
+  function extractMethod(node: ClangASTNode, contextFile?: string): ObjCMethod | null {
     if (node.kind !== "ObjCMethodDecl") return null;
     if (node.isImplicit) return null;
     if (isUnavailable(node)) return null;
@@ -262,9 +511,9 @@ export function parseAST(
     const returnType = node.returnType?.qualType ?? "void";
     const isClassMethod = node.instance === false;
     const attrDeprecated = isDeprecated(node);
-    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
-    const description = extractDescription(node);
+    const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
     const parameters: { name: string; type: string }[] = [];
     if (node.inner) {
@@ -289,7 +538,7 @@ export function parseAST(
     };
   }
 
-  function extractProperty(node: ClangASTNode): ObjCProperty | null {
+  function extractProperty(node: ClangASTNode, contextFile?: string): ObjCProperty | null {
     if (node.kind !== "ObjCPropertyDecl") return null;
     if (node.isImplicit) return null;
 
@@ -300,9 +549,9 @@ export function parseAST(
     // Class properties have "class": true in the AST node
     const isClassProperty = (node as any)["class"] === true;
     const attrDeprecated = isDeprecated(node);
-    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
-    const description = extractDescription(node);
+    const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
     return {
       name,
@@ -317,7 +566,8 @@ export function parseAST(
 
   function processInterfaceOrCategory(
     node: ClangASTNode,
-    className: string
+    className: string,
+    walkContextFile?: string
   ): void {
     if (!targetClasses.has(className)) return;
 
@@ -339,6 +589,10 @@ export function parseAST(
 
     if (!node.inner) return;
 
+    // Resolve the file path from the parent node for child context.
+    // Fall back to walkContextFile (the running file tracker from walk()).
+    const parentFile = getLocFile(node) ?? walkContextFile;
+
     // Track selectors we've already added (to handle categories extending the same class)
     const existingInstanceSelectors = new Set(
       cls.instanceMethods.map((m) => m.selector)
@@ -350,7 +604,7 @@ export function parseAST(
 
     for (const child of node.inner) {
       if (child.kind === "ObjCMethodDecl") {
-        const method = extractMethod(child);
+        const method = extractMethod(child, parentFile);
         if (!method) continue;
 
         if (method.isClassMethod) {
@@ -365,7 +619,7 @@ export function parseAST(
           }
         }
       } else if (child.kind === "ObjCPropertyDecl") {
-        const prop = extractProperty(child);
+        const prop = extractProperty(child, parentFile);
         if (prop && !existingProperties.has(prop.name)) {
           cls.properties.push(prop);
           existingProperties.add(prop.name);
@@ -374,17 +628,26 @@ export function parseAST(
     }
   }
 
+  // Running file tracker: clang only emits `loc.file` when it changes between
+  // nodes. As we walk in document order, we track the last-seen file so that
+  // nodes without an explicit `loc.file` can inherit the correct context.
+  let currentFile: string | undefined;
+
   function walk(node: ClangASTNode): void {
+    // Update running file tracker from this node's loc (if present)
+    const nodeFile = getLocFile(node);
+    if (nodeFile) currentFile = nodeFile;
+
     if (node.kind === "ObjCInterfaceDecl" && node.name) {
-      processInterfaceOrCategory(node, node.name);
+      processInterfaceOrCategory(node, node.name, currentFile);
     } else if (node.kind === "ObjCCategoryDecl" && node.interface?.name) {
-      processInterfaceOrCategory(node, node.interface.name);
+      processInterfaceOrCategory(node, node.interface.name, currentFile);
     } else if (node.kind === "ObjCProtocolDecl" && node.name) {
       // Merge protocol methods into matching class (e.g., NSObject protocol → NSObject class).
       // The NSObject class conforms to the NSObject protocol, which defines
       // isEqual:, isKindOfClass:, respondsToSelector:, performSelector:, etc.
       if (targetClasses.has(node.name)) {
-        processInterfaceOrCategory(node, node.name);
+        processInterfaceOrCategory(node, node.name, currentFile);
       }
     }
 
@@ -404,11 +667,13 @@ export function parseAST(
  * Returns a map of protocol name → ObjCProtocol for protocols in the target set.
  *
  * @param headerLines - Split lines of the header file for deprecation scanning.
+ * @param headerLinesMap - Map of file path → lines for batched mode deprecation scanning.
  */
 export function parseProtocols(
   root: ClangASTNode,
   targetProtocols: Set<string>,
-  headerLines?: string[]
+  headerLines?: string[],
+  headerLinesMap?: Map<string, string[]>
 ): Map<string, ObjCProtocol> {
   const protocols = new Map<string, ObjCProtocol>();
 
@@ -424,7 +689,7 @@ export function parseProtocols(
     return node.inner.some((child) => child.kind === "UnavailableAttr");
   }
 
-  function extractMethod(node: ClangASTNode): ObjCMethod | null {
+  function extractMethod(node: ClangASTNode, contextFile?: string): ObjCMethod | null {
     if (node.kind !== "ObjCMethodDecl") return null;
     if (node.isImplicit) return null;
     if (isUnavailable(node)) return null;
@@ -433,9 +698,9 @@ export function parseProtocols(
     const returnType = node.returnType?.qualType ?? "void";
     const isClassMethod = node.instance === false;
     const attrDeprecated = isDeprecated(node);
-    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
-    const description = extractDescription(node);
+    const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
     const parameters: { name: string; type: string }[] = [];
     if (node.inner) {
@@ -460,7 +725,7 @@ export function parseProtocols(
     };
   }
 
-  function extractProperty(node: ClangASTNode): ObjCProperty | null {
+  function extractProperty(node: ClangASTNode, contextFile?: string): ObjCProperty | null {
     if (node.kind !== "ObjCPropertyDecl") return null;
     if (node.isImplicit) return null;
 
@@ -469,9 +734,9 @@ export function parseProtocols(
     const readonly = node.readonly === true;
     const isClassProperty = (node as any)["class"] === true;
     const attrDeprecated = isDeprecated(node);
-    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
-    const description = extractDescription(node);
+    const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
     return {
       name,
@@ -484,37 +749,54 @@ export function parseProtocols(
     };
   }
 
-  function processProtocolDecl(node: ClangASTNode): void {
+  function getOrCreateProtocol(name: string): ObjCProtocol {
+    let proto = protocols.get(name);
+    if (!proto) {
+      proto = {
+        name,
+        extendedProtocols: [],
+        instanceMethods: [],
+        classMethods: [],
+        properties: [],
+      };
+      protocols.set(name, proto);
+    }
+    return proto;
+  }
+
+  function processProtocolDecl(node: ClangASTNode, walkContextFile?: string): void {
     const name = node.name ?? "";
     if (!targetProtocols.has(name)) return;
 
-    const proto: ObjCProtocol = {
-      name,
-      extendedProtocols: [],
-      instanceMethods: [],
-      classMethods: [],
-      properties: [],
-    };
+    const proto = getOrCreateProtocol(name);
 
     // Collect extended protocols
     if (node.protocols) {
       for (const p of node.protocols) {
-        proto.extendedProtocols.push(p.name);
+        if (!proto.extendedProtocols.includes(p.name)) {
+          proto.extendedProtocols.push(p.name);
+        }
       }
     }
 
-    if (!node.inner) {
-      protocols.set(name, proto);
-      return;
-    }
+    if (!node.inner) return;
 
-    const existingInstanceSelectors = new Set<string>();
-    const existingClassSelectors = new Set<string>();
-    const existingProperties = new Set<string>();
+    // Resolve the file path from the parent node for child context.
+    // Fall back to walkContextFile (the running file tracker from walk()).
+    const parentFile = getLocFile(node) ?? walkContextFile;
+
+    // Track selectors we've already added (to handle multiple declarations of the same protocol)
+    const existingInstanceSelectors = new Set(
+      proto.instanceMethods.map((m) => m.selector)
+    );
+    const existingClassSelectors = new Set(
+      proto.classMethods.map((m) => m.selector)
+    );
+    const existingProperties = new Set(proto.properties.map((p) => p.name));
 
     for (const child of node.inner) {
       if (child.kind === "ObjCMethodDecl") {
-        const method = extractMethod(child);
+        const method = extractMethod(child, parentFile);
         if (!method) continue;
 
         if (method.isClassMethod) {
@@ -529,20 +811,25 @@ export function parseProtocols(
           }
         }
       } else if (child.kind === "ObjCPropertyDecl") {
-        const prop = extractProperty(child);
+        const prop = extractProperty(child, parentFile);
         if (prop && !existingProperties.has(prop.name)) {
           proto.properties.push(prop);
           existingProperties.add(prop.name);
         }
       }
     }
-
-    protocols.set(name, proto);
   }
 
+  // Running file tracker for batched mode (same approach as parseAST).
+  let currentFile: string | undefined;
+
   function walk(node: ClangASTNode): void {
+    // Update running file tracker from this node's loc (if present)
+    const nodeFile = getLocFile(node);
+    if (nodeFile) currentFile = nodeFile;
+
     if (node.kind === "ObjCProtocolDecl" && node.name) {
-      processProtocolDecl(node);
+      processProtocolDecl(node, currentFile);
     }
 
     if (node.inner) {

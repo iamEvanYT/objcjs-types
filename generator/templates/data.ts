@@ -67,8 +67,7 @@ export function uint8ArrayFromNSData(data: _NSData): Uint8Array {
  * @returns A base64-encoded string
  */
 export function base64FromNSData(data: _NSData): string {
-  const nsData = data as unknown as typeof NSData.prototype;
-  const nsString = nsData.base64EncodedStringWithOptions$(0);
+  const nsString = data.base64EncodedStringWithOptions$(0);
   return nsString.UTF8String();
 }
 

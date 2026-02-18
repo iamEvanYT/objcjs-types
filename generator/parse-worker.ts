@@ -9,7 +9,7 @@
 
 declare var self: Worker;
 
-import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
+import { clangASTDump, clangASTDumpWithPreIncludes, clangBatchASTDump } from "./clang.ts";
 import { parseAST, parseProtocols, parseIntegerEnums, parseStringEnums, parseStructs } from "./ast-parser.ts";
 
 /**
@@ -24,11 +24,79 @@ async function readHeaderLines(headerPath: string): Promise<string[] | undefined
   }
 }
 
+/**
+ * Read multiple header files and build a map of file path → lines
+ * for batched deprecation scanning.
+ */
+async function readHeaderLinesMap(headerPaths: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  const results = await Promise.all(
+    headerPaths.map(async (p) => {
+      try {
+        const content = await Bun.file(p).text();
+        return { path: p, lines: content.split("\n") };
+      } catch {
+        return { path: p, lines: undefined };
+      }
+    })
+  );
+  for (const { path, lines } of results) {
+    if (lines) map.set(path, lines);
+  }
+  return map;
+}
+
 self.onmessage = async (event: MessageEvent) => {
   const msg = event.data;
 
   try {
-    if (msg.type === "parse-all") {
+    if (msg.type === "parse-batch") {
+      // Batched framework task: parse all classes, protocols, and enums from
+      // a single clang invocation that includes ALL framework headers at once.
+      // This dramatically reduces clang process overhead.
+      const classTargetSet = new Set<string>(msg.classTargets ?? []);
+      const protocolTargetSet = new Set<string>(msg.protocolTargets ?? []);
+      const integerTargetSet = new Set<string>(msg.integerEnumTargets ?? []);
+      const stringTargetSet = new Set<string>(msg.stringEnumTargets ?? []);
+      const headerPaths: string[] = msg.headerPaths ?? [];
+      const preIncludes: string[] = msg.preIncludes ?? [];
+
+      // Read all header files for deprecation scanning
+      const headerLinesMap = await readHeaderLinesMap(headerPaths);
+
+      // Run a single batched clang invocation for all headers
+      const ast = await clangBatchASTDump(headerPaths, preIncludes);
+
+      const classes = classTargetSet.size > 0
+        ? parseAST(ast, classTargetSet, undefined, headerLinesMap)
+        : new Map();
+      const protocols = protocolTargetSet.size > 0
+        ? parseProtocols(ast, protocolTargetSet, undefined, headerLinesMap)
+        : new Map();
+      const integerEnums = integerTargetSet.size > 0
+        ? parseIntegerEnums(ast, integerTargetSet)
+        : new Map();
+      const stringEnums = stringTargetSet.size > 0
+        ? parseStringEnums(ast, stringTargetSet)
+        : new Map();
+      const structResult = parseStructs(ast);
+
+      postMessage({
+        id: msg.id,
+        type: "batch-result",
+        classes: [...classes.entries()],
+        protocols: [...protocols.entries()],
+        integerEnums: [...integerEnums.entries()],
+        stringEnums: [...stringEnums.entries()],
+        structs: [...structResult.structs.entries()],
+        structAliases: structResult.aliases,
+        // Report what was found vs expected for logging
+        foundClasses: classes.size,
+        foundProtocols: protocols.size,
+        foundIntegerEnums: integerEnums.size,
+        foundStringEnums: stringEnums.size,
+      });
+    } else if (msg.type === "parse-all") {
       // Unified task: parse classes, protocols, and enums from a single clang AST.
       // This avoids running clang multiple times on the same header file.
       const classTargetSet = new Set<string>(msg.classTargets ?? []);
