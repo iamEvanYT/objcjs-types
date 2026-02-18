@@ -1,9 +1,4 @@
-import {
-  ASAuthorization,
-  ASAuthorizationPlatformPublicKeyCredentialProvider,
-  ASPasskeyRegistrationCredential,
-} from "./src/AuthenticationServices";
-import { NSProcessInfo, NSString } from "./src/Foundation";
+import { NSProcessInfo } from "../src/Foundation";
 
 function getOperatingSystemVersion() {
   const version = NSProcessInfo.processInfo().operatingSystemVersion();

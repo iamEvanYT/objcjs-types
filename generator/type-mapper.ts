@@ -357,10 +357,20 @@ export function mapReturnType(
 
 /**
  * Map a parameter type.
+ *
+ * For raw pointer parameters (`void *`, `const void *`), the objc-js bridge
+ * accepts `Buffer` (which extends `Uint8Array`) and any TypedArray at runtime.
+ * We type these as `Uint8Array` so callers can pass `Buffer` or `Uint8Array`
+ * without casting.
  */
 export function mapParamType(
   qualType: string,
   containingClass: string
 ): string {
+  const cleaned = cleanQualType(qualType);
+  if (cleaned === "void *" || cleaned === "const void *") {
+    const nullable = isNullableType(qualType);
+    return nullable ? "Uint8Array | null" : "Uint8Array";
+  }
   return mapType(qualType, containingClass);
 }
