@@ -79,8 +79,14 @@ export function base64FromNSData(data: _NSData): string {
  */
 export function NSDataFromBase64(base64String: string): _NSData {
   const nsString = NSStringFromString(base64String);
-  const nsData = NSData.alloc();
-  return nsData.initWithBase64EncodedString$options$(nsString, 0);
+  const nsDataAlloc = NSData.alloc();
+  const nsData = nsDataAlloc.initWithBase64EncodedString$options$(nsString, 0);
+  if (!nsData) {
+    throw new Error(
+      `Failed to create NSData from base64 string: ${base64String}`
+    );
+  }
+  return nsData;
 }
 
 /**

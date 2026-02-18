@@ -217,6 +217,7 @@ function cleanQualType(qualType: string): string {
     .replace(/\b__weak\b/g, "")
     .replace(/\b__autoreleasing\b/g, "")
     .replace(/\bNS_NOESCAPE\b/g, "")
+    .replace(/\bNS_RETURNS_INNER_POINTER\b/g, "")
     .replace(/^struct\s+/, "")
     .trim();
 }
