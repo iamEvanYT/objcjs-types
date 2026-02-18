@@ -205,6 +205,12 @@ function isNullableType(qualType: string): boolean {
 
 /**
  * Clean up a qualType string by removing annotations.
+ *
+ * Clang qualType strings can contain attribute macros that are not part of the
+ * actual type. These include nullability qualifiers, ownership qualifiers,
+ * availability macros (API_AVAILABLE, API_DEPRECATED, etc.), CoreFoundation
+ * ownership macros (CF_CONSUMED, CF_RETURNS_RETAINED, etc.), and Swift interop
+ * macros (NS_REFINED_FOR_SWIFT, NS_SWIFT_UI_ACTOR, etc.).
  */
 function cleanQualType(qualType: string): string {
   return qualType
@@ -216,8 +222,8 @@ function cleanQualType(qualType: string): string {
     .replace(/\b__strong\b/g, "")
     .replace(/\b__weak\b/g, "")
     .replace(/\b__autoreleasing\b/g, "")
-    .replace(/\bNS_NOESCAPE\b/g, "")
-    .replace(/\bNS_RETURNS_INNER_POINTER\b/g, "")
+    // Attribute macros: NS_*, API_*, CF_*, XPC_* (e.g. API_AVAILABLE, CF_RETURNS_RETAINED)
+    .replace(/\b(?:NS|API|CF|XPC)_[A-Z_]+\b/g, "")
     .replace(/^struct\s+/, "")
     .trim();
 }
