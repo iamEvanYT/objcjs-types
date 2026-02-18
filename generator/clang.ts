@@ -41,6 +41,33 @@ export interface ClangASTNode {
   value?: string;
 }
 
+/** Node kinds we actually need from the AST (ObjC decls, enums, structs, typedefs, vars for string enums) */
+const RELEVANT_KINDS = new Set([
+  "ObjCInterfaceDecl",
+  "ObjCCategoryDecl",
+  "ObjCProtocolDecl",
+  "EnumDecl",
+  "RecordDecl",
+  "TypedefDecl",
+  "VarDecl",
+]);
+
+/**
+ * Strip the top-level AST to only keep nodes we care about.
+ * The clang AST includes thousands of FunctionDecl, TypedefDecl for C stdlib,
+ * RecordDecl for POSIX structs, etc. that we never process. By pruning these
+ * immediately after JSON.parse, we allow GC to reclaim ~50-70% of the parsed
+ * AST memory.
+ *
+ * This mutates the AST in place for minimal allocation.
+ */
+function pruneAST(ast: ClangASTNode): ClangASTNode {
+  if (ast.inner) {
+    ast.inner = ast.inner.filter((node) => RELEVANT_KINDS.has(node.kind));
+  }
+  return ast;
+}
+
 /**
  * Run clang on a header file and return the parsed AST JSON.
  * Clang may exit with code 1 due to warnings but still produce valid AST JSON.
@@ -65,7 +92,7 @@ export async function clangASTDump(headerPath: string): Promise<ClangASTNode> {
   );
   const text = await new Response(proc.stdout).text();
   await proc.exited;
-  return JSON.parse(text) as ClangASTNode;
+  return pruneAST(JSON.parse(text) as ClangASTNode);
 }
 
 /**
@@ -96,7 +123,7 @@ export async function clangASTDumpWithPreIncludes(
   const proc = Bun.spawn(args, { stdout: "pipe", stderr: "ignore" });
   const text = await new Response(proc.stdout).text();
   await proc.exited;
-  return JSON.parse(text) as ClangASTNode;
+  return pruneAST(JSON.parse(text) as ClangASTNode);
 }
 
 /**
@@ -140,7 +167,7 @@ export async function clangBatchASTDump(
     const proc = Bun.spawn(args, { stdout: "pipe", stderr: "ignore" });
     const text = await new Response(proc.stdout).text();
     await proc.exited;
-    return JSON.parse(text) as ClangASTNode;
+    return pruneAST(JSON.parse(text) as ClangASTNode);
   } finally {
     // Clean up temp file
     try { await Bun.write(tmpPath, ""); } catch {}

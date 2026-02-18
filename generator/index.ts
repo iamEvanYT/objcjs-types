@@ -295,7 +295,14 @@ async function main(): Promise<void> {
   // Phase 3: Parallel parsing via worker pool
   // ========================================
 
-  const poolSize = navigator.hardwareConcurrency ?? 4;
+  // Native JSON.parse is ~3x faster than any JS-based streaming parser, but
+  // each clang batch materializes ~1-2GB of JS objects. With 8 workers the
+  // peak memory is higher but parse time drops to ~30s (from ~55s with 4).
+  // The actual per-task bottleneck is clang execution + JSON.parse (~95% of
+  // task time), not the AST walk passes (~5%). Any Xcode-capable Mac with
+  // 32+GB RAM handles 8 workers comfortably.
+  const cpuCount = navigator.hardwareConcurrency ?? 4;
+  const poolSize = Math.min(cpuCount, 8);
   const pool = new WorkerPool(poolSize);
   const totalBatchTasks = batchTasks.length;
   const totalExtraTasks = extraTasks.length;
@@ -303,6 +310,11 @@ async function main(): Promise<void> {
   let completedTasks = 0;
 
   const totalHeaders = batchTasks.reduce((sum, t) => sum + t.headerPaths.length, 0) + totalExtraTasks;
+
+  // Sort batch tasks largest-first so expensive frameworks (AppKit, Foundation)
+  // start immediately and don't create tail latency at the end.
+  batchTasks.sort((a, b) => b.headerPaths.length - a.headerPaths.length);
+
   console.log(
     `Parsing ${totalHeaders} headers via ${totalBatchTasks} batched framework tasks + ${totalExtraTasks} extra tasks using ${pool.size} worker threads...`
   );

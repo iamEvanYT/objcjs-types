@@ -61,11 +61,11 @@ self.onmessage = async (event: MessageEvent) => {
       const headerPaths: string[] = msg.headerPaths ?? [];
       const preIncludes: string[] = msg.preIncludes ?? [];
 
-      // Read all header files for deprecation scanning
-      const headerLinesMap = await readHeaderLinesMap(headerPaths);
-
-      // Run a single batched clang invocation for all headers
-      const ast = await clangBatchASTDump(headerPaths, preIncludes);
+      // Read all header files for deprecation scanning concurrently with clang.
+      const [headerLinesMap, ast] = await Promise.all([
+        readHeaderLinesMap(headerPaths),
+        clangBatchASTDump(headerPaths, preIncludes),
+      ]);
 
       const classes = classTargetSet.size > 0
         ? parseAST(ast, classTargetSet, undefined, headerLinesMap)
