@@ -871,6 +871,9 @@ function collectProtocolReferencedClasses(
     extractClassRefs(pType);
   }
 
+  // Remove self-reference
+  refs.delete(proto.name);
+
   return refs;
 }
 
