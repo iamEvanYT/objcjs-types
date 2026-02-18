@@ -27,10 +27,18 @@ export interface FrameworkConfig extends FrameworkBase {
   classes: string[];
   /** All discovered protocol names */
   protocols: string[];
+  /** All discovered integer enum names (NS_ENUM / NS_OPTIONS) */
+  integerEnums: string[];
+  /** All discovered string enum names (NS_TYPED_EXTENSIBLE_ENUM etc.) */
+  stringEnums: string[];
   /** Maps class name → header file name (without .h) */
   classHeaders: Map<string, string>;
   /** Maps protocol name → header file name (without .h) */
   protocolHeaders: Map<string, string>;
+  /** Maps integer enum name → header file name (without .h) */
+  integerEnumHeaders: Map<string, string>;
+  /** Maps string enum name → header file name (without .h) */
+  stringEnumHeaders: Map<string, string>;
 }
 
 export const SDK_PATH =
@@ -119,5 +127,18 @@ export function getProtocolHeaderPath(
   protocolName: string
 ): string {
   const headerName = framework.protocolHeaders.get(protocolName) ?? protocolName;
+  return `${framework.headersPath}/${headerName}.h`;
+}
+
+/**
+ * Get the header file path for an enum using discovered header mapping.
+ */
+export function getEnumHeaderPath(
+  framework: FrameworkConfig,
+  enumName: string,
+  kind: "integer" | "string"
+): string {
+  const headers = kind === "integer" ? framework.integerEnumHeaders : framework.stringEnumHeaders;
+  const headerName = headers.get(enumName) ?? enumName;
   return `${framework.headersPath}/${headerName}.h`;
 }

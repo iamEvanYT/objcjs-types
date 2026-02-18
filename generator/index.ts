@@ -6,13 +6,14 @@
  * 4. Emit .ts declaration files
  */
 
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, readdir, copyFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, type FrameworkConfig } from "./frameworks.ts";
+import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, getEnumHeaderPath, type FrameworkConfig } from "./frameworks.ts";
 import { discoverFramework } from "./discover.ts";
-import type { ObjCClass, ObjCProtocol } from "./ast-parser.ts";
-import { setKnownClasses, setKnownProtocols, setProtocolConformers } from "./type-mapper.ts";
+import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum } from "./ast-parser.ts";
+import { setKnownClasses, setKnownProtocols, setProtocolConformers, setKnownIntegerEnums, setKnownStringEnums } from "./type-mapper.ts";
+import { resolveStringConstants, cleanupResolver } from "./resolve-strings.ts";
 import {
   emitClassFile,
   emitMergedClassFile,
@@ -21,6 +22,8 @@ import {
   emitTopLevelIndex,
   emitDelegatesFile,
   emitStructsFile,
+  emitIntegerEnumFile,
+  emitStringEnumFile,
   groupCaseCollisions,
 } from "./emitter.ts";
 import { WorkerPool } from "./worker-pool.ts";
@@ -41,6 +44,15 @@ interface ProtocolParseTask {
   frameworkName: string;
   headerPath: string;
   targets: string[];
+  fallbackPreIncludes: string[];
+}
+
+/** Task descriptor for enum header parsing */
+interface EnumParseTask {
+  frameworkName: string;
+  headerPath: string;
+  integerTargets: string[];
+  stringTargets: string[];
   fallbackPreIncludes: string[];
 }
 
@@ -91,20 +103,30 @@ async function main(): Promise<void> {
       }
     }
 
-    // Skip frameworks with no ObjC classes or protocols
-    if (discovery.classes.size === 0 && discovery.protocols.size === 0) continue;
+    // Skip frameworks with no ObjC classes, protocols, or enums
+    if (
+      discovery.classes.size === 0 &&
+      discovery.protocols.size === 0 &&
+      discovery.integerEnums.size === 0 &&
+      discovery.stringEnums.size === 0
+    ) continue;
 
     const fw: FrameworkConfig = {
       ...base,
       classes: [...discovery.classes.keys()].sort(),
       protocols: [...discovery.protocols.keys()].sort(),
+      integerEnums: [...discovery.integerEnums.keys()].sort(),
+      stringEnums: [...discovery.stringEnums.keys()].sort(),
       classHeaders: discovery.classes,
       protocolHeaders: discovery.protocols,
+      integerEnumHeaders: discovery.integerEnums,
+      stringEnumHeaders: discovery.stringEnums,
     };
     frameworks.push(fw);
 
+    const enumCount = fw.integerEnums.length + fw.stringEnums.length;
     console.log(
-      `  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols`
+      `  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols, ${enumCount} enums`
     );
   }
   console.log("");
@@ -126,6 +148,20 @@ async function main(): Promise<void> {
     }
   }
   setKnownProtocols(allKnownProtocols);
+
+  // Collect all known enum names across all frameworks
+  const allKnownIntegerEnums = new Set<string>();
+  const allKnownStringEnums = new Set<string>();
+  for (const fw of frameworks) {
+    for (const name of fw.integerEnums) {
+      allKnownIntegerEnums.add(name);
+    }
+    for (const name of fw.stringEnums) {
+      allKnownStringEnums.add(name);
+    }
+  }
+  setKnownIntegerEnums(allKnownIntegerEnums);
+  setKnownStringEnums(allKnownStringEnums);
 
   // Validate filter names against discovered frameworks
   if (isFiltered) {
@@ -150,6 +186,7 @@ async function main(): Promise<void> {
 
   const classTasks: ClassParseTask[] = [];
   const protocolTasks: ProtocolParseTask[] = [];
+  const enumTasks: EnumParseTask[] = [];
 
   for (const fw of frameworksToProcess) {
     const fallbackPreIncludes = [
@@ -221,6 +258,47 @@ async function main(): Promise<void> {
         fallbackPreIncludes,
       });
     }
+
+    // --- Enum header tasks ---
+    // Group enums by their header file to parse each header only once.
+    // A single header may contain both integer and string enums.
+    const headerToIntegerEnums = new Map<string, string[]>();
+    const headerToStringEnums = new Map<string, string[]>();
+
+    for (const enumName of fw.integerEnums) {
+      const headerPath = getEnumHeaderPath(fw, enumName, "integer");
+      if (!headerToIntegerEnums.has(headerPath)) {
+        headerToIntegerEnums.set(headerPath, []);
+      }
+      headerToIntegerEnums.get(headerPath)!.push(enumName);
+    }
+    for (const enumName of fw.stringEnums) {
+      const headerPath = getEnumHeaderPath(fw, enumName, "string");
+      if (!headerToStringEnums.has(headerPath)) {
+        headerToStringEnums.set(headerPath, []);
+      }
+      headerToStringEnums.get(headerPath)!.push(enumName);
+    }
+
+    // Merge integer and string enum targets by header path into a single task
+    const allEnumHeaders = new Set([
+      ...headerToIntegerEnums.keys(),
+      ...headerToStringEnums.keys(),
+    ]);
+
+    for (const headerPath of allEnumHeaders) {
+      if (!existsSync(headerPath)) {
+        console.log(`  [SKIP] Enum header not found: ${headerPath}`);
+        continue;
+      }
+      enumTasks.push({
+        frameworkName: fw.name,
+        headerPath,
+        integerTargets: headerToIntegerEnums.get(headerPath) ?? [],
+        stringTargets: headerToStringEnums.get(headerPath) ?? [],
+        fallbackPreIncludes,
+      });
+    }
   }
 
   // ========================================
@@ -229,12 +307,12 @@ async function main(): Promise<void> {
 
   const poolSize = navigator.hardwareConcurrency ?? 4;
   const pool = new WorkerPool(poolSize);
-  const totalTasks = classTasks.length + protocolTasks.length;
+  const totalTasks = classTasks.length + protocolTasks.length + enumTasks.length;
   let completedTasks = 0;
 
   console.log(
-    `Parsing ${classTasks.length} class headers + ${protocolTasks.length} protocol headers ` +
-    `using ${pool.size} worker threads...`
+    `Parsing ${classTasks.length} class headers + ${protocolTasks.length} protocol headers + ` +
+    `${enumTasks.length} enum headers using ${pool.size} worker threads...`
   );
 
   const startTime = performance.now();
@@ -282,9 +360,29 @@ async function main(): Promise<void> {
       })
   );
 
+  // Dispatch all enum tasks concurrently
+  const enumPromises = enumTasks.map((task) =>
+    pool
+      .parseEnums(
+        task.headerPath,
+        task.integerTargets,
+        task.stringTargets,
+        task.fallbackPreIncludes.length > 0 ? task.fallbackPreIncludes : undefined
+      )
+      .then((result) => {
+        trackProgress();
+        return { task, result, error: null as string | null };
+      })
+      .catch((err) => {
+        trackProgress();
+        return { task, result: null, error: String(err) };
+      })
+  );
+
   // Wait for all parse tasks to complete
   const classResults = await Promise.all(classPromises);
   const protocolResults = await Promise.all(protocolPromises);
+  const enumResults = await Promise.all(enumPromises);
 
   pool.destroy();
 
@@ -388,6 +486,76 @@ async function main(): Promise<void> {
     }
   }
 
+  // Organize parsed enums by framework
+  const frameworkIntegerEnums = new Map<string, Map<string, ObjCIntegerEnum>>();
+  const frameworkStringEnums = new Map<string, Map<string, ObjCStringEnum>>();
+  for (const { task, result, error } of enumResults) {
+    if (error) {
+      console.log(`  [ERROR] ${task.headerPath}: ${error}`);
+      continue;
+    }
+    if (!result) continue;
+
+    if (!frameworkIntegerEnums.has(task.frameworkName)) {
+      frameworkIntegerEnums.set(task.frameworkName, new Map());
+    }
+    if (!frameworkStringEnums.has(task.frameworkName)) {
+      frameworkStringEnums.set(task.frameworkName, new Map());
+    }
+
+    const fwIntEnums = frameworkIntegerEnums.get(task.frameworkName)!;
+    const fwStrEnums = frameworkStringEnums.get(task.frameworkName)!;
+
+    for (const [name, enumDef] of result.integerEnums) {
+      fwIntEnums.set(name, enumDef);
+    }
+    for (const [name, enumDef] of result.stringEnums) {
+      fwStrEnums.set(name, enumDef);
+    }
+  }
+
+  // Resolve actual string values for extern NSString * constants.
+  // This compiles a small ObjC helper once, then invokes it per-framework
+  // with the symbol names discovered during parsing.
+  console.log("Resolving string enum values from framework binaries...");
+  let totalResolved = 0;
+  let totalStringSymbols = 0;
+
+  for (const fw of frameworksToProcess) {
+    const fwStrEnums = frameworkStringEnums.get(fw.name);
+    if (!fwStrEnums || fwStrEnums.size === 0) continue;
+
+    // Collect all symbol names for this framework
+    const allSymbols: string[] = [];
+    for (const enumDef of fwStrEnums.values()) {
+      for (const v of enumDef.values) {
+        allSymbols.push(v.symbolName);
+      }
+    }
+    if (allSymbols.length === 0) continue;
+
+    totalStringSymbols += allSymbols.length;
+
+    try {
+      const resolved = await resolveStringConstants(fw.libraryPath, allSymbols);
+
+      // Populate the resolved values back into the enum definitions
+      for (const enumDef of fwStrEnums.values()) {
+        for (const v of enumDef.values) {
+          const value = resolved.get(v.symbolName);
+          if (value !== undefined) {
+            v.value = value;
+            totalResolved++;
+          }
+        }
+      }
+    } catch (err) {
+      console.log(`  [WARN] Failed to resolve string values for ${fw.name}: ${err}`);
+    }
+  }
+
+  console.log(`  Resolved ${totalResolved}/${totalStringSymbols} string enum values\n`);
+
   // Build protocol -> conforming classes map from all parsed classes.
   // This must happen after ALL parsing completes so every conformance is known.
   const protocolConformers = new Map<string, Set<string>>();
@@ -406,11 +574,18 @@ async function main(): Promise<void> {
   for (const fw of frameworksToProcess) {
     const fwClasses = frameworkClasses.get(fw.name);
     const fwProtos = frameworkProtocolsParsed.get(fw.name);
+    const fwIntEnums = frameworkIntegerEnums.get(fw.name);
+    const fwStrEnums = frameworkStringEnums.get(fw.name);
     const classCount = fwClasses?.size ?? 0;
     const protoCount = fwProtos?.size ?? 0;
+    const intEnumCount = fwIntEnums?.size ?? 0;
+    const strEnumCount = fwStrEnums?.size ?? 0;
+    const totalEnums = intEnumCount + strEnumCount;
+    const expectedEnums = fw.integerEnums.length + fw.stringEnums.length;
     console.log(
       `  ${fw.name}: parsed ${classCount}/${fw.classes.length} classes, ` +
-      `${protoCount}/${fw.protocols.length} protocols`
+      `${protoCount}/${fw.protocols.length} protocols, ` +
+      `${totalEnums}/${expectedEnums} enums`
     );
   }
   console.log("");
@@ -443,6 +618,8 @@ async function main(): Promise<void> {
 
     const fwClasses = frameworkClasses.get(framework.name) ?? new Map<string, ObjCClass>();
     const fwProtos = frameworkProtocolsParsed.get(framework.name) ?? new Map<string, ObjCProtocol>();
+    const fwIntEnums = frameworkIntegerEnums.get(framework.name) ?? new Map<string, ObjCIntegerEnum>();
+    const fwStrEnums = frameworkStringEnums.get(framework.name) ?? new Map<string, ObjCStringEnum>();
 
     // Detect case-insensitive filename collisions among this framework's classes
     const collisions = collisionsByFramework.get(framework.name)!;
@@ -532,16 +709,62 @@ async function main(): Promise<void> {
       generatedProtocols.push(protoName);
     }
 
+    // Emit integer enum files
+    const generatedIntegerEnums: string[] = [];
+    const enumWritePromises: Promise<void>[] = [];
+
+    for (const enumName of framework.integerEnums) {
+      const enumDef = fwIntEnums.get(enumName);
+      if (!enumDef) continue;
+
+      const content = emitIntegerEnumFile(enumDef);
+      enumWritePromises.push(
+        writeFile(join(frameworkDir, `${enumName}.ts`), content)
+      );
+      generatedIntegerEnums.push(enumName);
+    }
+
+    // Emit string enum files
+    const generatedStringEnums: string[] = [];
+    const generatedStringEnumsTypeOnly: string[] = [];
+
+    for (const enumName of framework.stringEnums) {
+      const enumDef = fwStrEnums.get(enumName);
+      if (!enumDef) continue;
+
+      const content = emitStringEnumFile(enumDef, framework.name);
+      enumWritePromises.push(
+        writeFile(join(frameworkDir, `${enumName}.ts`), content)
+      );
+
+      // Enums with resolved values export a const + type; unresolved ones are type-only
+      const hasResolvedValues = enumDef.values.some((v) => v.value !== null);
+      if (hasResolvedValues) {
+        generatedStringEnums.push(enumName);
+      } else {
+        generatedStringEnumsTypeOnly.push(enumName);
+      }
+    }
+
     // Wait for all file writes in this framework to complete
-    await Promise.all([...classWritePromises, ...protoWritePromises]);
+    await Promise.all([...classWritePromises, ...protoWritePromises, ...enumWritePromises]);
 
     // Emit framework index
-    const indexContent = emitFrameworkIndex(framework, generatedClasses, generatedProtocols, collisions);
+    const indexContent = emitFrameworkIndex(
+      framework,
+      generatedClasses,
+      generatedProtocols,
+      collisions,
+      generatedIntegerEnums,
+      generatedStringEnums,
+      generatedStringEnumsTypeOnly
+    );
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
+    const totalEnumCount = generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
     console.log(
-      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + index.ts`
+      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files + index.ts`
     );
   }
 
@@ -558,6 +781,20 @@ async function main(): Promise<void> {
     // Emit top-level index
     const topIndex = emitTopLevelIndex(frameworks.map((f) => f.name));
     await writeFile(join(SRC_DIR, "index.ts"), topIndex);
+
+    // Copy template files from generator/templates/ into src/
+    const templatesDir = join(import.meta.dir, "templates");
+    if (existsSync(templatesDir)) {
+      const templateFiles = await readdir(templatesDir);
+      await Promise.all(
+        templateFiles.map((file) =>
+          copyFile(join(templatesDir, file), join(SRC_DIR, file))
+        )
+      );
+      if (templateFiles.length > 0) {
+        console.log(`  Copied ${templateFiles.length} template file(s) to src/`);
+      }
+    }
   }
 
   const emitTime = ((performance.now() - emitStart) / 1000).toFixed(1);
@@ -568,6 +805,7 @@ async function main(): Promise<void> {
   // Print summary
   let totalClasses = 0;
   let totalProtocols = 0;
+  let totalEnums = 0;
   for (const fw of frameworksToProcess) {
     const dir = join(SRC_DIR, fw.name);
     const classCount = fw.classes.filter((c) =>
@@ -576,11 +814,18 @@ async function main(): Promise<void> {
     const protoCount = fw.protocols.filter((p) =>
       existsSync(join(dir, `${p}.ts`))
     ).length;
-    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols`);
+    const enumCount = [...fw.integerEnums, ...fw.stringEnums].filter((e) =>
+      existsSync(join(dir, `${e}.ts`))
+    ).length;
+    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums`);
     totalClasses += classCount;
     totalProtocols += protoCount;
+    totalEnums += enumCount;
   }
-  console.log(`  Total: ${totalClasses} classes, ${totalProtocols} protocols`);
+  console.log(`  Total: ${totalClasses} classes, ${totalProtocols} protocols, ${totalEnums} enums`);
+
+  // Clean up the compiled ObjC helper binary
+  await cleanupResolver();
 }
 
 main().catch((err) => {

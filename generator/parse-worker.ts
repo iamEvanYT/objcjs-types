@@ -10,7 +10,7 @@
 declare var self: Worker;
 
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
-import { parseAST, parseProtocols } from "./ast-parser.ts";
+import { parseAST, parseProtocols, parseIntegerEnums, parseStringEnums } from "./ast-parser.ts";
 
 /**
  * Read a header file and split it into lines for deprecation scanning.
@@ -65,6 +65,28 @@ self.onmessage = async (event: MessageEvent) => {
         type: "protocols-result",
         protocols: [...parsed.entries()],
         targets: msg.targets,
+      });
+    } else if (msg.type === "parse-enums") {
+      const integerTargetSet = new Set<string>(msg.integerTargets ?? []);
+      const stringTargetSet = new Set<string>(msg.stringTargets ?? []);
+      let ast = await clangASTDump(msg.headerPath);
+      let integerEnums = parseIntegerEnums(ast, integerTargetSet);
+      let stringEnums = parseStringEnums(ast, stringTargetSet);
+
+      // Fallback: retry without -fmodules using pre-includes
+      if (integerEnums.size === 0 && stringEnums.size === 0 && msg.fallbackPreIncludes) {
+        ast = await clangASTDumpWithPreIncludes(msg.headerPath, msg.fallbackPreIncludes);
+        integerEnums = parseIntegerEnums(ast, integerTargetSet);
+        stringEnums = parseStringEnums(ast, stringTargetSet);
+      }
+
+      postMessage({
+        id: msg.id,
+        type: "enums-result",
+        integerEnums: [...integerEnums.entries()],
+        stringEnums: [...stringEnums.entries()],
+        integerTargets: msg.integerTargets ?? [],
+        stringTargets: msg.stringTargets ?? [],
       });
     }
   } catch (error) {

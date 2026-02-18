@@ -2,7 +2,7 @@
  * Generates TypeScript declaration files from parsed ObjC class data.
  */
 
-import type { ObjCClass, ObjCMethod, ObjCProperty, ObjCProtocol } from "./ast-parser.ts";
+import type { ObjCClass, ObjCMethod, ObjCProperty, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum, ObjCStringEnumValue } from "./ast-parser.ts";
 import type { FrameworkConfig } from "./frameworks.ts";
 import {
   selectorToJS,
@@ -822,6 +822,129 @@ function getProtocolFramework(
   return null;
 }
 
+// --- Enum file generation ---
+
+/**
+ * Generate a .ts file for an integer enum (NS_ENUM / NS_OPTIONS).
+ *
+ * Emits a const object with the computed values and a companion type
+ * that resolves to the union of its values. The enum prefix is stripped
+ * from constant names to produce short keys.
+ *
+ * Example output:
+ * ```ts
+ * export const ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirement = {
+ *   Required: 0,
+ *   Preferred: 1,
+ * } as const;
+ * export type ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirement =
+ *   typeof ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirement[
+ *     keyof typeof ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirement
+ *   ];
+ * ```
+ */
+export function emitIntegerEnumFile(enumDef: ObjCIntegerEnum): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push("");
+
+  // Strip the enum name prefix from constant names to get short keys.
+  // e.g., "ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirementRequired"
+  //     → "Required"
+  const prefix = enumDef.name;
+  const entries: { key: string; value: string }[] = [];
+
+  for (const v of enumDef.values) {
+    let key = v.name;
+    if (key.startsWith(prefix)) {
+      key = key.slice(prefix.length);
+    }
+    // If stripping left an empty key or a key starting with a digit, use the full name
+    if (!key || /^\d/.test(key)) {
+      key = v.name;
+    }
+    entries.push({ key, value: v.value ?? "0" });
+  }
+
+  lines.push(`export const ${enumDef.name} = {`);
+  for (const entry of entries) {
+    lines.push(`  ${entry.key}: ${entry.value},`);
+  }
+  lines.push(`} as const;`);
+
+  lines.push(
+    `export type ${enumDef.name} =`
+  );
+  lines.push(
+    `  typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
+  );
+
+  lines.push("");
+  return lines.join("\n");
+}
+
+/**
+ * Generate a .ts file for a string enum (NS_TYPED_EXTENSIBLE_ENUM etc.).
+ *
+ * Emits a const object mapping short names to their resolved string values,
+ * plus a companion type. The actual values are read from the framework binary
+ * at generation time via dlopen/dlsym.
+ *
+ * Example output:
+ * ```ts
+ * export const ASAuthorizationPublicKeyCredentialUserVerificationPreference = {
+ *   Preferred: "preferred",
+ *   Required: "required",
+ *   Discouraged: "discouraged",
+ * } as const;
+ * export type ASAuthorizationPublicKeyCredentialUserVerificationPreference =
+ *   typeof ASAuthorizationPublicKeyCredentialUserVerificationPreference[
+ *     keyof typeof ASAuthorizationPublicKeyCredentialUserVerificationPreference
+ *   ];
+ * ```
+ */
+export function emitStringEnumFile(
+  enumDef: ObjCStringEnum,
+  _currentFrameworkName: string
+): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push("");
+
+  // Filter to values that were successfully resolved
+  const resolvedValues = enumDef.values.filter((v) => v.value !== null);
+
+  if (resolvedValues.length > 0) {
+    lines.push(`export const ${enumDef.name} = {`);
+    for (const v of resolvedValues) {
+      // JSON.stringify handles escaping of special characters in the value
+      lines.push(`  ${v.shortName}: ${JSON.stringify(v.value)},`);
+    }
+    lines.push(`} as const;`);
+
+    lines.push(
+      `export type ${enumDef.name} =`
+    );
+    lines.push(
+      `  typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
+    );
+  } else {
+    // Fallback: if no values could be resolved, emit short names as a JSDoc comment
+    // and a type alias that accepts any string (for forward compatibility)
+    const shortNames = enumDef.values.map((v) => v.shortName);
+    if (shortNames.length > 0) {
+      lines.push(`/**`);
+      lines.push(` * Known values: ${shortNames.join(", ")}`);
+      lines.push(` * Values could not be resolved from the framework binary.`);
+      lines.push(` */`);
+    }
+    lines.push(`export type ${enumDef.name} = string;`);
+  }
+
+  lines.push("");
+  return lines.join("\n");
+}
+
 // --- Struct definitions for code generation ---
 // Each struct defines its TypeScript interface and factory function.
 // Field info comes from the objc-js native bridge's KNOWN_STRUCT_FIELDS table
@@ -1050,12 +1173,18 @@ export function emitStructsFile(): string {
  * @param caseCollisions - Map from canonical filename to all class names in
  *   that file. Colliding classes import from the canonical file rather than
  *   their own name. Pass an empty map when there are no collisions.
+ * @param generatedIntegerEnums - Names of integer enums generated for this framework.
+ * @param generatedStringEnums - Names of string enums with resolved values (value + type export).
+ * @param generatedStringEnumsTypeOnly - Names of string enums without resolved values (type-only export).
  */
 export function emitFrameworkIndex(
   framework: FrameworkConfig,
   generatedClasses: string[],
   generatedProtocols?: string[],
-  caseCollisions?: Map<string, string[]>
+  caseCollisions?: Map<string, string[]>,
+  generatedIntegerEnums?: string[],
+  generatedStringEnums?: string[],
+  generatedStringEnumsTypeOnly?: string[]
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
@@ -1095,6 +1224,36 @@ export function emitFrameworkIndex(
         `import type { _${protoName} } from "./${protoName}.js";`
       );
       lines.push(`export type { _${protoName} };`);
+      lines.push("");
+    }
+  }
+
+  // Export integer enums (re-export value + type)
+  if (generatedIntegerEnums && generatedIntegerEnums.length > 0) {
+    for (const enumName of generatedIntegerEnums) {
+      lines.push(
+        `export { ${enumName} } from "./${enumName}.js";`
+      );
+      lines.push("");
+    }
+  }
+
+  // Export string enums (re-export value + type)
+  if (generatedStringEnums && generatedStringEnums.length > 0) {
+    for (const enumName of generatedStringEnums) {
+      lines.push(
+        `export { ${enumName} } from "./${enumName}.js";`
+      );
+      lines.push("");
+    }
+  }
+
+  // Export unresolved string enums (type-only, no runtime value available)
+  if (generatedStringEnumsTypeOnly && generatedStringEnumsTypeOnly.length > 0) {
+    for (const enumName of generatedStringEnumsTypeOnly) {
+      lines.push(
+        `export type { ${enumName} } from "./${enumName}.js";`
+      );
       lines.push("");
     }
   }

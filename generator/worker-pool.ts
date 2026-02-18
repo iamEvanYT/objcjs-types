@@ -7,7 +7,7 @@
  * tasks to idle workers and queues excess tasks until a worker is free.
  */
 
-import type { ObjCClass, ObjCProtocol } from "./ast-parser.ts";
+import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum } from "./ast-parser.ts";
 
 export interface ClassParseResult {
   /** Parsed classes from the header (class name → ObjCClass) */
@@ -21,6 +21,17 @@ export interface ProtocolParseResult {
   protocols: Map<string, ObjCProtocol>;
   /** Original target protocol names that were requested */
   targets: string[];
+}
+
+export interface EnumParseResult {
+  /** Parsed integer enums from the header (enum name → ObjCIntegerEnum) */
+  integerEnums: Map<string, ObjCIntegerEnum>;
+  /** Parsed string enums from the header (enum name → ObjCStringEnum) */
+  stringEnums: Map<string, ObjCStringEnum>;
+  /** Original target integer enum names that were requested */
+  integerTargets: string[];
+  /** Original target string enum names that were requested */
+  stringTargets: string[];
 }
 
 interface PendingTask {
@@ -153,6 +164,33 @@ export class WorkerPool {
     return {
       protocols: new Map(result.protocols),
       targets: result.targets,
+    };
+  }
+
+  /**
+   * Parse enums from a header file using a worker thread.
+   * Extracts both integer enums (NS_ENUM/NS_OPTIONS) and string enums
+   * (NS_TYPED_EXTENSIBLE_ENUM) in a single clang pass.
+   */
+  async parseEnums(
+    headerPath: string,
+    integerTargets: string[],
+    stringTargets: string[],
+    fallbackPreIncludes?: string[]
+  ): Promise<EnumParseResult> {
+    const result = await this.dispatch({
+      id: this.nextId++,
+      type: "parse-enums",
+      headerPath,
+      integerTargets,
+      stringTargets,
+      fallbackPreIncludes,
+    });
+    return {
+      integerEnums: new Map(result.integerEnums),
+      stringEnums: new Map(result.stringEnums),
+      integerTargets: result.integerTargets,
+      stringTargets: result.stringTargets,
     };
   }
 

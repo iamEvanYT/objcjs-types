@@ -11,6 +11,10 @@ export interface DiscoveryResult {
   classes: Map<string, string>;
   /** Maps protocol name → header file name (without .h extension) */
   protocols: Map<string, string>;
+  /** Maps integer enum name → header file name (without .h extension) */
+  integerEnums: Map<string, string>;
+  /** Maps string enum name → header file name (without .h extension) */
+  stringEnums: Map<string, string>;
 }
 
 /** Matches `@interface ClassName` — captures class name */
@@ -21,6 +25,21 @@ const CATEGORY_RE = /@interface\s+\w+(?:<[^>]*>)?\s*\(/;
 
 /** Matches `@protocol ProtocolName` — captures protocol name */
 const PROTOCOL_RE = /@protocol\s+(\w+)/;
+
+/**
+ * Matches NS_ENUM / NS_OPTIONS integer enum declarations.
+ * e.g., `typedef NS_ENUM(NSInteger, NSWindowStyleMask) {`
+ * e.g., `typedef NS_OPTIONS(NSUInteger, NSWindowStyleMask) {`
+ */
+const NS_ENUM_RE = /typedef\s+NS_(?:ENUM|OPTIONS)\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
+
+/**
+ * Matches NS_TYPED_EXTENSIBLE_ENUM / NS_STRING_ENUM / NS_TYPED_ENUM string enum declarations.
+ * These are NSString * typedefs whose values are extern constants.
+ * e.g., `typedef NSString * ASAuthorizationPublicKeyCredentialUserVerificationPreference NS_TYPED_EXTENSIBLE_ENUM;`
+ * Also matches the multi-line form where the macro is on the typedef.
+ */
+const NS_STRING_ENUM_RE = /typedef\s+NSString\s*\*\s*(\w+)\s+NS_(?:TYPED_EXTENSIBLE_ENUM|STRING_ENUM|TYPED_ENUM)/;
 
 /**
  * Scan all .h files in a framework's Headers directory and discover
@@ -35,6 +54,8 @@ export async function discoverFramework(
 ): Promise<DiscoveryResult> {
   const classes = new Map<string, string>();
   const protocols = new Map<string, string>();
+  const integerEnums = new Map<string, string>();
+  const stringEnums = new Map<string, string>();
 
   const entries = await readdir(headersPath);
   const headerFiles = entries.filter((f) => f.endsWith(".h")).sort();
@@ -67,8 +88,26 @@ export async function discoverFramework(
           protocols.set(name, headerName);
         }
       }
+
+      // --- Integer enum declarations (NS_ENUM / NS_OPTIONS) ---
+      const enumMatch = NS_ENUM_RE.exec(line);
+      if (enumMatch) {
+        const name = enumMatch[1]!;
+        if (!integerEnums.has(name)) {
+          integerEnums.set(name, headerName);
+        }
+      }
+
+      // --- String enum declarations (NS_TYPED_EXTENSIBLE_ENUM etc.) ---
+      const stringEnumMatch = NS_STRING_ENUM_RE.exec(line);
+      if (stringEnumMatch) {
+        const name = stringEnumMatch[1]!;
+        if (!stringEnums.has(name)) {
+          stringEnums.set(name, headerName);
+        }
+      }
     }
   }
 
-  return { classes, protocols };
+  return { classes, protocols, integerEnums, stringEnums };
 }

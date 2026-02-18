@@ -11,6 +11,12 @@ let knownProtocols: Set<string> = new Set();
 /** Maps protocol name → set of known conforming class names */
 let protocolConformers: Map<string, Set<string>> = new Map();
 
+/** Set of all known integer enum names (NS_ENUM / NS_OPTIONS) across all frameworks */
+let knownIntegerEnums: Set<string> = new Set();
+
+/** Set of all known string enum names (NS_TYPED_EXTENSIBLE_ENUM etc.) across all frameworks */
+let knownStringEnums: Set<string> = new Set();
+
 export function setKnownClasses(classes: Set<string>): void {
   knownClasses = classes;
 }
@@ -21,6 +27,14 @@ export function setKnownProtocols(protocols: Set<string>): void {
 
 export function setProtocolConformers(conformers: Map<string, Set<string>>): void {
   protocolConformers = conformers;
+}
+
+export function setKnownIntegerEnums(enums: Set<string>): void {
+  knownIntegerEnums = enums;
+}
+
+export function setKnownStringEnums(enums: Set<string>): void {
+  knownStringEnums = enums;
 }
 
 /**
@@ -304,6 +318,15 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
   }
 
   // Enum / typedef types that are numeric (only match known framework-prefixed types)
+  // First check if this is a known enum type — this is more precise than the
+  // prefix heuristic below and handles prefixes like AS that aren't in the list.
+  if (knownIntegerEnums.has(cleaned)) {
+    return "number";
+  }
+  if (knownStringEnums.has(cleaned)) {
+    return "_NSString";
+  }
+
   const hasFrameworkPrefix =
     cleaned.startsWith("NS") ||
     cleaned.startsWith("CG") ||

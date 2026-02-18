@@ -41,6 +41,44 @@ export interface ObjCProtocol {
   properties: ObjCProperty[];
 }
 
+// --- Enum types ---
+
+export interface ObjCEnumValue {
+  /** The constant name (e.g., "ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirementRequired") */
+  name: string;
+  /** The integer value as a string (from ConstantExpr.value), or null if implicit */
+  value: string | null;
+}
+
+export interface ObjCIntegerEnum {
+  kind: "integer";
+  /** The enum type name (e.g., "ASAuthorizationPublicKeyCredentialLargeBlobSupportRequirement") */
+  name: string;
+  /** The underlying integer type (e.g., "NSInteger", "NSUInteger") */
+  underlyingType: string;
+  /** Whether this is an NS_OPTIONS (bitfield) vs NS_ENUM */
+  isOptions: boolean;
+  /** Ordered list of enum constants with their values */
+  values: ObjCEnumValue[];
+}
+
+export interface ObjCStringEnumValue {
+  /** The full extern symbol name (e.g., "ASAuthorizationPublicKeyCredentialUserVerificationPreferencePreferred") */
+  symbolName: string;
+  /** Short key after stripping the enum name prefix (e.g., "Preferred") */
+  shortName: string;
+  /** The resolved string value from the framework binary (e.g., "preferred"), or null if unresolved */
+  value: string | null;
+}
+
+export interface ObjCStringEnum {
+  kind: "string";
+  /** The enum type name (e.g., "ASAuthorizationPublicKeyCredentialUserVerificationPreference") */
+  name: string;
+  /** Extern NSString * constants with their resolved values */
+  values: ObjCStringEnumValue[];
+}
+
 // --- Helpers for extracting doc comments and deprecation info ---
 
 /**
@@ -488,4 +526,201 @@ export function parseProtocols(
 
   walk(root);
   return protocols;
+}
+
+/**
+ * Parse a clang AST root node and extract integer enums (NS_ENUM / NS_OPTIONS).
+ *
+ * Integer enums appear as EnumDecl nodes with a fixedUnderlyingType.
+ * NS_OPTIONS enums additionally have a FlagEnumAttr child.
+ * Each EnumConstantDecl child represents a constant; its value comes from
+ * a nested ConstantExpr node (always the fully-computed integer as a string).
+ *
+ * @param targetEnums - Set of enum names to extract (from discovery)
+ */
+export function parseIntegerEnums(
+  root: ClangASTNode,
+  targetEnums: Set<string>
+): Map<string, ObjCIntegerEnum> {
+  const enums = new Map<string, ObjCIntegerEnum>();
+
+  function walk(node: ClangASTNode): void {
+    if (node.kind === "EnumDecl" && node.name && targetEnums.has(node.name)) {
+      if (node.fixedUnderlyingType) {
+        const hasConstants = node.inner?.some(
+          (child) => child.kind === "EnumConstantDecl"
+        ) ?? false;
+
+        // Skip forward declarations (no EnumConstantDecl children).
+        // The full definition with constants may appear later with previousDecl set.
+        if (!hasConstants) {
+          // Only record if we haven't seen a definition with values yet
+          if (!enums.has(node.name)) {
+            enums.set(node.name, {
+              kind: "integer",
+              name: node.name,
+              underlyingType: node.fixedUnderlyingType.qualType,
+              isOptions: false,
+              values: [],
+            });
+          }
+        } else {
+          const isOptions = node.inner?.some(
+            (child) => child.kind === "FlagEnumAttr"
+          ) ?? false;
+
+          const values: ObjCEnumValue[] = [];
+          let implicitNextValue = 0;
+
+          for (const child of node.inner!) {
+            if (child.kind === "EnumConstantDecl" && child.name) {
+              // Extract value from ConstantExpr if present
+              let value: string | null = null;
+              if (child.inner) {
+                const constExpr = findConstantExpr(child);
+                if (constExpr?.value !== undefined) {
+                  value = constExpr.value;
+                  implicitNextValue = parseInt(value, 10) + 1;
+                }
+              }
+              if (value === null) {
+                value = String(implicitNextValue);
+                implicitNextValue++;
+              }
+              values.push({ name: child.name, value });
+            }
+          }
+
+          // Always overwrite — the definition with constants is authoritative
+          enums.set(node.name, {
+            kind: "integer",
+            name: node.name,
+            underlyingType: node.fixedUnderlyingType.qualType,
+            isOptions,
+            values,
+          });
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return enums;
+}
+
+/**
+ * Recursively find the first ConstantExpr node in a tree.
+ * ConstantExpr may be nested under ImplicitCastExpr or other intermediate nodes.
+ */
+function findConstantExpr(node: ClangASTNode): ClangASTNode | null {
+  if (node.kind === "ConstantExpr" && node.value !== undefined) {
+    return node;
+  }
+  if (node.inner) {
+    for (const child of node.inner) {
+      const found = findConstantExpr(child);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse a clang AST root node and extract string enums (NS_TYPED_EXTENSIBLE_ENUM etc.).
+ *
+ * String enums appear as TypedefDecl nodes with a SwiftNewTypeAttr child
+ * and a type.qualType of "NSString *". The individual values are VarDecl
+ * nodes with storageClass "extern" whose type.typeAliasDeclId links back
+ * to the TypedefDecl's id.
+ *
+ * @param targetEnums - Set of string enum names to extract (from discovery)
+ */
+export function parseStringEnums(
+  root: ClangASTNode,
+  targetEnums: Set<string>
+): Map<string, ObjCStringEnum> {
+  const enums = new Map<string, ObjCStringEnum>();
+  // Map from TypedefDecl id → enum name, for linking VarDecls
+  const typedefIdToName = new Map<string, string>();
+
+  function walkForTypedefs(node: ClangASTNode): void {
+    if (node.kind === "TypedefDecl" && node.name && targetEnums.has(node.name)) {
+      // Check for SwiftNewTypeAttr in inner
+      const hasSwiftNewType = node.inner?.some(
+        (child) => child.kind === "SwiftNewTypeAttr"
+      ) ?? false;
+
+      // Check that the underlying type is NSString *
+      const qualType = node.type?.qualType ?? "";
+      const isStringType =
+        qualType === "NSString *" ||
+        qualType.includes("NSString") ||
+        (node.type?.desugaredQualType ?? "").includes("NSString");
+
+      if (hasSwiftNewType && isStringType) {
+        typedefIdToName.set(node.id, node.name);
+        if (!enums.has(node.name)) {
+          enums.set(node.name, {
+            kind: "string",
+            name: node.name,
+            values: [],
+          });
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForTypedefs(child);
+      }
+    }
+  }
+
+  function walkForVarDecls(node: ClangASTNode): void {
+    if (
+      node.kind === "VarDecl" &&
+      node.name &&
+      node.storageClass === "extern" &&
+      node.type?.typeAliasDeclId
+    ) {
+      const enumName = typedefIdToName.get(node.type.typeAliasDeclId);
+      if (enumName) {
+        const enumDef = enums.get(enumName);
+        if (enumDef) {
+          // Strip the enum name prefix to get the short name
+          let shortName = node.name;
+          if (shortName.startsWith(enumName)) {
+            shortName = shortName.slice(enumName.length);
+          }
+          if (!shortName || /^\d/.test(shortName)) {
+            shortName = node.name;
+          }
+          enumDef.values.push({
+            symbolName: node.name,
+            shortName,
+            value: null, // Resolved later by resolve-strings.ts
+          });
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForVarDecls(child);
+      }
+    }
+  }
+
+  // First pass: find TypedefDecl nodes
+  walkForTypedefs(root);
+  // Second pass: find VarDecl nodes that reference the typedefs
+  walkForVarDecls(root);
+
+  return enums;
 }

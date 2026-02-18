@@ -19,8 +19,8 @@ export interface ClangASTNode {
   // ObjCMethodDecl
   instance?: boolean;
   returnType?: { qualType: string; desugaredQualType?: string };
-  // ObjCPropertyDecl
-  type?: { qualType: string; desugaredQualType?: string };
+  // ObjCPropertyDecl / VarDecl / EnumConstantDecl
+  type?: { qualType: string; desugaredQualType?: string; typeAliasDeclId?: string };
   // ObjCCategoryDecl
   interface?: { id: string; kind: string; name: string };
   // ParmVarDecl
@@ -32,6 +32,13 @@ export interface ClangASTNode {
   readwrite?: boolean;
   // For checking if implicit
   isImplicit?: boolean;
+  // EnumDecl
+  fixedUnderlyingType?: { qualType: string; desugaredQualType?: string; typeAliasDeclId?: string };
+  previousDecl?: string;
+  // VarDecl
+  storageClass?: string;
+  // ConstantExpr
+  value?: string;
 }
 
 /**
