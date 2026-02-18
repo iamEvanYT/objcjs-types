@@ -107,21 +107,30 @@ const DIRECT_MAPPINGS: Record<string, string> = {
   NSSizeArray: "NobjcObject",
   NSSizePointer: "NobjcObject",
   NSRangePointer: "NobjcObject",
-  // CoreFoundation opaque types
-  CGContextRef: "NobjcObject",
-  CGImageRef: "NobjcObject",
-  CGColorRef: "NobjcObject",
-  CGColorSpaceRef: "NobjcObject",
-  CGPathRef: "NobjcObject",
-  CGEventRef: "NobjcObject",
-  CGLayerRef: "NobjcObject",
-  CFRunLoopRef: "NobjcObject",
-  CFStringRef: "NobjcObject",
-  CFTypeRef: "NobjcObject",
-  SecTrustRef: "NobjcObject",
-  SecIdentityRef: "NobjcObject",
-  IOSurfaceRef: "NobjcObject",
+  // CoreFoundation opaque types — these are C struct pointers (type encoding `^{...}`),
+  // NOT ObjC objects. Handled separately in mapParamType/mapReturnType.
 };
+
+/**
+ * CoreFoundation opaque types — these are C struct pointers (type encoding
+ * `^{CGContext=}` etc.), NOT ObjC objects. The objc-js bridge handles `^`
+ * params with Buffer/TypedArray and pointer returns throw TypeError.
+ */
+const CF_OPAQUE_TYPES = new Set([
+  "CGContextRef",
+  "CGImageRef",
+  "CGColorRef",
+  "CGColorSpaceRef",
+  "CGPathRef",
+  "CGEventRef",
+  "CGLayerRef",
+  "CFRunLoopRef",
+  "CFStringRef",
+  "CFTypeRef",
+  "SecTrustRef",
+  "SecIdentityRef",
+  "IOSurfaceRef",
+]);
 
 /**
  * ObjC generic type parameters that should map to NobjcObject.
@@ -256,13 +265,15 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
   }
 
   // Block types: "void (^)(Type1, Type2)" or "ReturnType (^)(Type1, Type2)"
+  // At runtime, blocks have type encoding `@?` which the bridge handles via
+  // the `@` (id) case — only NobjcObject is accepted/returned, not JS functions.
   if (cleaned.includes("(^") || cleaned.includes("Block_")) {
-    return "(...args: any[]) => any";
+    return "NobjcObject";
   }
 
-  // Function pointer types
+  // Function pointer types — same runtime limitation as blocks
   if (cleaned.includes("(*)") || cleaned.includes("(*")) {
-    return "(...args: any[]) => any";
+    return "NobjcObject";
   }
 
   // Pointer to pointer (e.g., "NSError **") - out parameters
@@ -347,28 +358,42 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
 
 /**
  * Map a return type, handling instancetype specially.
+ *
+ * CF opaque types (CGContextRef, etc.) are struct pointers at the ABI level.
+ * The objc-js bridge throws TypeError for pointer return types, so we type
+ * them as NobjcObject (the call will fail at runtime regardless).
  */
 export function mapReturnType(
   qualType: string,
   containingClass: string
 ): string {
+  const cleaned = cleanQualType(qualType);
+  if (CF_OPAQUE_TYPES.has(cleaned)) {
+    return "NobjcObject";
+  }
   return mapType(qualType, containingClass);
 }
 
 /**
  * Map a parameter type.
  *
- * For raw pointer parameters (`void *`, `const void *`), the objc-js bridge
- * accepts `Buffer` (which extends `Uint8Array`) and any TypedArray at runtime.
- * We type these as `Uint8Array` so callers can pass `Buffer` or `Uint8Array`
- * without casting.
+ * For raw pointer parameters (`void *`, `const void *`) and CF opaque types
+ * (CGContextRef, etc.), the objc-js bridge expects `Buffer` or `TypedArray`
+ * at runtime (type encoding `^`). We type these as `Uint8Array` so callers
+ * can pass `Buffer` or `Uint8Array` without casting.
  */
 export function mapParamType(
   qualType: string,
   containingClass: string
 ): string {
   const cleaned = cleanQualType(qualType);
+  // Raw void pointers
   if (cleaned === "void *" || cleaned === "const void *") {
+    const nullable = isNullableType(qualType);
+    return nullable ? "Uint8Array | null" : "Uint8Array";
+  }
+  // CF opaque types (struct pointers with `^{...}` encoding)
+  if (CF_OPAQUE_TYPES.has(cleaned)) {
     const nullable = isNullableType(qualType);
     return nullable ? "Uint8Array | null" : "Uint8Array";
   }
