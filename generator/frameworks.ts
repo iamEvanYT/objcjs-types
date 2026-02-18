@@ -60,6 +60,7 @@ const EXTRA_HEADERS: Record<string, Record<string, string>> = {
 /** Additional pre-includes for fallback clang mode (without -fmodules). */
 const PRE_INCLUDES: Record<string, string[]> = {
   WebKit: ["WebKit/WKFoundation.h"],
+  AuthenticationServices: ["AuthenticationServices/ASFoundation.h"],
 };
 
 /**

@@ -161,27 +161,53 @@ const GENERIC_TYPE_PARAMS = new Set([
 
 /**
  * Maps ObjC struct type names to their TypeScript interface names (defined in src/structs.ts).
+ * Built dynamically from parsed struct data by setKnownStructs().
  * NS geometry aliases map to their CG counterparts (identical layout).
  */
-const STRUCT_TYPE_MAP: Record<string, string> = {
-  CGPoint: "CGPoint",
-  CGSize: "CGSize",
-  CGRect: "CGRect",
-  CGVector: "CGVector",
-  NSPoint: "CGPoint",
-  NSSize: "CGSize",
-  NSRect: "CGRect",
-  NSRange: "NSRange",
-  NSEdgeInsets: "NSEdgeInsets",
-  NSDirectionalEdgeInsets: "NSDirectionalEdgeInsets",
-  CGAffineTransform: "CGAffineTransform",
-  NSAffineTransformStruct: "NSAffineTransformStruct",
-  NSDecimal: "NSDecimal",
-  NSOperatingSystemVersion: "NSOperatingSystemVersion",
-};
+let STRUCT_TYPE_MAP: Record<string, string> = {};
 
 /** The set of all TS struct type names (for use by the emitter to generate imports). */
-export const STRUCT_TS_TYPES = new Set(Object.values(STRUCT_TYPE_MAP));
+export let STRUCT_TS_TYPES = new Set<string>();
+
+/**
+ * Set the known struct types from parsed AST data.
+ * Builds STRUCT_TYPE_MAP (ObjC name → TS name) and STRUCT_TS_TYPES (set of TS names).
+ *
+ * @param structNames - All struct definition names (e.g., "CGPoint", "NSRange")
+ * @param aliases - Map of alias name → target name (e.g., "NSPoint" → "CGPoint")
+ * @param internalNames - Map of public name → internal name (e.g., "NSRange" → "_NSRange")
+ */
+export function setKnownStructs(
+  structNames: Set<string>,
+  aliases: Map<string, string>,
+  internalNames: Map<string, string>
+): void {
+  STRUCT_TYPE_MAP = {};
+
+  // Add direct struct names — they map to themselves as TS types
+  for (const name of structNames) {
+    STRUCT_TYPE_MAP[name] = name;
+  }
+
+  // Add internal names mapping to the public typedef name
+  // e.g., _NSRange → NSRange
+  // But don't overwrite if the internal name is itself a known public struct name
+  // (that case should have been handled as an alias in the parser).
+  for (const [publicName, internalName] of internalNames) {
+    if (!structNames.has(internalName)) {
+      STRUCT_TYPE_MAP[internalName] = publicName;
+    }
+  }
+
+  // Add aliases — they map to the target TS type
+  // e.g., NSPoint → CGPoint (the TS type is CGPoint)
+  for (const [aliasName, targetName] of aliases) {
+    STRUCT_TYPE_MAP[aliasName] = targetName;
+  }
+
+  // Rebuild the TS types set
+  STRUCT_TS_TYPES = new Set(Object.values(STRUCT_TYPE_MAP));
+}
 
 /**
  * Convert an ObjC selector string to the objc-js `$` convention.

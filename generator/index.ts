@@ -6,13 +6,13 @@
  * 4. Emit .ts declaration files
  */
 
-import { mkdir, writeFile, readdir, copyFile } from "fs/promises";
+import { mkdir, writeFile, readdir, copyFile, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, getEnumHeaderPath, type FrameworkConfig } from "./frameworks.ts";
 import { discoverFramework } from "./discover.ts";
-import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum } from "./ast-parser.ts";
-import { setKnownClasses, setKnownProtocols, setProtocolConformers, setKnownIntegerEnums, setKnownStringEnums } from "./type-mapper.ts";
+import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum, ObjCStruct, ObjCStructAlias } from "./ast-parser.ts";
+import { setKnownClasses, setKnownProtocols, setProtocolConformers, setKnownIntegerEnums, setKnownStringEnums, setKnownStructs, mapReturnType, mapParamType, STRUCT_TS_TYPES } from "./type-mapper.ts";
 import { resolveStringConstants, cleanupResolver } from "./resolve-strings.ts";
 import {
   emitClassFile,
@@ -21,11 +21,14 @@ import {
   emitFrameworkIndex,
   emitTopLevelIndex,
   emitDelegatesFile,
-  emitStructsFile,
+  emitStructFile,
+  emitStructIndex,
   emitIntegerEnumFile,
   emitStringEnumFile,
   groupCaseCollisions,
 } from "./emitter.ts";
+import type { StructDef, StructFieldDef } from "./emitter.ts";
+import { parseKnownStructFields } from "./struct-fields.ts";
 import { WorkerPool } from "./worker-pool.ts";
 import type { UnifiedParseResult } from "./worker-pool.ts";
 
@@ -462,6 +465,28 @@ async function main(): Promise<void> {
     }
   }
 
+  // Collect all parsed structs and struct aliases across all headers
+  const allParsedStructs = new Map<string, ObjCStruct>();
+  const allStructAliases: ObjCStructAlias[] = [];
+  for (const { task, result, error } of allResults) {
+    if (task.isExtra) continue;
+    if (error || !result) continue;
+
+    for (const [name, structDef] of result.structs) {
+      // Keep the first definition encountered (later duplicates are typically
+      // forward declarations or re-declarations of the same struct)
+      if (!allParsedStructs.has(name)) {
+        allParsedStructs.set(name, structDef);
+      }
+    }
+    for (const alias of result.structAliases) {
+      // Deduplicate aliases (same alias may appear in multiple headers)
+      if (!allStructAliases.some((a) => a.name === alias.name)) {
+        allStructAliases.push(alias);
+      }
+    }
+  }
+
   // Resolve actual string values for extern NSString * constants.
   // This compiles a small ObjC helper once, then invokes it per-framework
   // with the symbol names discovered during parsing.
@@ -561,9 +586,310 @@ async function main(): Promise<void> {
   }
   console.log("");
 
+  // Update knownClasses/knownProtocols to reflect only actually-parsed entities.
+  // Some classes are discovered in headers but fail to parse (e.g., classes hidden
+  // behind NS_REFINED_FOR_SWIFT that clang omits from the AST). If we leave
+  // discovered-but-unparsed classes in the known set, the type-mapper will generate
+  // _ClassName references to types that have no corresponding .ts file, causing
+  // broken imports. By narrowing to parsed classes only, those types fall back to
+  // NobjcObject instead.
+  //
+  // For filtered runs (only regenerating some frameworks), we keep discovered classes
+  // from non-processed frameworks since their .ts files already exist on disk from
+  // a previous full run.
+  const parsedClassNames = new Set(allParsedClasses.keys());
+  const allParsedProtocolNames = new Set<string>();
+  for (const fwProtos of frameworkProtocolsParsed.values()) {
+    for (const name of fwProtos.keys()) {
+      allParsedProtocolNames.add(name);
+    }
+  }
+
+  // Add discovered classes/protocols from frameworks we're NOT processing
+  // (their .ts files exist from a previous run)
+  const processedFrameworkNames = new Set(frameworksToProcess.map((fw) => fw.name));
+  for (const fw of frameworks) {
+    if (processedFrameworkNames.has(fw.name)) continue;
+    for (const cls of fw.classes) {
+      parsedClassNames.add(cls);
+    }
+    for (const proto of fw.protocols) {
+      allParsedProtocolNames.add(proto);
+    }
+  }
+
+  setKnownClasses(parsedClassNames);
+  setKnownProtocols(allParsedProtocolNames);
+
   // ========================================
-  // Phase 5: Emit files
+  // Phase 4b: Build struct definitions from parsed AST + KNOWN_STRUCT_FIELDS
   // ========================================
+
+  // Parse the runtime's known struct field table to determine which structs
+  // get named fields vs positional (field0, field1, ...) names at JS level.
+  const knownStructFields = await parseKnownStructFields();
+  console.log(`  Parsed ${knownStructFields.size} struct field mappings from objc-js runtime`);
+  console.log(`  Found ${allParsedStructs.size} struct definitions, ${allStructAliases.length} aliases from AST\n`);
+
+  // Only emit structs that are referenced by class methods/properties.
+  // This is determined by STRUCT_TYPE_MAP — we build it from discovered structs,
+  // but only include structs that are actually used.
+
+  // Build the struct name sets for setKnownStructs()
+  const structNames = new Set(allParsedStructs.keys());
+  const aliasMap = new Map(allStructAliases.map((a) => [a.name, a.target]));
+  const internalNameMap = new Map<string, string>();
+  for (const [name, structDef] of allParsedStructs) {
+    if (structDef.internalName) {
+      internalNameMap.set(name, structDef.internalName);
+    }
+  }
+  setKnownStructs(structNames, aliasMap, internalNameMap);
+
+  // --- Scan all parsed classes & protocols to find which structs are actually referenced ---
+  // We temporarily registered ALL structs in STRUCT_TYPE_MAP above so that mapReturnType/
+  // mapParamType can resolve struct qualType strings. Now we scan every method/property
+  // signature to see which struct TS types actually appear, then filter down to only those.
+  const referencedStructTSNames = new Set<string>();
+
+  function extractStructRefs(typeStr: string): void {
+    for (const structName of STRUCT_TS_TYPES) {
+      if (typeStr === structName || typeStr.startsWith(structName + " ")) {
+        referencedStructTSNames.add(structName);
+      }
+    }
+  }
+
+  // Scan all classes
+  for (const cls of allParsedClasses.values()) {
+    for (const method of [...cls.instanceMethods, ...cls.classMethods]) {
+      extractStructRefs(mapReturnType(method.returnType, cls.name));
+      for (const param of method.parameters) {
+        extractStructRefs(mapParamType(param.type, cls.name));
+      }
+    }
+    for (const prop of cls.properties) {
+      extractStructRefs(mapReturnType(prop.type, cls.name));
+      extractStructRefs(mapParamType(prop.type, cls.name));
+    }
+  }
+
+  // Scan all protocols
+  for (const fwProtos of frameworkProtocolsParsed.values()) {
+    for (const proto of fwProtos.values()) {
+      for (const method of [...proto.instanceMethods, ...proto.classMethods]) {
+        extractStructRefs(mapReturnType(method.returnType, proto.name));
+        for (const param of method.parameters) {
+          extractStructRefs(mapParamType(param.type, proto.name));
+        }
+      }
+      for (const prop of proto.properties) {
+        extractStructRefs(mapReturnType(prop.type, proto.name));
+        extractStructRefs(mapParamType(prop.type, proto.name));
+      }
+    }
+  }
+
+  // Also include transitive struct dependencies (e.g., CGRect references CGPoint, CGSize)
+  function addStructDeps(name: string): void {
+    const structDef = allParsedStructs.get(name);
+    if (!structDef) return;
+
+    const runtimeFields = knownStructFields.get(name)
+      ?? (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
+
+    if (runtimeFields && runtimeFields.length === structDef.fields.length) {
+      for (const field of structDef.fields) {
+        const fieldTypeCleaned = field.type.replace(/^(const\s+)?struct\s+/, "").trim();
+        if (structNames.has(fieldTypeCleaned) && !referencedStructTSNames.has(fieldTypeCleaned)) {
+          referencedStructTSNames.add(fieldTypeCleaned);
+          addStructDeps(fieldTypeCleaned);
+        }
+        const aliasTarget = aliasMap.get(fieldTypeCleaned);
+        if (aliasTarget && !referencedStructTSNames.has(aliasTarget)) {
+          referencedStructTSNames.add(aliasTarget);
+          addStructDeps(aliasTarget);
+        }
+      }
+    }
+  }
+
+  for (const name of [...referencedStructTSNames]) {
+    addStructDeps(name);
+  }
+
+  // Filter: only keep parsed structs that are referenced
+  const filteredStructs = new Map<string, ObjCStruct>();
+  for (const [name, structDef] of allParsedStructs) {
+    if (referencedStructTSNames.has(name)) {
+      filteredStructs.set(name, structDef);
+    }
+  }
+
+  // Filter aliases: only keep those whose target is referenced
+  const filteredAliases = allStructAliases.filter((a) => referencedStructTSNames.has(a.target));
+
+  // Re-register with only the filtered structs so STRUCT_TYPE_MAP doesn't
+  // contain random C structs like siginfo_t
+  const filteredStructNames = new Set(filteredStructs.keys());
+  const filteredAliasMap = new Map(filteredAliases.map((a) => [a.name, a.target]));
+  const filteredInternalNameMap = new Map<string, string>();
+  for (const [name, structDef] of filteredStructs) {
+    if (structDef.internalName) {
+      filteredInternalNameMap.set(name, structDef.internalName);
+    }
+  }
+  setKnownStructs(filteredStructNames, filteredAliasMap, filteredInternalNameMap);
+
+  console.log(`  Filtered to ${filteredStructs.size} referenced structs + ${filteredAliases.length} aliases\n`);
+
+  /**
+   * Map an ObjC field type string to a TS type.
+   * Struct fields that are other structs get the struct interface name;
+   * everything else maps to "number" (CGFloat, int, NSInteger, etc.).
+   */
+  function mapStructFieldType(cType: string): string {
+    // Clean up the C type: remove "struct " prefix, const, etc.
+    const cleaned = cType.replace(/^(const\s+)?struct\s+/, "").trim();
+    // Check if this field references another known struct
+    if (filteredStructNames.has(cleaned)) return cleaned;
+    // Check aliases
+    const aliasTarget = filteredAliasMap.get(cleaned);
+    if (aliasTarget) return aliasTarget;
+    // Everything else is numeric
+    return "number";
+  }
+
+  /**
+   * Build the StructDef array from parsed AST data cross-referenced with
+   * the runtime's KNOWN_STRUCT_FIELDS table.
+   *
+   * For structs in KNOWN_STRUCT_FIELDS: use named fields from that table.
+   * For structs NOT in the table: use positional field0, field1, ... names.
+   * For nested struct fields: auto-generate flattened factory params and body.
+   */
+  function buildStructDefs(): StructDef[] {
+    const defs: StructDef[] = [];
+    const emittedStructs = new Set<string>();
+
+    /**
+     * Ensure a struct's dependencies are emitted before itself.
+     * Returns true if the struct was successfully processed.
+     */
+    function emitStruct(name: string): boolean {
+      if (emittedStructs.has(name)) return true;
+
+      const structDef = filteredStructs.get(name);
+      if (!structDef) return false;
+
+      // Check KNOWN_STRUCT_FIELDS for this struct.
+      // For NSRange, the internal struct name is _NSRange, but the runtime table
+      // may use either "NSRange" or "_NSRange" as the key.
+      const runtimeFields = knownStructFields.get(name)
+        ?? (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
+
+      const astFields = structDef.fields;
+
+      // Determine the TS fields for this struct
+      const tsFields: StructFieldDef[] = [];
+      const hasRuntimeNames = runtimeFields !== undefined;
+
+      if (hasRuntimeNames && runtimeFields.length === astFields.length) {
+        // Use runtime field names with AST-derived types
+        for (let i = 0; i < runtimeFields.length; i++) {
+          const fieldName = runtimeFields[i]!;
+          const fieldType = mapStructFieldType(astFields[i]!.type);
+          tsFields.push({ name: fieldName, type: fieldType });
+
+          // Ensure nested struct dependencies are emitted first
+          if (fieldType !== "number") {
+            emitStruct(fieldType);
+          }
+        }
+      } else {
+        // Positional field names (field0, field1, ...)
+        for (let i = 0; i < astFields.length; i++) {
+          tsFields.push({ name: `field${i}`, type: "number" });
+        }
+      }
+
+      // Check if any fields reference other structs (nested structs)
+      const hasNestedStructs = tsFields.some((f) => f.type !== "number");
+
+      emittedStructs.add(name);
+
+      if (hasNestedStructs) {
+        // Generate flattened factory params for nested structs.
+        // e.g., CGRect with fields { origin: CGPoint, size: CGSize }
+        // gets factory params (x, y, width, height) instead of (origin, size).
+        const factoryParams: { name: string; type: string }[] = [];
+        const bodyParts: string[] = [];
+
+        for (const field of tsFields) {
+          if (field.type === "number") {
+            factoryParams.push({ name: field.name, type: "number" });
+            bodyParts.push(field.name);
+          } else {
+            // Look up the nested struct's fields to flatten them
+            const nestedDef = defs.find((d) =>
+              !("aliasOf" in d) && d.tsName === field.type
+            );
+            if (nestedDef && !("aliasOf" in nestedDef)) {
+              const nestedParamNames: string[] = [];
+              for (const nestedField of nestedDef.fields) {
+                factoryParams.push({ name: nestedField.name, type: nestedField.type });
+                nestedParamNames.push(nestedField.name);
+              }
+              bodyParts.push(`{ ${nestedParamNames.join(", ")} }`);
+            } else {
+              // Fallback: use the field name as-is
+              factoryParams.push({ name: field.name, type: field.type });
+              bodyParts.push(field.name);
+            }
+          }
+        }
+
+        // Build the factory body expression
+        const fieldAssignments = tsFields.map((f, i) => `${f.name}: ${bodyParts[i]}`);
+        const factoryBody = `{ ${fieldAssignments.join(", ")} }`;
+
+        defs.push({
+          tsName: name,
+          fields: tsFields,
+          factoryParams,
+          factoryBody,
+        });
+      } else {
+        defs.push({
+          tsName: name,
+          fields: tsFields,
+        });
+      }
+
+      return true;
+    }
+
+    // Emit only filtered (referenced) structs — dependencies handled recursively
+    // Sort for deterministic output order
+    const sortedNames = [...filteredStructs.keys()].sort();
+    for (const name of sortedNames) {
+      emitStruct(name);
+    }
+
+    // Emit aliases at the end
+    const sortedAliases = [...filteredAliases].sort((a, b) => a.name.localeCompare(b.name));
+    for (const alias of sortedAliases) {
+      // Only emit if the target struct was emitted
+      if (emittedStructs.has(alias.target)) {
+        defs.push({ tsName: alias.name, aliasOf: alias.target });
+      }
+    }
+
+    return defs;
+  }
+
+  const structDefs = buildStructDefs();
+  console.log(`  Built ${structDefs.length} struct definitions for emission\n`);
 
   const emitStart = performance.now();
   const generatedProtocolsByFramework = new Map<string, string[]>();
@@ -627,9 +953,9 @@ async function main(): Promise<void> {
         groupClasses,
         framework,
         frameworks,
-        allKnownClasses,
+        parsedClassNames,
         allParsedClasses,
-        allKnownProtocols,
+        allParsedProtocolNames,
         globalClassToFile
       );
       classWritePromises.push(
@@ -647,9 +973,9 @@ async function main(): Promise<void> {
         cls,
         framework,
         frameworks,
-        allKnownClasses,
+        parsedClassNames,
         allParsedClasses,
-        allKnownProtocols,
+        allParsedProtocolNames,
         globalClassToFile
       );
       classWritePromises.push(
@@ -670,8 +996,8 @@ async function main(): Promise<void> {
         proto,
         framework,
         frameworks,
-        allKnownClasses,
-        allKnownProtocols,
+        parsedClassNames,
+        allParsedProtocolNames,
         globalClassToFile
       );
       protoWritePromises.push(
@@ -741,9 +1067,30 @@ async function main(): Promise<void> {
 
   // Emit shared files only during full regeneration (they depend on all frameworks)
   if (!isFiltered) {
-    // Emit structs file
-    const structsContent = emitStructsFile();
-    await writeFile(join(SRC_DIR, "structs.ts"), structsContent);
+    // Remove old monolithic structs.ts if it exists (replaced by src/structs/ directory)
+    const oldStructsFile = join(SRC_DIR, "structs.ts");
+    if (existsSync(oldStructsFile)) {
+      await unlink(oldStructsFile);
+    }
+
+    // Emit individual struct files under src/structs/
+    const structsDir = join(SRC_DIR, "structs");
+    await mkdir(structsDir, { recursive: true });
+
+    const structWritePromises: Promise<void>[] = [];
+    for (const def of structDefs) {
+      const content = emitStructFile(def, structDefs);
+      structWritePromises.push(
+        writeFile(join(structsDir, `${def.tsName}.ts`), content)
+      );
+    }
+    await Promise.all(structWritePromises);
+
+    // Emit structs barrel index
+    const structIndexContent = emitStructIndex(structDefs);
+    await writeFile(join(structsDir, "index.ts"), structIndexContent);
+
+    console.log(`  structs: ${structDefs.length} struct files + index.ts`);
 
     // Emit delegates file (ProtocolMap + createDelegate)
     const delegatesContent = emitDelegatesFile(frameworks, generatedProtocolsByFramework);

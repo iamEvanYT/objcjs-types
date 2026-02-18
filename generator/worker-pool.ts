@@ -7,9 +7,9 @@
  * tasks to idle workers and queues excess tasks until a worker is free.
  */
 
-import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum } from "./ast-parser.ts";
+import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum, ObjCStruct, ObjCStructAlias } from "./ast-parser.ts";
 
-/** Result from a unified parse-all task (classes + protocols + enums from one clang invocation) */
+/** Result from a unified parse-all task (classes + protocols + enums + structs from one clang invocation) */
 export interface UnifiedParseResult {
   /** Parsed classes from the header (class name → ObjCClass) */
   classes: Map<string, ObjCClass>;
@@ -19,6 +19,10 @@ export interface UnifiedParseResult {
   integerEnums: Map<string, ObjCIntegerEnum>;
   /** Parsed string enums from the header (enum name → ObjCStringEnum) */
   stringEnums: Map<string, ObjCStringEnum>;
+  /** Parsed struct definitions from the header (struct name → ObjCStruct) */
+  structs: Map<string, ObjCStruct>;
+  /** Struct typedef aliases (e.g., NSPoint → CGPoint) */
+  structAliases: ObjCStructAlias[];
 }
 
 export interface ClassParseResult {
@@ -233,6 +237,8 @@ export class WorkerPool {
       protocols: new Map(result.protocols),
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
+      structs: new Map(result.structs ?? []),
+      structAliases: result.structAliases ?? [],
     };
   }
 

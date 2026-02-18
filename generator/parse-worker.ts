@@ -10,7 +10,7 @@
 declare var self: Worker;
 
 import { clangASTDump, clangASTDumpWithPreIncludes } from "./clang.ts";
-import { parseAST, parseProtocols, parseIntegerEnums, parseStringEnums } from "./ast-parser.ts";
+import { parseAST, parseProtocols, parseIntegerEnums, parseStringEnums, parseStructs } from "./ast-parser.ts";
 
 /**
  * Read a header file and split it into lines for deprecation scanning.
@@ -43,6 +43,7 @@ self.onmessage = async (event: MessageEvent) => {
       let protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
       let integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
       let stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
+      let structResult = parseStructs(ast);
 
       // Fallback: retry without -fmodules using pre-includes if nothing was found.
       const foundNothing = classes.size === 0 && protocols.size === 0 &&
@@ -53,6 +54,7 @@ self.onmessage = async (event: MessageEvent) => {
         protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
         integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
         stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
+        structResult = parseStructs(ast);
       }
 
       postMessage({
@@ -62,6 +64,8 @@ self.onmessage = async (event: MessageEvent) => {
         protocols: [...protocols.entries()],
         integerEnums: [...integerEnums.entries()],
         stringEnums: [...stringEnums.entries()],
+        structs: [...structResult.structs.entries()],
+        structAliases: structResult.aliases,
       });
     } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);

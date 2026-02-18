@@ -41,6 +41,34 @@ export interface ObjCProtocol {
   properties: ObjCProperty[];
 }
 
+// --- Struct types ---
+
+export interface ObjCStructField {
+  /** The C field name from the struct definition */
+  name: string;
+  /** The C type string (e.g., "CGFloat", "CGPoint") */
+  type: string;
+}
+
+export interface ObjCStruct {
+  /** The public typedef name (e.g., "CGPoint", "NSRange", "NSDecimal") */
+  name: string;
+  /** The internal struct name if different (e.g., "_NSRange" for NSRange) */
+  internalName?: string;
+  /** Fields from the struct definition */
+  fields: ObjCStructField[];
+}
+
+/**
+ * A typedef alias from one struct name to another (e.g., NSPoint → CGPoint).
+ */
+export interface ObjCStructAlias {
+  /** The alias name (e.g., "NSPoint") */
+  name: string;
+  /** The target type name (e.g., "CGPoint") */
+  target: string;
+}
+
 // --- Enum types ---
 
 export interface ObjCEnumValue {
@@ -723,4 +751,198 @@ export function parseStringEnums(
   walkForVarDecls(root);
 
   return enums;
+}
+
+// --- Struct parsing ---
+
+/**
+ * Parse a clang AST root node and extract struct definitions and struct typedef aliases.
+ *
+ * Structs appear as:
+ * 1. Named RecordDecl with tagUsed:"struct", containing FieldDecl children
+ *    e.g., `struct CGPoint { CGFloat x; CGFloat y; }`
+ * 2. Anonymous RecordDecl wrapped by TypedefDecl
+ *    e.g., `typedef struct { ... } NSDecimal;`
+ * 3. TypedefDecl aliasing one struct to another
+ *    e.g., `typedef CGPoint NSPoint;`
+ *
+ * Returns { structs, aliases } where:
+ * - structs: Map<name, ObjCStruct> — all struct definitions (keyed by public name)
+ * - aliases: ObjCStructAlias[] — typedef aliases between structs
+ */
+export function parseStructs(root: ClangASTNode): {
+  structs: Map<string, ObjCStruct>;
+  aliases: ObjCStructAlias[];
+} {
+  const structs = new Map<string, ObjCStruct>();
+  const aliases: ObjCStructAlias[] = [];
+
+  // Map from RecordDecl id → struct definition (for linking typedefs to anonymous structs)
+  const recordById = new Map<string, { name: string; fields: ObjCStructField[] }>();
+  // Set of all known struct names (for detecting typedef aliases between structs)
+  const knownStructNames = new Set<string>();
+  // Map of internal struct names to their RecordDecl data (for typedef linking)
+  const recordByName = new Map<string, { fields: ObjCStructField[] }>();
+
+  /** Extract fields from a RecordDecl's inner children. */
+  function extractFields(node: ClangASTNode): ObjCStructField[] {
+    const fields: ObjCStructField[] = [];
+    if (!node.inner) return fields;
+    for (const child of node.inner) {
+      if (child.kind === "FieldDecl" && child.name) {
+        fields.push({
+          name: child.name,
+          type: child.type?.qualType ?? "int",
+        });
+      }
+    }
+    return fields;
+  }
+
+  // First pass: collect all RecordDecl nodes (struct definitions)
+  function walkForRecords(node: ClangASTNode): void {
+    if (
+      node.kind === "RecordDecl" &&
+      (node as any).tagUsed === "struct"
+    ) {
+      const fields = extractFields(node);
+      // Only record definitions with fields (skip forward declarations)
+      if (fields.length > 0) {
+        recordById.set(node.id, {
+          name: node.name ?? "",
+          fields,
+        });
+        if (node.name && node.name !== "(anonymous)") {
+          knownStructNames.add(node.name);
+          recordByName.set(node.name, { fields });
+
+          // Named structs are directly usable (e.g., struct CGPoint), but
+          // underscore-prefixed names (e.g., _NSRange) are internal C names
+          // that will get a public typedef later — don't add them to structs
+          // directly, only to recordByName for lookup.
+          if (!node.name.startsWith("_")) {
+            structs.set(node.name, {
+              name: node.name,
+              fields,
+            });
+          }
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForRecords(child);
+      }
+    }
+  }
+
+  // Second pass: find TypedefDecl nodes that reference structs
+  function walkForTypedefs(node: ClangASTNode): void {
+    if (node.kind === "TypedefDecl" && node.name) {
+      const qualType = node.type?.qualType ?? "";
+
+      // Case 1: Typedef wrapping an anonymous struct (inline definition)
+      // The RecordDecl appears as a direct child of the TypedefDecl
+      if (node.inner) {
+        for (const child of node.inner) {
+          if (child.kind === "RecordDecl" && (child as any).tagUsed === "struct") {
+            const fields = extractFields(child);
+            if (fields.length > 0) {
+              structs.set(node.name, {
+                name: node.name,
+                fields,
+              });
+              knownStructNames.add(node.name);
+              return; // Don't also check typedef alias case
+            }
+          }
+        }
+      }
+
+      // Case 2: Typedef aliasing a named struct (e.g., typedef struct _NSRange NSRange)
+      // The qualType will be "struct _NSRange" or just "_NSRange"
+      const structMatch = qualType.match(/^(?:struct\s+)?(\w+)$/);
+      if (structMatch) {
+        const targetName = structMatch[1]!;
+
+        // Self-referencing typedef (e.g., typedef struct CGRect CGRect, or
+        // typedef struct NS_SWIFT_SENDABLE { ... } NSOperatingSystemVersion).
+        // For the NS_SWIFT_SENDABLE pattern, the RecordDecl is anonymous but
+        // referenced via ownedTagDecl in the inner ElaboratedType node.
+        if (targetName === node.name) {
+          // Check if there's an ownedTagDecl referencing an anonymous struct
+          if (node.inner) {
+            for (const child of node.inner) {
+              const ownedId = (child as any).ownedTagDecl?.id;
+              if (ownedId) {
+                const record = recordById.get(ownedId);
+                if (record && (!record.name || record.name === "(anonymous)") && record.fields.length > 0) {
+                  structs.set(node.name, {
+                    name: node.name,
+                    fields: record.fields,
+                  });
+                  knownStructNames.add(node.name);
+                  return;
+                }
+              }
+            }
+          }
+          return; // Genuine self-reference, skip
+        }
+
+        // Check if target is a known record (C struct definition)
+        const targetRecord = recordByName.get(targetName);
+        if (targetRecord) {
+          // If the target is a public struct name (not underscore-prefixed internal),
+          // this typedef creates an alias. E.g., typedef CGRect NSRect means NSRect
+          // is an alias of CGRect. But typedef struct _NSRange NSRange means NSRange
+          // is the public name for the internal _NSRange struct.
+          const isInternalName = targetName.startsWith("_");
+          if (!isInternalName && structs.has(targetName)) {
+            // Target is a public struct name — create an alias
+            aliases.push({ name: node.name, target: targetName });
+            knownStructNames.add(node.name);
+            return;
+          }
+
+          // Otherwise, this is a typedef for a private internal struct name:
+          // typedef struct _NSRange NSRange
+          structs.set(node.name, {
+            name: node.name,
+            internalName: targetName,
+            fields: targetRecord.fields,
+          });
+          knownStructNames.add(node.name);
+          return;
+        }
+
+        // Check if target is another typedef'd struct name (e.g., NSPoint → CGPoint)
+        if (knownStructNames.has(targetName)) {
+          // Resolve through existing aliases to find the canonical struct name
+          let resolvedTarget = targetName;
+          for (const alias of aliases) {
+            if (alias.name === targetName) {
+              resolvedTarget = alias.target;
+              break;
+            }
+          }
+          aliases.push({ name: node.name, target: resolvedTarget });
+          knownStructNames.add(node.name);
+          return;
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForTypedefs(child);
+      }
+    }
+  }
+
+  walkForRecords(root);
+  walkForTypedefs(root);
+
+  return { structs, aliases };
 }

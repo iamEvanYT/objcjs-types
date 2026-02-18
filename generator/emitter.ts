@@ -77,7 +77,7 @@ export function groupCaseCollisions(classNames: string[]): Map<string, string[]>
 
 /**
  * Given an ObjCClass, determine which struct type names it references
- * (for import statements from ../structs.js).
+ * (for import statements from ../structs/).
  */
 function collectReferencedStructs(cls: ObjCClass): Set<string> {
   const refs = new Set<string>();
@@ -354,13 +354,12 @@ export function emitClassFile(
   const refs = collectReferencedClasses(cls, allKnownClasses, allKnownProtocols);
   lines.push(...emitImports(refs, currentFramework, allFrameworks, classToFile));
 
-  // Collect and emit struct type imports
+  // Collect and emit struct type imports (one import per struct file)
   const structRefs = collectReferencedStructs(cls);
   if (structRefs.size > 0) {
-    const sorted = [...structRefs].sort();
-    lines.push(
-      `import type { ${sorted.join(", ")} } from "../structs.js";`
-    );
+    for (const name of [...structRefs].sort()) {
+      lines.push(`import type { ${name} } from "../structs/${name}.js";`);
+    }
   }
 
   lines.push("");
@@ -436,12 +435,11 @@ export function emitMergedClassFile(
   // Emit imports using shared helper (resolves case-collision filenames)
   lines.push(...emitImports(allRefs, currentFramework, allFrameworks, classToFile));
 
-  // Emit struct imports
+  // Emit struct imports (one import per struct file)
   if (allStructRefs.size > 0) {
-    const sortedStructs = [...allStructRefs].sort();
-    lines.push(
-      `import type { ${sortedStructs.join(", ")} } from "../structs.js";`
-    );
+    for (const name of [...allStructRefs].sort()) {
+      lines.push(`import type { ${name} } from "../structs/${name}.js";`);
+    }
   }
 
   // Emit each class declaration
@@ -747,13 +745,12 @@ export function emitProtocolFile(
 
   lines.push(...emitImports(refs, currentFramework, allFrameworks, classToFile));
 
-  // Collect and emit struct type imports
+  // Collect and emit struct type imports (one import per struct file)
   const structRefs = collectProtocolReferencedStructs(proto);
   if (structRefs.size > 0) {
-    const sorted = [...structRefs].sort();
-    lines.push(
-      `import type { ${sorted.join(", ")} } from "../structs.js";`
-    );
+    for (const name of [...structRefs].sort()) {
+      lines.push(`import type { ${name} } from "../structs/${name}.js";`);
+    }
   }
 
   lines.push("");
@@ -967,12 +964,12 @@ export function emitStringEnumFile(
 // Field info comes from the objc-js native bridge's KNOWN_STRUCT_FIELDS table
 // (see struct-utils.h). Structs not in that table get positional names (field0, field1, ...).
 
-interface StructFieldDef {
+export interface StructFieldDef {
   name: string;
   type: string; // TypeScript type: "number" or a struct interface name
 }
 
-type StructDef = {
+export type StructDef = {
   /** The TypeScript interface/function name (e.g., "CGPoint") */
   tsName: string;
   /** Fields with their names and types */
@@ -989,198 +986,81 @@ type StructDef = {
 };
 
 /**
- * All struct definitions for src/structs.ts generation.
- * Order matters — dependencies must come before dependents.
+ * Generate a single struct .ts file (one per struct definition).
+ *
+ * For primary structs: emits an interface + factory function.
+ * For aliases: emits type alias + const re-export, with import of the target.
+ *
+ * @param def - The struct definition to emit.
+ * @param allDefs - All struct definitions (needed to look up nested struct deps).
  */
-const STRUCT_DEFS: StructDef[] = [
-  // --- Core Geometry ---
-  {
-    tsName: "CGPoint",
-    fields: [
-      { name: "x", type: "number" },
-      { name: "y", type: "number" },
-    ],
-  },
-  {
-    tsName: "CGSize",
-    fields: [
-      { name: "width", type: "number" },
-      { name: "height", type: "number" },
-    ],
-  },
-  {
-    tsName: "CGRect",
-    fields: [
-      { name: "origin", type: "CGPoint" },
-      { name: "size", type: "CGSize" },
-    ],
-    factoryParams: [
-      { name: "x", type: "number" },
-      { name: "y", type: "number" },
-      { name: "width", type: "number" },
-      { name: "height", type: "number" },
-    ],
-    factoryBody: `{ origin: { x, y }, size: { width, height } }`,
-  },
-  {
-    tsName: "CGVector",
-    fields: [
-      { name: "dx", type: "number" },
-      { name: "dy", type: "number" },
-    ],
-  },
-  // --- NS Aliases ---
-  { tsName: "NSPoint", aliasOf: "CGPoint" },
-  { tsName: "NSSize", aliasOf: "CGSize" },
-  { tsName: "NSRect", aliasOf: "CGRect" },
-  // --- Foundation Structs ---
-  {
-    tsName: "NSRange",
-    fields: [
-      { name: "location", type: "number" },
-      { name: "length", type: "number" },
-    ],
-  },
-  {
-    tsName: "NSEdgeInsets",
-    fields: [
-      { name: "top", type: "number" },
-      { name: "left", type: "number" },
-      { name: "bottom", type: "number" },
-      { name: "right", type: "number" },
-    ],
-  },
-  {
-    tsName: "NSDirectionalEdgeInsets",
-    fields: [
-      { name: "top", type: "number" },
-      { name: "leading", type: "number" },
-      { name: "bottom", type: "number" },
-      { name: "trailing", type: "number" },
-    ],
-  },
-  // --- Transforms ---
-  {
-    tsName: "CGAffineTransform",
-    fields: [
-      { name: "a", type: "number" },
-      { name: "b", type: "number" },
-      { name: "c", type: "number" },
-      { name: "d", type: "number" },
-      { name: "tx", type: "number" },
-      { name: "ty", type: "number" },
-    ],
-  },
-  // NSAffineTransformStruct is not in the objc-js known field table,
-  // so the runtime uses positional names (field0, field1, ...).
-  // The actual ObjC fields are: m11, m12, m21, m22, tX, tY.
-  {
-    tsName: "NSAffineTransformStruct",
-    fields: [
-      { name: "field0", type: "number" },
-      { name: "field1", type: "number" },
-      { name: "field2", type: "number" },
-      { name: "field3", type: "number" },
-      { name: "field4", type: "number" },
-      { name: "field5", type: "number" },
-    ],
-  },
-  // --- Structs not in objc-js known field table (positional names) ---
-  // NSDecimal: ObjC struct with _exponent, _length, _isNegative, _isCompact, _reserved, _mantissa[8]
-  // The runtime has no named fields for this, so it uses positional names.
-  // However, it's a packed struct with bitfields — at the JS level it surfaces as positional fields.
-  {
-    tsName: "NSDecimal",
-    fields: [
-      { name: "field0", type: "number" },
-      { name: "field1", type: "number" },
-      { name: "field2", type: "number" },
-      { name: "field3", type: "number" },
-      { name: "field4", type: "number" },
-      { name: "field5", type: "number" },
-      { name: "field6", type: "number" },
-      { name: "field7", type: "number" },
-    ],
-  },
-  {
-    tsName: "NSOperatingSystemVersion",
-    fields: [
-      { name: "field0", type: "number" },
-      { name: "field1", type: "number" },
-      { name: "field2", type: "number" },
-    ],
-  },
-];
-
-/**
- * Generate the src/structs.ts file with all struct interface + factory function definitions.
- */
-export function emitStructsFile(): string {
+export function emitStructFile(def: StructDef, allDefs: StructDef[]): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
-  lines.push(`// Struct type definitions and factory functions for objc-js.`);
-  lines.push(`// These match the field names produced by the objc-js native bridge.`);
 
-  let lastSection = "";
-
-  for (const def of STRUCT_DEFS) {
-    const isAlias = "aliasOf" in def;
-
-    // Determine section for comment headers
-    const section = isAlias ? "alias"
-      : def.tsName === "CGAffineTransform" || def.tsName === "NSAffineTransformStruct" ? "Transforms"
-      : def.tsName.startsWith("CG") ? "CoreGraphics"
-      : def.tsName === "NSRange" || def.tsName === "NSEdgeInsets" || def.tsName === "NSDirectionalEdgeInsets" ? "Foundation"
-      : "Other";
-
-    // Emit section headers
-    if (section !== lastSection && !isAlias) {
-      lines.push("");
-      if (section === "CoreGraphics") lines.push("// --- Core Geometry ---");
-      else if (section === "Foundation") lines.push("// --- Foundation Structs ---");
-      else if (section === "Transforms") lines.push("// --- Transforms ---");
-      else if (section === "Other") lines.push("// --- Other Structs (positional field names) ---");
-      lastSection = section;
-    }
-
-    if (isAlias) {
-      // Alias: emit type + const
-      if (def.tsName === "NSPoint") {
-        // Start NS aliases section
-        lines.push("");
-        lines.push("// --- NS Aliases (identical layout to CG counterparts) ---");
-      }
-      lines.push("");
-      lines.push(`export type ${def.tsName} = ${def.aliasOf};`);
-      lines.push(`export const ${def.tsName} = ${def.aliasOf};`);
-      continue;
-    }
-
-    // Interface
+  if ("aliasOf" in def) {
+    // Alias file: import target struct, re-export as alias
+    lines.push(`import { ${def.aliasOf} } from "./${def.aliasOf}.js";`);
+    lines.push(`import type { ${def.aliasOf} as _${def.aliasOf} } from "./${def.aliasOf}.js";`);
     lines.push("");
-    lines.push(`export interface ${def.tsName} {`);
-    for (const field of def.fields) {
-      lines.push(`  ${field.name}: ${field.type};`);
-    }
-    lines.push(`}`);
-
-    // Factory function
-    const params = def.factoryParams ?? def.fields.map((f) => ({ name: f.name, type: f.type }));
-    const paramStr = params.map((p) => `${p.name}: ${p.type}`).join(", ");
-
-    // For struct fields that reference other struct types, the factory needs
-    // special handling. If factoryBody is provided, use it; otherwise generate
-    // a simple object literal from the fields.
-    const body = def.factoryBody ?? `{ ${def.fields.map((f) => f.name).join(", ")} }`;
-
+    lines.push(`export type ${def.tsName} = _${def.aliasOf};`);
+    lines.push(`export const ${def.tsName} = ${def.aliasOf};`);
     lines.push("");
-    lines.push(`export function ${def.tsName}(${paramStr}): ${def.tsName} {`);
-    lines.push(`  return ${body};`);
-    lines.push(`}`);
+    return lines.join("\n");
+  }
+
+  // Collect nested struct dependencies for imports
+  const deps = new Set<string>();
+  for (const field of def.fields) {
+    if (field.type !== "number") {
+      deps.add(field.type);
+    }
+  }
+
+  // Import each dependency
+  for (const dep of [...deps].sort()) {
+    lines.push(`import type { ${dep} } from "./${dep}.js";`);
+  }
+  if (deps.size > 0) {
+    lines.push("");
+  }
+
+  // Interface
+  lines.push("");
+  lines.push(`export interface ${def.tsName} {`);
+  for (const field of def.fields) {
+    lines.push(`  ${field.name}: ${field.type};`);
+  }
+  lines.push(`}`);
+
+  // Factory function
+  const params = def.factoryParams ?? def.fields.map((f: StructFieldDef) => ({ name: f.name, type: f.type }));
+  const paramStr = params.map((p: { name: string; type: string }) => `${p.name}: ${p.type}`).join(", ");
+  const body = def.factoryBody ?? `{ ${def.fields.map((f: StructFieldDef) => f.name).join(", ")} }`;
+
+  lines.push("");
+  lines.push(`export function ${def.tsName}(${paramStr}): ${def.tsName} {`);
+  lines.push(`  return ${body};`);
+  lines.push(`}`);
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+/**
+ * Generate the barrel index.ts for src/structs/.
+ * Re-exports all struct types and factory functions.
+ */
+export function emitStructIndex(structDefs: StructDef[]): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push("");
+
+  for (const def of structDefs) {
+    lines.push(`export * from "./${def.tsName}.js";`);
   }
 
   lines.push("");
-
   return lines.join("\n");
 }
 
@@ -1289,7 +1169,7 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   lines.push(AUTOGEN_HEADER);
   lines.push("");
 
-  lines.push(`export * from "./structs.js";`);
+  lines.push(`export * from "./structs/index.js";`);
   lines.push(`export { createDelegate } from "./delegates.js";`);
   lines.push(`export type { ProtocolMap } from "./delegates.js";`);
   lines.push("");
