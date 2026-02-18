@@ -45,16 +45,57 @@ self.onmessage = async (event: MessageEvent) => {
       let stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       let structResult = parseStructs(ast);
 
-      // Fallback: retry without -fmodules using pre-includes if nothing was found.
-      const foundNothing = classes.size === 0 && protocols.size === 0 &&
-        integerEnums.size === 0 && stringEnums.size === 0;
-      if (foundNothing && msg.fallbackPreIncludes) {
-        ast = await clangASTDumpWithPreIncludes(msg.headerPath, msg.fallbackPreIncludes);
-        classes = classTargetSet.size > 0 ? parseAST(ast, classTargetSet, headerLines) : new Map();
-        protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
-        integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
-        stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
-        structResult = parseStructs(ast);
+      // Fallback: retry without -fmodules using pre-includes if any expected
+      // target type has missing results. Some headers contain both classes and
+      // enums, where the class parses fine with -fmodules but the enum does not.
+      // The old all-or-nothing check would skip the fallback if any target type
+      // succeeded, causing enums (or other types) to be silently dropped.
+      const missingClasses = classTargetSet.size > 0 && classes.size < classTargetSet.size;
+      const missingProtocols = protocolTargetSet.size > 0 && protocols.size < protocolTargetSet.size;
+      const missingIntEnums = integerTargetSet.size > 0 && integerEnums.size < integerTargetSet.size;
+      const missingStrEnums = stringTargetSet.size > 0 && stringEnums.size < stringTargetSet.size;
+      const hasMissing = missingClasses || missingProtocols || missingIntEnums || missingStrEnums;
+
+      if (hasMissing && msg.fallbackPreIncludes) {
+        const fallbackAst = await clangASTDumpWithPreIncludes(msg.headerPath, msg.fallbackPreIncludes);
+
+        // Merge fallback results: only fill in targets that were missing from the
+        // primary parse. Keep primary results where they succeeded to avoid
+        // losing data that only -fmodules can provide.
+        if (missingClasses) {
+          const fallbackClasses = parseAST(fallbackAst, classTargetSet, headerLines);
+          for (const [name, cls] of fallbackClasses) {
+            if (!classes.has(name)) classes.set(name, cls);
+          }
+        }
+        if (missingProtocols) {
+          const fallbackProtocols = parseProtocols(fallbackAst, protocolTargetSet, headerLines);
+          for (const [name, proto] of fallbackProtocols) {
+            if (!protocols.has(name)) protocols.set(name, proto);
+          }
+        }
+        if (missingIntEnums) {
+          const fallbackIntEnums = parseIntegerEnums(fallbackAst, integerTargetSet);
+          for (const [name, enumDef] of fallbackIntEnums) {
+            if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+          }
+        }
+        if (missingStrEnums) {
+          const fallbackStrEnums = parseStringEnums(fallbackAst, stringTargetSet);
+          for (const [name, enumDef] of fallbackStrEnums) {
+            if (!stringEnums.has(name)) stringEnums.set(name, enumDef);
+          }
+        }
+        // Re-parse structs from fallback AST and merge
+        const fallbackStructResult = parseStructs(fallbackAst);
+        for (const [name, structDef] of fallbackStructResult.structs) {
+          if (!structResult.structs.has(name)) structResult.structs.set(name, structDef);
+        }
+        for (const alias of fallbackStructResult.aliases) {
+          if (!structResult.aliases.some((a) => a.name === alias.name)) {
+            structResult.aliases.push(alias);
+          }
+        }
       }
 
       postMessage({

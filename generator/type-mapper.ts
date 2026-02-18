@@ -17,6 +17,16 @@ let knownIntegerEnums: Set<string> = new Set();
 /** Set of all known string enum names (NS_TYPED_EXTENSIBLE_ENUM etc.) across all frameworks */
 let knownStringEnums: Set<string> = new Set();
 
+/** Read-only access to the known integer enum names set (for use by the emitter). */
+export function getKnownIntegerEnums(): Set<string> {
+  return knownIntegerEnums;
+}
+
+/** Read-only access to the known string enum names set (for use by the emitter). */
+export function getKnownStringEnums(): Set<string> {
+  return knownStringEnums;
+}
+
 export function setKnownClasses(classes: Set<string>): void {
   knownClasses = classes;
 }
@@ -350,14 +360,14 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
     return "NobjcObject";
   }
 
-  // Enum / typedef types that are numeric (only match known framework-prefixed types)
+  // Enum / typedef types — use the enum type name directly for type safety.
   // First check if this is a known enum type — this is more precise than the
   // prefix heuristic below and handles prefixes like AS that aren't in the list.
   if (knownIntegerEnums.has(cleaned)) {
-    return "number";
+    return cleaned;
   }
   if (knownStringEnums.has(cleaned)) {
-    return "_NSString";
+    return cleaned;
   }
 
   const hasFrameworkPrefix =
