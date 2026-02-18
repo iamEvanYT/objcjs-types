@@ -10,6 +10,8 @@ export interface ObjCMethod {
   parameters: { name: string; type: string }[];
   isClassMethod: boolean;
   isDeprecated: boolean;
+  deprecationMessage?: string;
+  description?: string;
 }
 
 export interface ObjCProperty {
@@ -17,6 +19,9 @@ export interface ObjCProperty {
   type: string;
   readonly: boolean;
   isClassProperty: boolean;
+  isDeprecated: boolean;
+  deprecationMessage?: string;
+  description?: string;
 }
 
 export interface ObjCClass {
@@ -36,13 +41,121 @@ export interface ObjCProtocol {
   properties: ObjCProperty[];
 }
 
+// --- Helpers for extracting doc comments and deprecation info ---
+
+/**
+ * Recursively extract text from a FullComment AST node.
+ * Joins all TextComment leaf nodes into a single string.
+ */
+function extractCommentText(node: ClangASTNode): string {
+  const texts: string[] = [];
+
+  function walk(n: ClangASTNode): void {
+    if (n.kind === "TextComment") {
+      const text = (n as any).text as string | undefined;
+      if (text) texts.push(text);
+    }
+    if (n.inner) {
+      for (const child of n.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(node);
+
+  // Join and clean up whitespace
+  return texts
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Extract the description string from a declaration node's FullComment children.
+ */
+function extractDescription(node: ClangASTNode): string | undefined {
+  if (!node.inner) return undefined;
+  for (const child of node.inner) {
+    if (child.kind === "FullComment") {
+      const text = extractCommentText(child);
+      if (text) return text;
+    }
+  }
+  return undefined;
+}
+
+/** Regex patterns that indicate a deprecated API in Objective-C header source. */
+const DEPRECATION_PATTERNS = [
+  { regex: /API_DEPRECATED\s*\(\s*"([^"]*)"/, group: 1 },
+  { regex: /API_DEPRECATED_WITH_REPLACEMENT\s*\(\s*"([^"]*)"/, group: 1 },
+  { regex: /NS_DEPRECATED_MAC\s*\(/, group: -1 },
+  { regex: /NS_DEPRECATED\s*\(/, group: -1 },
+  { regex: /DEPRECATED_ATTRIBUTE/, group: -1 },
+  { regex: /__deprecated_msg\s*\(\s*"([^"]*)"/, group: 1 },
+] as const;
+
+/**
+ * Get the line number from a ClangASTNode's loc field.
+ * Handles both direct locations and expansion locations.
+ */
+function getLocLine(node: ClangASTNode): number | undefined {
+  const loc = node.loc as Record<string, any> | undefined;
+  if (!loc) return undefined;
+  if (typeof loc.line === "number") return loc.line;
+  if (loc.expansionLoc && typeof loc.expansionLoc.line === "number") {
+    return loc.expansionLoc.line;
+  }
+  return undefined;
+}
+
+/**
+ * Scan the header source lines around a declaration's location for
+ * deprecation macros. Returns { isDeprecated, message } if found.
+ */
+function scanForDeprecation(
+  node: ClangASTNode,
+  headerLines: string[] | undefined
+): { isDeprecated: boolean; message?: string } {
+  if (!headerLines) return { isDeprecated: false };
+
+  const line = getLocLine(node);
+  if (!line || line < 1 || line > headerLines.length) {
+    return { isDeprecated: false };
+  }
+
+  // Scan the declaration line and a few lines after (macros can wrap to next lines)
+  const startLine = Math.max(0, line - 1);
+  const endLine = Math.min(headerLines.length, line + 5);
+  const sourceChunk = headerLines.slice(startLine, endLine).join(" ");
+
+  for (const pattern of DEPRECATION_PATTERNS) {
+    const match = pattern.regex.exec(sourceChunk);
+    if (match) {
+      const message = pattern.group >= 0 ? match[pattern.group]?.trim() : undefined;
+      return {
+        isDeprecated: true,
+        message: message || undefined,
+      };
+    }
+  }
+
+  return { isDeprecated: false };
+}
+
 /**
  * Parse a clang AST root node and extract all ObjC class declarations.
  * Merges categories into their base class.
+ *
+ * @param headerLines - Split lines of the header file for deprecation scanning.
+ *   Pass undefined to skip header-based deprecation detection.
  */
 export function parseAST(
   root: ClangASTNode,
-  targetClasses: Set<string>
+  targetClasses: Set<string>,
+  headerLines?: string[]
 ): Map<string, ObjCClass> {
   const classes = new Map<string, ObjCClass>();
 
@@ -82,7 +195,10 @@ export function parseAST(
     const selector = node.name ?? "";
     const returnType = node.returnType?.qualType ?? "void";
     const isClassMethod = node.instance === false;
-    const deprecated = isDeprecated(node);
+    const attrDeprecated = isDeprecated(node);
+    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
+    const description = extractDescription(node);
 
     const parameters: { name: string; type: string }[] = [];
     if (node.inner) {
@@ -102,6 +218,8 @@ export function parseAST(
       parameters,
       isClassMethod,
       isDeprecated: deprecated,
+      deprecationMessage: sourceDeprecation.message,
+      description,
     };
   }
 
@@ -115,8 +233,20 @@ export function parseAST(
     const readonly = node.readonly === true;
     // Class properties have "class": true in the AST node
     const isClassProperty = (node as any)["class"] === true;
+    const attrDeprecated = isDeprecated(node);
+    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
+    const description = extractDescription(node);
 
-    return { name, type, readonly, isClassProperty };
+    return {
+      name,
+      type,
+      readonly,
+      isClassProperty,
+      isDeprecated: deprecated,
+      deprecationMessage: sourceDeprecation.message,
+      description,
+    };
   }
 
   function processInterfaceOrCategory(
@@ -206,10 +336,13 @@ export function parseAST(
 /**
  * Parse a clang AST root node and extract ObjC protocol declarations.
  * Returns a map of protocol name → ObjCProtocol for protocols in the target set.
+ *
+ * @param headerLines - Split lines of the header file for deprecation scanning.
  */
 export function parseProtocols(
   root: ClangASTNode,
-  targetProtocols: Set<string>
+  targetProtocols: Set<string>,
+  headerLines?: string[]
 ): Map<string, ObjCProtocol> {
   const protocols = new Map<string, ObjCProtocol>();
 
@@ -233,7 +366,10 @@ export function parseProtocols(
     const selector = node.name ?? "";
     const returnType = node.returnType?.qualType ?? "void";
     const isClassMethod = node.instance === false;
-    const deprecated = isDeprecated(node);
+    const attrDeprecated = isDeprecated(node);
+    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
+    const description = extractDescription(node);
 
     const parameters: { name: string; type: string }[] = [];
     if (node.inner) {
@@ -253,6 +389,8 @@ export function parseProtocols(
       parameters,
       isClassMethod,
       isDeprecated: deprecated,
+      deprecationMessage: sourceDeprecation.message,
+      description,
     };
   }
 
@@ -264,8 +402,20 @@ export function parseProtocols(
     const type = node.type?.qualType ?? "id";
     const readonly = node.readonly === true;
     const isClassProperty = (node as any)["class"] === true;
+    const attrDeprecated = isDeprecated(node);
+    const sourceDeprecation = scanForDeprecation(node, headerLines);
+    const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
+    const description = extractDescription(node);
 
-    return { name, type, readonly, isClassProperty };
+    return {
+      name,
+      type,
+      readonly,
+      isClassProperty,
+      isDeprecated: deprecated,
+      deprecationMessage: sourceDeprecation.message,
+      description,
+    };
   }
 
   function processProtocolDecl(node: ClangASTNode): void {

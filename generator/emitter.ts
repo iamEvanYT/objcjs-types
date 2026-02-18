@@ -2,7 +2,7 @@
  * Generates TypeScript declaration files from parsed ObjC class data.
  */
 
-import type { ObjCClass, ObjCMethod, ObjCProtocol } from "./ast-parser.ts";
+import type { ObjCClass, ObjCMethod, ObjCProperty, ObjCProtocol } from "./ast-parser.ts";
 import type { FrameworkConfig } from "./frameworks.ts";
 import {
   selectorToJS,
@@ -166,6 +166,46 @@ function getEntityFramework(
 }
 
 /**
+ * Build a JSDoc comment block from a description and/or deprecation info.
+ * Returns an array of lines (without trailing newline) or empty array.
+ */
+function buildJSDoc(opts: {
+  description?: string;
+  isDeprecated?: boolean;
+  deprecationMessage?: string;
+  indent?: string;
+}): string[] {
+  const { description, isDeprecated, deprecationMessage, indent = "  " } = opts;
+  if (!description && !isDeprecated) return [];
+
+  const parts: string[] = [];
+  if (description) {
+    // Strip any embedded "*/" that would prematurely close the JSDoc comment
+    parts.push(description.replace(/\*\//g, "").trim());
+  }
+  if (isDeprecated) {
+    parts.push(deprecationMessage ? `@deprecated ${deprecationMessage}` : "@deprecated");
+  }
+
+  // Single-line JSDoc for short content
+  if (parts.length === 1 && parts[0]!.length < 80) {
+    return [`${indent}/** ${parts[0]} */`];
+  }
+
+  // Multi-line JSDoc
+  const lines: string[] = [];
+  lines.push(`${indent}/**`);
+  for (let i = 0; i < parts.length; i++) {
+    if (i > 0 && parts[i - 1] !== "" && !parts[i]!.startsWith("@")) {
+      lines.push(`${indent} *`);
+    }
+    lines.push(`${indent} * ${parts[i]}`);
+  }
+  lines.push(`${indent} */`);
+  return lines;
+}
+
+/**
  * Generate the method signature string for a single method.
  */
 function emitMethodSignature(
@@ -185,8 +225,13 @@ function emitMethodSignature(
   }
 
   const prefix = method.isClassMethod ? "static " : "";
-  const deprecated = method.isDeprecated ? "  /** @deprecated */\n" : "";
-  return `${deprecated}  ${prefix}${jsName}(${params.join(", ")}): ${returnType};`;
+  const jsdoc = buildJSDoc({
+    description: method.description,
+    isDeprecated: method.isDeprecated,
+    deprecationMessage: method.deprecationMessage,
+  });
+  const jsdocStr = jsdoc.length > 0 ? jsdoc.join("\n") + "\n" : "";
+  return `${jsdocStr}  ${prefix}${jsName}(${params.join(", ")}): ${returnType};`;
 }
 
 const TS_RESERVED = new Set([
@@ -501,16 +546,10 @@ function emitClassBody(
   // Emit class methods (static), excluding class property accessors
   const classPropertyNames = new Set(classProps.map((p) => p.name));
   const classMethods = cls.classMethods.filter(
-    (m) => !m.isDeprecated && !classPropertyNames.has(m.selector)
+    (m) => !classPropertyNames.has(m.selector)
   );
 
-  const allClassMethods = cls.classMethods;
-  const nonDeprecatedClassProps = classProps.filter((p) => {
-    const getter = allClassMethods.find((m) => m.selector === p.name);
-    return !getter?.isDeprecated;
-  });
-
-  const hasClassSection = classMethods.length > 0 || nonDeprecatedClassProps.length > 0;
+  const hasClassSection = classMethods.length > 0 || classProps.length > 0;
   if (hasClassSection) {
     lines.push("  // Class methods");
     for (const method of classMethods) {
@@ -521,9 +560,15 @@ function emitClassBody(
       const sig = emitMethodSignature(method, cls.name);
       if (sig) lines.push(sig);
     }
-    for (const prop of nonDeprecatedClassProps) {
+    for (const prop of classProps) {
       const tsType = mapReturnType(prop.type, cls.name);
       if (shouldSkipOverride(prop.name, tsType, [])) continue;
+      const jsdoc = buildJSDoc({
+        description: prop.description,
+        isDeprecated: prop.isDeprecated,
+        deprecationMessage: prop.deprecationMessage,
+      });
+      lines.push(...jsdoc);
       lines.push(`  static ${prop.name}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
@@ -536,9 +581,8 @@ function emitClassBody(
   }
 
   // Emit instance methods
-  const instanceMethods = cls.instanceMethods.filter((m) => !m.isDeprecated);
   const instancePropertyNames = new Set(instanceProps.map((p) => p.name));
-  const regularMethods = instanceMethods.filter(
+  const regularMethods = cls.instanceMethods.filter(
     (m) => !instancePropertyNames.has(m.selector)
   );
 
@@ -556,17 +600,18 @@ function emitClassBody(
   }
 
   // Emit instance properties
-  const nonDeprecatedInstanceProps = instanceProps.filter((p) => {
-    const getter = instanceMethods.find((m) => m.selector === p.name);
-    return !getter?.isDeprecated;
-  });
-
-  if (nonDeprecatedInstanceProps.length > 0) {
+  if (instanceProps.length > 0) {
     if (regularMethods.length > 0 || hasClassSection) lines.push("");
     lines.push("  // Properties");
-    for (const prop of nonDeprecatedInstanceProps) {
+    for (const prop of instanceProps) {
       const tsType = mapReturnType(prop.type, cls.name);
       if (shouldSkipOverride(prop.name, tsType, [])) continue;
+      const jsdoc = buildJSDoc({
+        description: prop.description,
+        isDeprecated: prop.isDeprecated,
+        deprecationMessage: prop.deprecationMessage,
+      });
+      lines.push(...jsdoc);
       lines.push(`  ${prop.name}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
@@ -709,9 +754,8 @@ export function emitProtocolFile(
   const instanceProps = proto.properties.filter((p) => !p.isClassProperty);
 
   // Emit instance methods (all optional with ? syntax)
-  const instanceMethods = proto.instanceMethods.filter((m) => !m.isDeprecated);
   const instancePropertyNames = new Set(instanceProps.map((p) => p.name));
-  const regularMethods = instanceMethods.filter(
+  const regularMethods = proto.instanceMethods.filter(
     (m) => !instancePropertyNames.has(m.selector)
   );
 
@@ -726,22 +770,28 @@ export function emitProtocolFile(
         const safeName = sanitizeParamName(param.name);
         params.push(`${safeName}: ${tsType}`);
       }
-      const deprecated = method.isDeprecated ? "  /** @deprecated */\n" : "";
-      lines.push(`${deprecated}  ${jsName}?(${params.join(", ")}): ${returnType};`);
+      const jsdoc = buildJSDoc({
+        description: method.description,
+        isDeprecated: method.isDeprecated,
+        deprecationMessage: method.deprecationMessage,
+      });
+      if (jsdoc.length > 0) lines.push(...jsdoc);
+      lines.push(`  ${jsName}?(${params.join(", ")}): ${returnType};`);
     }
   }
 
   // Emit instance properties (as optional getter methods)
-  const nonDeprecatedInstanceProps = instanceProps.filter((p) => {
-    const getter = instanceMethods.find((m) => m.selector === p.name);
-    return !getter?.isDeprecated;
-  });
-
-  if (nonDeprecatedInstanceProps.length > 0) {
+  if (instanceProps.length > 0) {
     if (regularMethods.length > 0) lines.push("");
     lines.push("  // Properties");
-    for (const prop of nonDeprecatedInstanceProps) {
+    for (const prop of instanceProps) {
       const tsType = mapReturnType(prop.type, proto.name);
+      const jsdoc = buildJSDoc({
+        description: prop.description,
+        isDeprecated: prop.isDeprecated,
+        deprecationMessage: prop.deprecationMessage,
+      });
+      if (jsdoc.length > 0) lines.push(...jsdoc);
       lines.push(`  ${prop.name}?(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;

@@ -50,6 +50,8 @@ export async function clangASTDump(headerPath: string): Promise<ClangASTNode> {
       "-isysroot",
       SDK_PATH,
       "-fmodules",
+      "-Xclang",
+      "-fparse-all-comments",
       headerPath,
     ],
     { stdout: "pipe", stderr: "ignore" }
@@ -81,6 +83,7 @@ export async function clangASTDumpWithPreIncludes(
   for (const inc of preIncludes) {
     args.push("-include", inc);
   }
+  args.push("-Xclang", "-fparse-all-comments");
   args.push(headerPath);
 
   const proc = Bun.spawn(args, { stdout: "pipe", stderr: "ignore" });
