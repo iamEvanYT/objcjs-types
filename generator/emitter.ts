@@ -1053,11 +1053,16 @@ export function emitIntegerEnumFile(enumDef: ObjCIntegerEnum): string {
   }
   lines.push(`} as const;`);
 
+  // NS_OPTIONS bitmask types should always accept 0 ("no options").
+  // If the enum doesn't already define a 0 constant, prepend `0 |` to the type.
+  const hasZero = entries.some((e) => e.value === "0");
+  const zeroPrefix = enumDef.isOptions && !hasZero ? "0 | " : "";
+
   lines.push(
     `export type ${enumDef.name} =`
   );
   lines.push(
-    `  typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
+    `  ${zeroPrefix}typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
   );
 
   lines.push("");
