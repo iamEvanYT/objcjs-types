@@ -9,6 +9,18 @@
 
 import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum } from "./ast-parser.ts";
 
+/** Result from a unified parse-all task (classes + protocols + enums from one clang invocation) */
+export interface UnifiedParseResult {
+  /** Parsed classes from the header (class name → ObjCClass) */
+  classes: Map<string, ObjCClass>;
+  /** Parsed protocols from the header (protocol name → ObjCProtocol) */
+  protocols: Map<string, ObjCProtocol>;
+  /** Parsed integer enums from the header (enum name → ObjCIntegerEnum) */
+  integerEnums: Map<string, ObjCIntegerEnum>;
+  /** Parsed string enums from the header (enum name → ObjCStringEnum) */
+  stringEnums: Map<string, ObjCStringEnum>;
+}
+
 export interface ClassParseResult {
   /** Parsed classes from the header (class name → ObjCClass) */
   classes: Map<string, ObjCClass>;
@@ -191,6 +203,36 @@ export class WorkerPool {
       stringEnums: new Map(result.stringEnums),
       integerTargets: result.integerTargets,
       stringTargets: result.stringTargets,
+    };
+  }
+
+  /**
+   * Parse classes, protocols, and enums from a single header in one clang invocation.
+   * This avoids spawning multiple clang processes for the same header file.
+   */
+  async parseAll(
+    headerPath: string,
+    classTargets: string[],
+    protocolTargets: string[],
+    integerEnumTargets: string[],
+    stringEnumTargets: string[],
+    fallbackPreIncludes?: string[]
+  ): Promise<UnifiedParseResult> {
+    const result = await this.dispatch({
+      id: this.nextId++,
+      type: "parse-all",
+      headerPath,
+      classTargets,
+      protocolTargets,
+      integerEnumTargets,
+      stringEnumTargets,
+      fallbackPreIncludes,
+    });
+    return {
+      classes: new Map(result.classes),
+      protocols: new Map(result.protocols),
+      integerEnums: new Map(result.integerEnums),
+      stringEnums: new Map(result.stringEnums),
     };
   }
 

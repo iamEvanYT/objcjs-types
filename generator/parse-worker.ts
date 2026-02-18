@@ -28,7 +28,42 @@ self.onmessage = async (event: MessageEvent) => {
   const msg = event.data;
 
   try {
-    if (msg.type === "parse-classes") {
+    if (msg.type === "parse-all") {
+      // Unified task: parse classes, protocols, and enums from a single clang AST.
+      // This avoids running clang multiple times on the same header file.
+      const classTargetSet = new Set<string>(msg.classTargets ?? []);
+      const protocolTargetSet = new Set<string>(msg.protocolTargets ?? []);
+      const integerTargetSet = new Set<string>(msg.integerEnumTargets ?? []);
+      const stringTargetSet = new Set<string>(msg.stringEnumTargets ?? []);
+
+      const headerLines = await readHeaderLines(msg.headerPath);
+      let ast = await clangASTDump(msg.headerPath);
+
+      let classes = classTargetSet.size > 0 ? parseAST(ast, classTargetSet, headerLines) : new Map();
+      let protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
+      let integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
+      let stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
+
+      // Fallback: retry without -fmodules using pre-includes if nothing was found.
+      const foundNothing = classes.size === 0 && protocols.size === 0 &&
+        integerEnums.size === 0 && stringEnums.size === 0;
+      if (foundNothing && msg.fallbackPreIncludes) {
+        ast = await clangASTDumpWithPreIncludes(msg.headerPath, msg.fallbackPreIncludes);
+        classes = classTargetSet.size > 0 ? parseAST(ast, classTargetSet, headerLines) : new Map();
+        protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
+        integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
+        stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
+      }
+
+      postMessage({
+        id: msg.id,
+        type: "all-result",
+        classes: [...classes.entries()],
+        protocols: [...protocols.entries()],
+        integerEnums: [...integerEnums.entries()],
+        stringEnums: [...stringEnums.entries()],
+      });
+    } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);
       const headerLines = await readHeaderLines(msg.headerPath);
       let ast = await clangASTDump(msg.headerPath);
