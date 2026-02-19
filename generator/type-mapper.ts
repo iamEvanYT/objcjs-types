@@ -17,6 +17,9 @@ let knownIntegerEnums: Set<string> = new Set();
 /** Set of all known string enum names (NS_TYPED_EXTENSIBLE_ENUM etc.) across all frameworks */
 let knownStringEnums: Set<string> = new Set();
 
+/** General typedef resolution table: typedef name → underlying qualType string */
+let knownTypedefs: Map<string, string> = new Map();
+
 /** Read-only access to the known integer enum names set (for use by the emitter). */
 export function getKnownIntegerEnums(): Set<string> {
   return knownIntegerEnums;
@@ -45,6 +48,10 @@ export function setKnownIntegerEnums(enums: Set<string>): void {
 
 export function setKnownStringEnums(enums: Set<string>): void {
   knownStringEnums = enums;
+}
+
+export function setKnownTypedefs(typedefs: Map<string, string>): void {
+  knownTypedefs = typedefs;
 }
 
 /**
@@ -250,6 +257,8 @@ function cleanQualType(qualType: string): string {
       .replace(/\b__autoreleasing\b/g, "")
       // Attribute macros: NS_*, API_*, CF_*, XPC_* (e.g. API_AVAILABLE, CF_RETURNS_RETAINED)
       .replace(/\b(?:NS|API|CF|XPC)_[A-Z_]+\b/g, "")
+      // Legacy availability macros: AVAILABLE_MAC_OS_X_VERSION_*_AND_LATER etc.
+      .replace(/\bAVAILABLE_MAC_OS_X_VERSION_[A-Z0-9_]+\b/g, "")
       .replace(/^struct\s+/, "")
       .trim()
   );
@@ -286,7 +295,7 @@ export function mapType(qualType: string, containingClass: string): string {
   return tsType;
 }
 
-function mapTypeInner(cleaned: string, containingClass: string): string {
+function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<string>): string {
   // Direct mappings
   if (cleaned in DIRECT_MAPPINGS) {
     return DIRECT_MAPPINGS[cleaned]!;
@@ -353,7 +362,7 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
 
   // Enum / typedef types — use the enum type name directly for type safety.
   // First check if this is a known enum type — this is more precise than the
-  // prefix heuristic below and handles prefixes like AS that aren't in the list.
+  // typedef resolution below and handles prefixes like AS that aren't in the list.
   if (knownIntegerEnums.has(cleaned)) {
     return cleaned;
   }
@@ -361,21 +370,18 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
     return cleaned;
   }
 
-  const hasFrameworkPrefix =
-    cleaned.startsWith("NS") ||
-    cleaned.startsWith("CG") ||
-    cleaned.startsWith("WK") ||
-    cleaned.startsWith("CF") ||
-    cleaned.startsWith("CA") ||
-    cleaned.startsWith("UI") ||
-    cleaned.startsWith("CL") ||
-    cleaned.startsWith("AV") ||
-    cleaned.startsWith("MK") ||
-    cleaned.startsWith("SK");
-
-  if (hasFrameworkPrefix && !cleaned.includes("*")) {
-    // This is likely an enum, options, or typedef to a numeric type
-    return "number";
+  // Resolve typedefs: look up the underlying type and recursively map it.
+  // This handles cases like NSWindowPersistableFrameDescriptor → NSString *,
+  // NSWindowFrameAutosaveName → NSString *, FourCharCode → unsigned int, etc.
+  // without needing hardcoded heuristics or manual DIRECT_MAPPINGS entries.
+  if (knownTypedefs.has(cleaned)) {
+    // Guard against circular typedef chains (e.g., typedef struct X X → cleanQualType → X)
+    const seen = resolving ?? new Set<string>();
+    if (!seen.has(cleaned)) {
+      seen.add(cleaned);
+      const underlying = knownTypedefs.get(cleaned)!;
+      return mapTypeInner(cleanQualType(underlying), containingClass, seen);
+    }
   }
 
   // Protocol-qualified id: "id<ASAuthorizationCredential>" or "id<Proto1, Proto2>"

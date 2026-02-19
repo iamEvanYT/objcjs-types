@@ -1403,7 +1403,6 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   lines.push(`export * from "./structs/index.js";`);
   lines.push(`export { createDelegate } from "./delegates.js";`);
   lines.push(`export type { ProtocolMap } from "./delegates.js";`);
-  lines.push(`export { NSStringFromString, options } from "./helpers.js";`);
   lines.push("");
 
   return lines.join("\n");

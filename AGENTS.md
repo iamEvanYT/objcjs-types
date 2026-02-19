@@ -14,7 +14,7 @@ is committed to the repo.
 | ------------------------------------ | ------------------------------------------------------------------------- |
 | `bun run generate`                   | Regenerate all type files from SDK headers (requires Xcode, ~50s)         |
 | `bun run generate Foundation AppKit` | Regenerate specific frameworks only                                       |
-| `bunx tsc --noEmit`                  | Typecheck the entire project (36 pre-existing errors in generated output) |
+| `bunx tsgo --noEmit`                 | Typecheck the entire project (36 pre-existing errors in generated output) |
 | `bun run tests/window.ts`            | Run a test file (requires macOS with GUI)                                 |
 
 There is no build step — the package exports raw `.ts` files. There is no test runner

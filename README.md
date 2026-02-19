@@ -21,7 +21,8 @@ Import frameworks by name:
 ```ts
 import { NSApplication, NSWindow, NSWindowStyleMask } from "objcjs-types/AppKit";
 import { NSString } from "objcjs-types/Foundation";
-import { CGRect, options } from "objcjs-types";
+import { CGRect } from "objcjs-types";
+import { options } from "objcjs-types/helpers";
 ```
 
 Create a window:
@@ -73,7 +74,7 @@ window.setDelegate$(delegate);
 Use `options()` to combine bitmask flags with type safety:
 
 ```ts
-import { options } from "objcjs-types";
+import { options } from "objcjs-types/helpers";
 import { NSWindowStyleMask } from "objcjs-types/AppKit";
 
 const mask = options(NSWindowStyleMask.Titled, NSWindowStyleMask.Closable, NSWindowStyleMask.Resizable);
@@ -96,7 +97,7 @@ const size: CGSize = { width: 800, height: 600 };
 ### Helpers
 
 ```ts
-import { NSStringFromString } from "objcjs-types";
+import { NSStringFromString } from "objcjs-types/helpers";
 
 const nsStr = NSStringFromString("hello"); // NSString from JS string
 ```

@@ -32,6 +32,7 @@ import {
   setKnownIntegerEnums,
   setKnownStringEnums,
   setKnownStructs,
+  setKnownTypedefs,
   mapReturnType,
   mapParamType,
   STRUCT_TS_TYPES
@@ -546,6 +547,19 @@ async function main(): Promise<void> {
     }
   }
 
+  // Collect all typedefs across all headers for general typedef resolution
+  const allTypedefs = new Map<string, string>();
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
+    for (const [name, qualType] of entry.result.typedefs) {
+      if (!allTypedefs.has(name)) {
+        allTypedefs.set(name, qualType);
+      }
+    }
+  }
+  setKnownTypedefs(allTypedefs);
+
   // Resolve actual string values for extern NSString * constants.
   // This compiles a small ObjC helper once, then invokes it per-framework
   // with the symbol names discovered during parsing.
@@ -553,12 +567,14 @@ async function main(): Promise<void> {
   let totalResolved = 0;
   let totalStringSymbols = 0;
 
-  // Build resolution tasks, then run them all in parallel
-  const resolvePromises: Promise<{
+  // Build resolution tasks
+  interface ResolveTask {
     fwName: string;
-    resolved: Map<string, string>;
-    symbolCount: number;
-  } | null>[] = [];
+    libraryPath: string;
+    symbols: string[];
+  }
+
+  const resolveTasks: ResolveTask[] = [];
 
   for (const fw of frameworksToProcess) {
     const fwStrEnums = frameworkStringEnums.get(fw.name);
@@ -573,39 +589,31 @@ async function main(): Promise<void> {
     }
     if (allSymbols.length === 0) continue;
 
-    resolvePromises.push(
-      resolveStringConstants(fw.libraryPath, allSymbols)
-        .then((resolved) => ({
-          fwName: fw.name,
-          resolved,
-          symbolCount: allSymbols.length
-        }))
-        .catch((err) => {
-          console.log(`  [WARN] Failed to resolve string values for ${fw.name}: ${err}`);
-          return null;
-        })
-    );
-
+    resolveTasks.push({ fwName: fw.name, libraryPath: fw.libraryPath, symbols: allSymbols });
     totalStringSymbols += allSymbols.length;
   }
 
-  // Wait for all resolution tasks to complete
-  const resolveResults = await Promise.all(resolvePromises);
-
-  // Populate resolved values back into enum definitions
-  for (const resolveResult of resolveResults) {
-    if (!resolveResult) continue;
-    const fwStrEnums = frameworkStringEnums.get(resolveResult.fwName);
-    if (!fwStrEnums) continue;
-
-    for (const enumDef of fwStrEnums.values()) {
-      for (const v of enumDef.values) {
-        const value = resolveResult.resolved.get(v.symbolName);
-        if (value !== undefined) {
-          v.value = value;
-          totalResolved++;
+  // Process resolution tasks sequentially to avoid spawning too many
+  // concurrent child processes. Each task is fast (~100ms) since dlopen/dlsym
+  // are lightweight. The timeout in resolveStringConstants guards against
+  // frameworks whose dlopen hangs.
+  for (const task of resolveTasks) {
+    try {
+      const resolved = await resolveStringConstants(task.libraryPath, task.symbols);
+      const fwStrEnums = frameworkStringEnums.get(task.fwName);
+      if (fwStrEnums) {
+        for (const enumDef of fwStrEnums.values()) {
+          for (const v of enumDef.values) {
+            const value = resolved.get(v.symbolName);
+            if (value !== undefined) {
+              v.value = value;
+              totalResolved++;
+            }
+          }
         }
       }
+    } catch (err) {
+      console.log(`  [WARN] Failed to resolve string values for ${task.fwName}: ${err}`);
     }
   }
 

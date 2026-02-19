@@ -4,89 +4,67 @@
  * String enums (NS_TYPED_EXTENSIBLE_ENUM) declare their values as extern
  * NSString * constants in the framework binary. Since objc-js doesn't expose
  * dlsym, we can't read these at runtime — but we CAN read them during
- * generation by compiling a small ObjC helper that uses dlopen/dlsym.
+ * generation using Bun's FFI to call dlopen/dlsym/objc_msgSend directly.
  *
- * The helper is compiled once and invoked per-framework with all symbol names.
- * It prints `SYMBOL=value` lines to stdout, which we parse into a Map.
+ * This avoids compiling a helper binary (which fails on macOS Sequoia due to
+ * Gatekeeper blocking unsigned locally-compiled executables).
  */
 
-import { join } from "path";
-import { existsSync } from "fs";
-import { mkdir, unlink, rmdir } from "fs/promises";
+import { dlopen as bunDlopen, FFIType, read, CString } from "bun:ffi";
+import type { Pointer } from "bun:ffi";
 
-const HELPER_SOURCE = `
-#import <Foundation/Foundation.h>
-#import <dlfcn.h>
-#import <stdio.h>
+/** Lazily initialized FFI bindings for dlopen/dlsym and ObjC runtime. */
+let ffi: {
+  dlopen: (path: Buffer, flags: number) => Pointer;
+  dlsym: (handle: Pointer, name: Buffer) => Pointer;
+  dlclose: (handle: Pointer) => number;
+  objc_msgSend: (obj: Pointer, sel: Pointer) => Pointer;
+  utf8Sel: Pointer;
+} | null = null;
 
-int main(int argc, const char *argv[]) {
-  @autoreleasepool {
-    if (argc < 3) {
-      fprintf(stderr, "Usage: %s <framework_path> <symbol1> [symbol2 ...]\\n", argv[0]);
-      return 1;
-    }
-
-    const char *frameworkPath = argv[1];
-    void *handle = dlopen(frameworkPath, RTLD_LAZY);
-    if (!handle) {
-      fprintf(stderr, "dlopen failed: %s\\n", dlerror());
-      return 1;
-    }
-
-    for (int i = 2; i < argc; i++) {
-      const char *symbolName = argv[i];
-      NSString **symPtr = (NSString **)dlsym(handle, symbolName);
-      if (symPtr && *symPtr) {
-        printf("%s=%s\\n", symbolName, [*symPtr UTF8String]);
-      } else {
-        fprintf(stderr, "dlsym failed for %s: %s\\n", symbolName, dlerror() ?: "null pointer");
-      }
-    }
-
-    dlclose(handle);
-  }
-  return 0;
+/** Convert a JS string to a null-terminated C string buffer. */
+function cstr(s: string): Buffer {
+  const buf = Buffer.alloc(s.length + 1);
+  buf.write(s, "utf-8");
+  return buf;
 }
-`;
 
-let compiledBinaryPath: string | null = null;
+/** Initialize the FFI bindings once. */
+function ensureFFI() {
+  if (ffi) return ffi;
 
-/**
- * Compile the ObjC helper binary once. Returns the path to the compiled binary.
- * Subsequent calls return the cached path.
- */
-async function ensureCompiled(): Promise<string> {
-  if (compiledBinaryPath && existsSync(compiledBinaryPath)) {
-    return compiledBinaryPath;
-  }
-
-  const tmpDir = join(import.meta.dir, "..", ".gen-tmp");
-  await mkdir(tmpDir, { recursive: true });
-  await Bun.write(join(tmpDir, "resolve_strings.m"), HELPER_SOURCE);
-
-  const outputPath = join(tmpDir, "resolve_strings");
-
-  const proc = Bun.spawn(["clang", "-framework", "Foundation", "-o", outputPath, join(tmpDir, "resolve_strings.m")], {
-    stdout: "pipe",
-    stderr: "pipe"
+  const libdl = bunDlopen("/usr/lib/libdl.dylib", {
+    dlopen: { args: [FFIType.ptr, FFIType.i32], returns: FFIType.ptr },
+    dlsym: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.ptr },
+    dlclose: { args: [FFIType.ptr], returns: FFIType.i32 }
   });
 
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
+  const libobjc = bunDlopen("/usr/lib/libobjc.A.dylib", {
+    sel_registerName: { args: [FFIType.ptr], returns: FFIType.ptr },
+    objc_msgSend: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.ptr }
+  });
 
-  if (exitCode !== 0) {
-    throw new Error(`Failed to compile string resolver helper:\n${stderr}`);
-  }
+  const utf8Sel = libobjc.symbols.sel_registerName(cstr("UTF8String")) as Pointer;
 
-  compiledBinaryPath = outputPath;
-  return outputPath;
+  ffi = {
+    dlopen: (path, flags) => libdl.symbols.dlopen(path, flags) as Pointer,
+    dlsym: (handle, name) => libdl.symbols.dlsym(handle, name) as Pointer,
+    dlclose: (handle) => libdl.symbols.dlclose(handle) as number,
+    objc_msgSend: (obj, sel) => libobjc.symbols.objc_msgSend(obj, sel) as Pointer,
+    utf8Sel
+  };
+
+  return ffi;
 }
 
 /**
  * Resolve extern NSString * constant values from a framework binary.
  *
+ * Uses Bun's FFI to call dlopen/dlsym directly within the Bun process,
+ * avoiding the need to compile and execute a separate helper binary.
+ *
  * @param frameworkBinaryPath - Path to the framework binary
- *   (e.g., "/System/Library/Frameworks/AuthenticationServices.framework/AuthenticationServices")
+ *   (e.g., "/System/Library/Frameworks/Foundation.framework/Foundation")
  * @param symbolNames - Array of extern symbol names to resolve
  * @returns Map from symbol name to its string value
  */
@@ -98,53 +76,46 @@ export async function resolveStringConstants(
     return new Map();
   }
 
-  const binaryPath = await ensureCompiled();
+  const f = ensureFFI();
 
-  // Batch all symbols into a single invocation for efficiency.
-  // macOS has a ~256KB arg limit, which supports thousands of symbol names.
-  const proc = Bun.spawn([binaryPath, frameworkBinaryPath, ...symbolNames], { stdout: "pipe", stderr: "pipe" });
-
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  await proc.exited;
-
-  // Log any dlsym failures (non-fatal — some symbols may not be in the binary)
-  if (stderr.trim()) {
-    for (const line of stderr.trim().split("\n")) {
-      if (line.includes("dlsym failed")) {
-        // Silently skip — these are expected for symbols not in this framework
-      } else {
-        console.log(`  [resolve-strings] ${line}`);
-      }
-    }
+  // Open the framework binary via dlopen (RTLD_LAZY = 1)
+  const handle = f.dlopen(cstr(frameworkBinaryPath), 1);
+  if (Number(handle) === 0) {
+    return new Map();
   }
 
-  // Parse "SYMBOL=value" lines
   const result = new Map<string, string>();
-  for (const line of stdout.trim().split("\n")) {
-    if (!line) continue;
-    const eqIdx = line.indexOf("=");
-    if (eqIdx < 0) continue;
-    const symbol = line.slice(0, eqIdx);
-    const value = line.slice(eqIdx + 1);
-    result.set(symbol, value);
+
+  try {
+    for (const symbolName of symbolNames) {
+      // dlsym returns the address of the global variable (NSString **)
+      const symAddr = f.dlsym(handle, cstr(symbolName));
+      if (Number(symAddr) === 0) continue;
+
+      // Dereference: read the NSString * pointer from the global variable
+      // read.ptr returns number; cast to Pointer for objc_msgSend
+      const nsStringPtr = read.ptr(symAddr, 0) as unknown as Pointer;
+      if (Number(nsStringPtr) === 0) continue;
+
+      // Call [nsString UTF8String] via objc_msgSend -> returns const char *
+      const utf8Ptr = f.objc_msgSend(nsStringPtr, f.utf8Sel);
+      if (Number(utf8Ptr) === 0) continue;
+
+      // Read the C string value
+      const value = new CString(utf8Ptr).toString();
+      result.set(symbolName, value);
+    }
+  } finally {
+    f.dlclose(handle);
   }
 
   return result;
 }
 
 /**
- * Clean up the compiled helper binary and temp directory.
- * Call this at the end of generation.
+ * Clean up resources. No-op in the FFI implementation since we don't
+ * compile a helper binary, but kept for API compatibility.
  */
 export async function cleanupResolver(): Promise<void> {
-  const tmpDir = join(import.meta.dir, "..", ".gen-tmp");
-  try {
-    await unlink(join(tmpDir, "resolve_strings.m"));
-    await unlink(join(tmpDir, "resolve_strings"));
-    await rmdir(tmpDir);
-  } catch {
-    // Ignore cleanup errors
-  }
-  compiledBinaryPath = null;
+  // No temp files to clean up in the FFI implementation
 }

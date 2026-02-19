@@ -10,7 +10,14 @@
 declare var self: Worker;
 
 import { clangASTDump, clangASTDumpWithPreIncludes, clangBatchASTDump } from "./clang.ts";
-import { parseAST, parseProtocols, parseIntegerEnums, parseStringEnums, parseStructs } from "./ast-parser.ts";
+import {
+  parseAST,
+  parseProtocols,
+  parseIntegerEnums,
+  parseStringEnums,
+  parseStructs,
+  parseTypedefs
+} from "./ast-parser.ts";
 
 /**
  * Read a header file and split it into lines for deprecation scanning.
@@ -73,6 +80,7 @@ self.onmessage = async (event: MessageEvent) => {
       const integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
       const stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       const structResult = parseStructs(ast);
+      const typedefs = parseTypedefs(ast);
 
       postMessage({
         id: msg.id,
@@ -83,6 +91,7 @@ self.onmessage = async (event: MessageEvent) => {
         stringEnums: [...stringEnums.entries()],
         structs: [...structResult.structs.entries()],
         structAliases: structResult.aliases,
+        typedefs: [...typedefs.entries()],
         // Report what was found vs expected for logging
         foundClasses: classes.size,
         foundProtocols: protocols.size,
@@ -105,6 +114,7 @@ self.onmessage = async (event: MessageEvent) => {
       let integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
       let stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       let structResult = parseStructs(ast);
+      let typedefs = parseTypedefs(ast);
 
       // Fallback: retry without -fmodules using pre-includes if any expected
       // target type has missing results. Some headers contain both classes and
@@ -157,6 +167,11 @@ self.onmessage = async (event: MessageEvent) => {
             structResult.aliases.push(alias);
           }
         }
+        // Merge fallback typedefs
+        const fallbackTypedefs = parseTypedefs(fallbackAst);
+        for (const [name, qualType] of fallbackTypedefs) {
+          if (!typedefs.has(name)) typedefs.set(name, qualType);
+        }
       }
 
       postMessage({
@@ -167,7 +182,8 @@ self.onmessage = async (event: MessageEvent) => {
         integerEnums: [...integerEnums.entries()],
         stringEnums: [...stringEnums.entries()],
         structs: [...structResult.structs.entries()],
-        structAliases: structResult.aliases
+        structAliases: structResult.aliases,
+        typedefs: [...typedefs.entries()]
       });
     } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);

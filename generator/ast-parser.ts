@@ -1208,3 +1208,45 @@ export function parseStructs(root: ClangASTNode): {
 
   return { structs, aliases };
 }
+
+// --- General typedef parsing ---
+
+/**
+ * Parse all TypedefDecl nodes from the AST to build a typedef resolution table.
+ *
+ * This captures arbitrary typedefs like `typedef NSString * NSWindowFrameAutosaveName`
+ * so the type mapper can resolve them instead of falling back to heuristics.
+ * Only captures typedefs whose underlying type is an ObjC pointer type (e.g., `NSString *`)
+ * or a known numeric/boolean type — not struct/enum typedefs (handled elsewhere).
+ *
+ * @returns Map of typedef name → underlying qualType string
+ */
+export function parseTypedefs(root: ClangASTNode): Map<string, string> {
+  const typedefs = new Map<string, string>();
+
+  function walk(node: ClangASTNode): void {
+    if (node.kind === "TypedefDecl" && node.name && node.type?.qualType) {
+      const name = node.name;
+      const qualType = node.type.qualType;
+
+      // Skip typedefs that are self-referencing (e.g., typedef struct CGPoint CGPoint)
+      if (name === qualType || qualType === `struct ${name}`) return;
+
+      // Skip typedefs with no useful resolution (e.g., __builtin_va_list)
+      if (qualType.startsWith("__")) return;
+
+      // Store the mapping — the type mapper will use this to resolve
+      // unknown typedef names to their underlying types
+      typedefs.set(name, qualType);
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return typedefs;
+}

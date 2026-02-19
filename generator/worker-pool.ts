@@ -30,6 +30,8 @@ export interface UnifiedParseResult {
   structs: Map<string, ObjCStruct>;
   /** Struct typedef aliases (e.g., NSPoint → CGPoint) */
   structAliases: ObjCStructAlias[];
+  /** General typedef resolution table (typedef name → underlying qualType) */
+  typedefs: Map<string, string>;
 }
 
 export interface ClassParseResult {
@@ -241,7 +243,8 @@ export class WorkerPool {
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
-      structAliases: result.structAliases ?? []
+      structAliases: result.structAliases ?? [],
+      typedefs: new Map(result.typedefs ?? [])
     };
   }
 
@@ -281,7 +284,8 @@ export class WorkerPool {
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
-      structAliases: result.structAliases ?? []
+      structAliases: result.structAliases ?? [],
+      typedefs: new Map(result.typedefs ?? [])
     };
   }
 
