@@ -1,6 +1,6 @@
 {
   "name": "objcjs-types",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Auto-generated TypeScript type declarations for macOS Objective-C frameworks",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,6 +21,10 @@
     "./nsdata": {
       "types": "./dist/nsdata.d.ts",
       "default": "./dist/nsdata.js"
+    },
+    "./osversion": {
+      "types": "./dist/osversion.d.ts",
+      "default": "./dist/osversion.js"
     },
     "./*": {
       "types": "./dist/*/index.d.ts",

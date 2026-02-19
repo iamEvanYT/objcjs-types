@@ -6,7 +6,7 @@ import {
   type _NSArray,
   type _NSDictionary,
   type _NSString
-} from "../Foundation/index.js";
+} from "./Foundation/index.js";
 
 /**
  * Create NSString from a JavaScript string
