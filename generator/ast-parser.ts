@@ -211,7 +211,7 @@ const DEPRECATION_PATTERNS = [
   { regex: /NS_DEPRECATED_MAC\s*\(/, group: -1 },
   { regex: /NS_DEPRECATED\s*\(/, group: -1 },
   { regex: /DEPRECATED_ATTRIBUTE/, group: -1 },
-  { regex: /__deprecated_msg\s*\(\s*"([^"]*)"/, group: 1 },
+  { regex: /__deprecated_msg\s*\(\s*"([^"]*)"/, group: 1 }
 ] as const;
 
 /**
@@ -322,7 +322,18 @@ function scanForDocComment(
   // Skip blank lines and preprocessor directives between comment and declaration
   while (scanEnd >= 0) {
     const trimmed = lines[scanEnd]!.trim();
-    if (trimmed === "" || trimmed.startsWith("#") || trimmed.startsWith("NS_HEADER_AUDIT") || trimmed.startsWith("API_AVAILABLE") || trimmed.startsWith("API_UNAVAILABLE") || trimmed.startsWith("NS_AVAILABLE") || trimmed.startsWith("NS_SWIFT_") || trimmed.startsWith("NS_REFINED_FOR_SWIFT") || trimmed.startsWith("NS_ASSUME_NONNULL") || trimmed.startsWith("__attribute__")) {
+    if (
+      trimmed === "" ||
+      trimmed.startsWith("#") ||
+      trimmed.startsWith("NS_HEADER_AUDIT") ||
+      trimmed.startsWith("API_AVAILABLE") ||
+      trimmed.startsWith("API_UNAVAILABLE") ||
+      trimmed.startsWith("NS_AVAILABLE") ||
+      trimmed.startsWith("NS_SWIFT_") ||
+      trimmed.startsWith("NS_REFINED_FOR_SWIFT") ||
+      trimmed.startsWith("NS_ASSUME_NONNULL") ||
+      trimmed.startsWith("__attribute__")
+    ) {
       scanEnd--;
       continue;
     }
@@ -450,7 +461,7 @@ function scanForDeprecation(
       const message = pattern.group >= 0 ? match[pattern.group]?.trim() : undefined;
       return {
         isDeprecated: true,
-        message: message || undefined,
+        message: message || undefined
       };
     }
   }
@@ -483,7 +494,7 @@ export function parseAST(
         protocols: [],
         instanceMethods: [],
         classMethods: [],
-        properties: [],
+        properties: []
       };
       classes.set(name, cls);
     }
@@ -492,9 +503,7 @@ export function parseAST(
 
   function isDeprecated(node: ClangASTNode): boolean {
     if (!node.inner) return false;
-    return node.inner.some(
-      (child) => child.kind === "DeprecatedAttr"
-    );
+    return node.inner.some((child) => child.kind === "DeprecatedAttr");
   }
 
   function isUnavailable(node: ClangASTNode): boolean {
@@ -521,7 +530,7 @@ export function parseAST(
         if (child.kind === "ParmVarDecl") {
           parameters.push({
             name: child.name ?? "arg",
-            type: child.type?.qualType ?? "id",
+            type: child.type?.qualType ?? "id"
           });
         }
       }
@@ -534,7 +543,7 @@ export function parseAST(
       isClassMethod,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
-      description,
+      description
     };
   }
 
@@ -560,15 +569,11 @@ export function parseAST(
       isClassProperty,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
-      description,
+      description
     };
   }
 
-  function processInterfaceOrCategory(
-    node: ClangASTNode,
-    className: string,
-    walkContextFile?: string
-  ): void {
+  function processInterfaceOrCategory(node: ClangASTNode, className: string, walkContextFile?: string): void {
     if (!targetClasses.has(className)) return;
 
     const cls = getOrCreateClass(className);
@@ -594,12 +599,8 @@ export function parseAST(
     const parentFile = getLocFile(node) ?? walkContextFile;
 
     // Track selectors we've already added (to handle categories extending the same class)
-    const existingInstanceSelectors = new Set(
-      cls.instanceMethods.map((m) => m.selector)
-    );
-    const existingClassSelectors = new Set(
-      cls.classMethods.map((m) => m.selector)
-    );
+    const existingInstanceSelectors = new Set(cls.instanceMethods.map((m) => m.selector));
+    const existingClassSelectors = new Set(cls.classMethods.map((m) => m.selector));
     const existingProperties = new Set(cls.properties.map((p) => p.name));
 
     for (const child of node.inner) {
@@ -679,9 +680,7 @@ export function parseProtocols(
 
   function isDeprecated(node: ClangASTNode): boolean {
     if (!node.inner) return false;
-    return node.inner.some(
-      (child) => child.kind === "DeprecatedAttr"
-    );
+    return node.inner.some((child) => child.kind === "DeprecatedAttr");
   }
 
   function isUnavailable(node: ClangASTNode): boolean {
@@ -708,7 +707,7 @@ export function parseProtocols(
         if (child.kind === "ParmVarDecl") {
           parameters.push({
             name: child.name ?? "arg",
-            type: child.type?.qualType ?? "id",
+            type: child.type?.qualType ?? "id"
           });
         }
       }
@@ -721,7 +720,7 @@ export function parseProtocols(
       isClassMethod,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
-      description,
+      description
     };
   }
 
@@ -745,7 +744,7 @@ export function parseProtocols(
       isClassProperty,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
-      description,
+      description
     };
   }
 
@@ -757,7 +756,7 @@ export function parseProtocols(
         extendedProtocols: [],
         instanceMethods: [],
         classMethods: [],
-        properties: [],
+        properties: []
       };
       protocols.set(name, proto);
     }
@@ -786,12 +785,8 @@ export function parseProtocols(
     const parentFile = getLocFile(node) ?? walkContextFile;
 
     // Track selectors we've already added (to handle multiple declarations of the same protocol)
-    const existingInstanceSelectors = new Set(
-      proto.instanceMethods.map((m) => m.selector)
-    );
-    const existingClassSelectors = new Set(
-      proto.classMethods.map((m) => m.selector)
-    );
+    const existingInstanceSelectors = new Set(proto.instanceMethods.map((m) => m.selector));
+    const existingClassSelectors = new Set(proto.classMethods.map((m) => m.selector));
     const existingProperties = new Set(proto.properties.map((p) => p.name));
 
     for (const child of node.inner) {
@@ -853,18 +848,13 @@ export function parseProtocols(
  *
  * @param targetEnums - Set of enum names to extract (from discovery)
  */
-export function parseIntegerEnums(
-  root: ClangASTNode,
-  targetEnums: Set<string>
-): Map<string, ObjCIntegerEnum> {
+export function parseIntegerEnums(root: ClangASTNode, targetEnums: Set<string>): Map<string, ObjCIntegerEnum> {
   const enums = new Map<string, ObjCIntegerEnum>();
 
   function walk(node: ClangASTNode): void {
     if (node.kind === "EnumDecl" && node.name && targetEnums.has(node.name)) {
       if (node.fixedUnderlyingType) {
-        const hasConstants = node.inner?.some(
-          (child) => child.kind === "EnumConstantDecl"
-        ) ?? false;
+        const hasConstants = node.inner?.some((child) => child.kind === "EnumConstantDecl") ?? false;
 
         // Skip forward declarations (no EnumConstantDecl children).
         // The full definition with constants may appear later with previousDecl set.
@@ -876,13 +866,11 @@ export function parseIntegerEnums(
               name: node.name,
               underlyingType: node.fixedUnderlyingType.qualType,
               isOptions: false,
-              values: [],
+              values: []
             });
           }
         } else {
-          const isOptions = node.inner?.some(
-            (child) => child.kind === "FlagEnumAttr"
-          ) ?? false;
+          const isOptions = node.inner?.some((child) => child.kind === "FlagEnumAttr") ?? false;
 
           const values: ObjCEnumValue[] = [];
           let implicitNextValue = 0;
@@ -912,7 +900,7 @@ export function parseIntegerEnums(
             name: node.name,
             underlyingType: node.fixedUnderlyingType.qualType,
             isOptions,
-            values,
+            values
           });
         }
       }
@@ -956,10 +944,7 @@ function findConstantExpr(node: ClangASTNode): ClangASTNode | null {
  *
  * @param targetEnums - Set of string enum names to extract (from discovery)
  */
-export function parseStringEnums(
-  root: ClangASTNode,
-  targetEnums: Set<string>
-): Map<string, ObjCStringEnum> {
+export function parseStringEnums(root: ClangASTNode, targetEnums: Set<string>): Map<string, ObjCStringEnum> {
   const enums = new Map<string, ObjCStringEnum>();
   // Map from TypedefDecl id → enum name, for linking VarDecls
   const typedefIdToName = new Map<string, string>();
@@ -967,9 +952,7 @@ export function parseStringEnums(
   function walkForTypedefs(node: ClangASTNode): void {
     if (node.kind === "TypedefDecl" && node.name && targetEnums.has(node.name)) {
       // Check for SwiftNewTypeAttr in inner
-      const hasSwiftNewType = node.inner?.some(
-        (child) => child.kind === "SwiftNewTypeAttr"
-      ) ?? false;
+      const hasSwiftNewType = node.inner?.some((child) => child.kind === "SwiftNewTypeAttr") ?? false;
 
       // Check that the underlying type is NSString *
       const qualType = node.type?.qualType ?? "";
@@ -984,7 +967,7 @@ export function parseStringEnums(
           enums.set(node.name, {
             kind: "string",
             name: node.name,
-            values: [],
+            values: []
           });
         }
       }
@@ -998,12 +981,7 @@ export function parseStringEnums(
   }
 
   function walkForVarDecls(node: ClangASTNode): void {
-    if (
-      node.kind === "VarDecl" &&
-      node.name &&
-      node.storageClass === "extern" &&
-      node.type?.typeAliasDeclId
-    ) {
+    if (node.kind === "VarDecl" && node.name && node.storageClass === "extern" && node.type?.typeAliasDeclId) {
       const enumName = typedefIdToName.get(node.type.typeAliasDeclId);
       if (enumName) {
         const enumDef = enums.get(enumName);
@@ -1019,7 +997,7 @@ export function parseStringEnums(
           enumDef.values.push({
             symbolName: node.name,
             shortName,
-            value: null, // Resolved later by resolve-strings.ts
+            value: null // Resolved later by resolve-strings.ts
           });
         }
       }
@@ -1079,7 +1057,7 @@ export function parseStructs(root: ClangASTNode): {
       if (child.kind === "FieldDecl" && child.name) {
         fields.push({
           name: child.name,
-          type: child.type?.qualType ?? "int",
+          type: child.type?.qualType ?? "int"
         });
       }
     }
@@ -1088,16 +1066,13 @@ export function parseStructs(root: ClangASTNode): {
 
   // First pass: collect all RecordDecl nodes (struct definitions)
   function walkForRecords(node: ClangASTNode): void {
-    if (
-      node.kind === "RecordDecl" &&
-      (node as any).tagUsed === "struct"
-    ) {
+    if (node.kind === "RecordDecl" && (node as any).tagUsed === "struct") {
       const fields = extractFields(node);
       // Only record definitions with fields (skip forward declarations)
       if (fields.length > 0) {
         recordById.set(node.id, {
           name: node.name ?? "",
-          fields,
+          fields
         });
         if (node.name && node.name !== "(anonymous)") {
           knownStructNames.add(node.name);
@@ -1110,7 +1085,7 @@ export function parseStructs(root: ClangASTNode): {
           if (!node.name.startsWith("_")) {
             structs.set(node.name, {
               name: node.name,
-              fields,
+              fields
             });
           }
         }
@@ -1138,7 +1113,7 @@ export function parseStructs(root: ClangASTNode): {
             if (fields.length > 0) {
               structs.set(node.name, {
                 name: node.name,
-                fields,
+                fields
               });
               knownStructNames.add(node.name);
               return; // Don't also check typedef alias case
@@ -1167,7 +1142,7 @@ export function parseStructs(root: ClangASTNode): {
                 if (record && (!record.name || record.name === "(anonymous)") && record.fields.length > 0) {
                   structs.set(node.name, {
                     name: node.name,
-                    fields: record.fields,
+                    fields: record.fields
                   });
                   knownStructNames.add(node.name);
                   return;
@@ -1198,7 +1173,7 @@ export function parseStructs(root: ClangASTNode): {
           structs.set(node.name, {
             name: node.name,
             internalName: targetName,
-            fields: targetRecord.fields,
+            fields: targetRecord.fields
           });
           knownStructNames.add(node.name);
           return;

@@ -9,10 +9,33 @@
 import { mkdir, writeFile, readdir, copyFile, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { discoverAllFrameworks, getHeaderPath, getProtocolHeaderPath, getEnumHeaderPath, type FrameworkConfig } from "./frameworks.ts";
+import {
+  discoverAllFrameworks,
+  getHeaderPath,
+  getProtocolHeaderPath,
+  getEnumHeaderPath,
+  type FrameworkConfig
+} from "./frameworks.ts";
 import { discoverFramework } from "./discover.ts";
-import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum, ObjCStruct, ObjCStructAlias } from "./ast-parser.ts";
-import { setKnownClasses, setKnownProtocols, setProtocolConformers, setKnownIntegerEnums, setKnownStringEnums, setKnownStructs, mapReturnType, mapParamType, STRUCT_TS_TYPES } from "./type-mapper.ts";
+import type {
+  ObjCClass,
+  ObjCProtocol,
+  ObjCIntegerEnum,
+  ObjCStringEnum,
+  ObjCStruct,
+  ObjCStructAlias
+} from "./ast-parser.ts";
+import {
+  setKnownClasses,
+  setKnownProtocols,
+  setProtocolConformers,
+  setKnownIntegerEnums,
+  setKnownStringEnums,
+  setKnownStructs,
+  mapReturnType,
+  mapParamType,
+  STRUCT_TS_TYPES
+} from "./type-mapper.ts";
 import { resolveStringConstants, cleanupResolver } from "./resolve-strings.ts";
 import {
   emitClassFile,
@@ -25,7 +48,7 @@ import {
   emitStructIndex,
   emitIntegerEnumFile,
   emitStringEnumFile,
-  groupCaseCollisions,
+  groupCaseCollisions
 } from "./emitter.ts";
 import type { StructDef, StructFieldDef } from "./emitter.ts";
 import { parseKnownStructFields } from "./struct-fields.ts";
@@ -41,7 +64,10 @@ async function main(): Promise<void> {
   // --- Parse CLI args: optional framework name filter ---
   // Usage: bun run generate [Framework1 Framework2 ...]
   // If no names given, all frameworks are regenerated.
-  const filterNames = process.argv.slice(2).map((s) => s.trim()).filter(Boolean);
+  const filterNames = process.argv
+    .slice(2)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const isFiltered = filterNames.length > 0;
   if (isFiltered) {
     console.log(`Regenerating frameworks: ${filterNames.join(", ")}\n`);
@@ -69,7 +95,6 @@ async function main(): Promise<void> {
   );
 
   for (const { base, discovery } of discoveryResults) {
-
     // Filter out protocols whose names clash with class names (e.g., NSObject)
     // to avoid generating both a class type and protocol interface with the same _Name.
     for (const protoName of discovery.protocols.keys()) {
@@ -96,7 +121,8 @@ async function main(): Promise<void> {
       discovery.protocols.size === 0 &&
       discovery.integerEnums.size === 0 &&
       discovery.stringEnums.size === 0
-    ) continue;
+    )
+      continue;
 
     const fw: FrameworkConfig = {
       ...base,
@@ -107,14 +133,12 @@ async function main(): Promise<void> {
       classHeaders: discovery.classes,
       protocolHeaders: discovery.protocols,
       integerEnumHeaders: discovery.integerEnums,
-      stringEnumHeaders: discovery.stringEnums,
+      stringEnumHeaders: discovery.stringEnums
     };
     frameworks.push(fw);
 
     const enumCount = fw.integerEnums.length + fw.stringEnums.length;
-    console.log(
-      `  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols, ${enumCount} enums`
-    );
+    console.log(`  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols, ${enumCount} enums`);
   }
   const discoveryTime = ((performance.now() - globalStart) / 1000).toFixed(1);
   console.log(`  Discovery completed in ${discoveryTime}s\n`);
@@ -164,9 +188,7 @@ async function main(): Promise<void> {
 
   // Determine which frameworks to process (parse + emit)
   const filterSet = new Set(filterNames);
-  const frameworksToProcess = isFiltered
-    ? frameworks.filter((fw) => filterSet.has(fw.name))
-    : frameworks;
+  const frameworksToProcess = isFiltered ? frameworks.filter((fw) => filterSet.has(fw.name)) : frameworks;
 
   // ========================================
   // Phase 2: Build batched parse tasks (one per framework)
@@ -198,10 +220,7 @@ async function main(): Promise<void> {
   const extraTasks: ExtraHeaderTask[] = [];
 
   for (const fw of frameworksToProcess) {
-    const preIncludes = [
-      "Foundation/Foundation.h",
-      ...(fw.preIncludes ?? []),
-    ];
+    const preIncludes = ["Foundation/Foundation.h", ...(fw.preIncludes ?? [])];
 
     // Include ALL .h files from the framework's Headers/ directory.
     // This is critical because ObjC categories extending a class (e.g., NSObject)
@@ -263,7 +282,13 @@ async function main(): Promise<void> {
     }
 
     // Only create a batch task if there are targets to parse
-    if (allFrameworkHeaders.length > 0 && (classTargets.length > 0 || protocolTargets.length > 0 || integerEnumTargets.length > 0 || stringEnumTargets.length > 0)) {
+    if (
+      allFrameworkHeaders.length > 0 &&
+      (classTargets.length > 0 ||
+        protocolTargets.length > 0 ||
+        integerEnumTargets.length > 0 ||
+        stringEnumTargets.length > 0)
+    ) {
       batchTasks.push({
         frameworkName: fw.name,
         headerPaths: allFrameworkHeaders,
@@ -271,7 +296,7 @@ async function main(): Promise<void> {
         protocolTargets,
         integerEnumTargets,
         stringEnumTargets,
-        preIncludes,
+        preIncludes
       });
     }
 
@@ -285,7 +310,7 @@ async function main(): Promise<void> {
         extraTasks.push({
           frameworkName: fw.name,
           headerPath,
-          classTargets: [className],
+          classTargets: [className]
         });
       }
     }
@@ -447,7 +472,7 @@ async function main(): Promise<void> {
 
         console.log(
           `  [extra] Merged ${className}: +${extraCls.instanceMethods.length} instance, ` +
-          `+${extraCls.classMethods.length} class methods, +${extraCls.properties.length} props`
+            `+${extraCls.classMethods.length} class methods, +${extraCls.properties.length} props`
         );
       } else {
         fwClasses.set(className, extraCls);
@@ -553,7 +578,7 @@ async function main(): Promise<void> {
         .then((resolved) => ({
           fwName: fw.name,
           resolved,
-          symbolCount: allSymbols.length,
+          symbolCount: allSymbols.length
         }))
         .catch((err) => {
           console.log(`  [WARN] Failed to resolve string values for ${fw.name}: ${err}`);
@@ -614,8 +639,8 @@ async function main(): Promise<void> {
     const expectedEnums = fw.integerEnums.length + fw.stringEnums.length;
     console.log(
       `  ${fw.name}: parsed ${classCount}/${fw.classes.length} classes, ` +
-      `${protoCount}/${fw.protocols.length} protocols, ` +
-      `${totalEnums}/${expectedEnums} enums`
+        `${protoCount}/${fw.protocols.length} protocols, ` +
+        `${totalEnums}/${expectedEnums} enums`
     );
   }
   console.log("");
@@ -729,8 +754,9 @@ async function main(): Promise<void> {
     const structDef = allParsedStructs.get(name);
     if (!structDef) return;
 
-    const runtimeFields = knownStructFields.get(name)
-      ?? (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
+    const runtimeFields =
+      knownStructFields.get(name) ??
+      (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
 
     if (runtimeFields && runtimeFields.length === structDef.fields.length) {
       for (const field of structDef.fields) {
@@ -819,8 +845,9 @@ async function main(): Promise<void> {
       // Check KNOWN_STRUCT_FIELDS for this struct.
       // For NSRange, the internal struct name is _NSRange, but the runtime table
       // may use either "NSRange" or "_NSRange" as the key.
-      const runtimeFields = knownStructFields.get(name)
-        ?? (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
+      const runtimeFields =
+        knownStructFields.get(name) ??
+        (structDef.internalName ? knownStructFields.get(structDef.internalName) : undefined);
 
       const astFields = structDef.fields;
 
@@ -865,9 +892,7 @@ async function main(): Promise<void> {
             bodyParts.push(field.name);
           } else {
             // Look up the nested struct's fields to flatten them
-            const nestedDef = defs.find((d) =>
-              !("aliasOf" in d) && d.tsName === field.type
-            );
+            const nestedDef = defs.find((d) => !("aliasOf" in d) && d.tsName === field.type);
             if (nestedDef && !("aliasOf" in nestedDef)) {
               const nestedParamNames: string[] = [];
               for (const nestedField of nestedDef.fields) {
@@ -891,12 +916,12 @@ async function main(): Promise<void> {
           tsName: name,
           fields: tsFields,
           factoryParams,
-          factoryBody,
+          factoryBody
         });
       } else {
         defs.push({
           tsName: name,
-          fields: tsFields,
+          fields: tsFields
         });
       }
 
@@ -962,9 +987,7 @@ async function main(): Promise<void> {
     }
 
     if (collisions.size > 0) {
-      console.log(
-        `  ${framework.name}: ${collisions.size} case-collision group(s) — merging into shared files`
-      );
+      console.log(`  ${framework.name}: ${collisions.size} case-collision group(s) — merging into shared files`);
     }
 
     // Emit class files
@@ -976,7 +999,9 @@ async function main(): Promise<void> {
       // Delete stale files first — on case-insensitive filesystems (macOS APFS),
       // writing to a different-cased filename doesn't update the on-disk name.
       for (const name of group) {
-        try { await unlink(join(frameworkDir, `${name}.ts`)); } catch {}
+        try {
+          await unlink(join(frameworkDir, `${name}.ts`));
+        } catch {}
       }
       const groupClasses: ObjCClass[] = [];
       for (const name of group) {
@@ -997,9 +1022,7 @@ async function main(): Promise<void> {
         allParsedProtocolNames,
         globalClassToFile
       );
-      classWritePromises.push(
-        writeFile(join(frameworkDir, `${canonical}.ts`), content)
-      );
+      classWritePromises.push(writeFile(join(frameworkDir, `${canonical}.ts`), content));
     }
 
     // Then: emit single-class files for non-colliding classes
@@ -1017,9 +1040,7 @@ async function main(): Promise<void> {
         allParsedProtocolNames,
         globalClassToFile
       );
-      classWritePromises.push(
-        writeFile(join(frameworkDir, `${className}.ts`), content)
-      );
+      classWritePromises.push(writeFile(join(frameworkDir, `${className}.ts`), content));
       generatedClasses.push(className);
     }
 
@@ -1039,9 +1060,7 @@ async function main(): Promise<void> {
         allParsedProtocolNames,
         globalClassToFile
       );
-      protoWritePromises.push(
-        writeFile(join(frameworkDir, `${protoName}.ts`), content)
-      );
+      protoWritePromises.push(writeFile(join(frameworkDir, `${protoName}.ts`), content));
       generatedProtocols.push(protoName);
     }
 
@@ -1101,7 +1120,9 @@ async function main(): Promise<void> {
       // Delete stale files first — on case-insensitive filesystems (macOS APFS),
       // writing to a different-cased filename doesn't update the on-disk name.
       for (const name of group) {
-        try { await unlink(join(frameworkDir, `${name}.ts`)); } catch {}
+        try {
+          await unlink(join(frameworkDir, `${name}.ts`));
+        } catch {}
       }
       const parts: string[] = [];
       let isFirst = true;
@@ -1117,17 +1138,13 @@ async function main(): Promise<void> {
           parts.push(withoutHeader);
         }
       }
-      enumWritePromises.push(
-        writeFile(join(frameworkDir, `${canonical}.ts`), parts.join("\n"))
-      );
+      enumWritePromises.push(writeFile(join(frameworkDir, `${canonical}.ts`), parts.join("\n")));
     }
 
     // Write individual (non-colliding) enum files
     for (const [enumName, content] of enumContents) {
       if (enumCollisionMembers.has(enumName)) continue;
-      enumWritePromises.push(
-        writeFile(join(frameworkDir, `${enumName}.ts`), content)
-      );
+      enumWritePromises.push(writeFile(join(frameworkDir, `${enumName}.ts`), content));
     }
 
     // Wait for all file writes in this framework to complete
@@ -1147,7 +1164,8 @@ async function main(): Promise<void> {
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
-    const totalEnumCount = generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
+    const totalEnumCount =
+      generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
     console.log(
       `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files + index.ts`
     );
@@ -1168,9 +1186,7 @@ async function main(): Promise<void> {
     const structWritePromises: Promise<void>[] = [];
     for (const def of structDefs) {
       const content = emitStructFile(def, structDefs);
-      structWritePromises.push(
-        writeFile(join(structsDir, `${def.tsName}.ts`), content)
-      );
+      structWritePromises.push(writeFile(join(structsDir, `${def.tsName}.ts`), content));
     }
     await Promise.all(structWritePromises);
 
@@ -1192,11 +1208,7 @@ async function main(): Promise<void> {
     const templatesDir = join(import.meta.dir, "templates");
     if (existsSync(templatesDir)) {
       const templateFiles = await readdir(templatesDir);
-      await Promise.all(
-        templateFiles.map((file) =>
-          copyFile(join(templatesDir, file), join(SRC_DIR, file))
-        )
-      );
+      await Promise.all(templateFiles.map((file) => copyFile(join(templatesDir, file), join(SRC_DIR, file))));
       if (templateFiles.length > 0) {
         console.log(`  Copied ${templateFiles.length} template file(s) to src/`);
       }
@@ -1206,7 +1218,9 @@ async function main(): Promise<void> {
   const emitTime = ((performance.now() - emitStart) / 1000).toFixed(1);
   const totalTime = ((performance.now() - globalStart) / 1000).toFixed(1);
   console.log(`\n  Emitted files in ${emitTime}s`);
-  console.log(`\n=== Generation complete${isFiltered ? " (partial)" : ""} (${totalTime}s total, ${discoveryTime}s discovery + ${parseTime}s parsing + ${emitTime}s emit) ===`);
+  console.log(
+    `\n=== Generation complete${isFiltered ? " (partial)" : ""} (${totalTime}s total, ${discoveryTime}s discovery + ${parseTime}s parsing + ${emitTime}s emit) ===`
+  );
 
   // Print summary
   let totalClasses = 0;
@@ -1214,15 +1228,9 @@ async function main(): Promise<void> {
   let totalEnums = 0;
   for (const fw of frameworksToProcess) {
     const dir = join(SRC_DIR, fw.name);
-    const classCount = fw.classes.filter((c) =>
-      existsSync(join(dir, `${c}.ts`))
-    ).length;
-    const protoCount = fw.protocols.filter((p) =>
-      existsSync(join(dir, `${p}.ts`))
-    ).length;
-    const enumCount = [...fw.integerEnums, ...fw.stringEnums].filter((e) =>
-      existsSync(join(dir, `${e}.ts`))
-    ).length;
+    const classCount = fw.classes.filter((c) => existsSync(join(dir, `${c}.ts`))).length;
+    const protoCount = fw.protocols.filter((p) => existsSync(join(dir, `${p}.ts`))).length;
+    const enumCount = [...fw.integerEnums, ...fw.stringEnums].filter((e) => existsSync(join(dir, `${e}.ts`))).length;
     console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums`);
     totalClasses += classCount;
     totalProtocols += protoCount;

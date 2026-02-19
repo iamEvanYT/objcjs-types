@@ -11,6 +11,7 @@ identified by auditing the C++ source in `node_modules/objc-js/src/native/`.
 runtime.
 
 **Affected APIs:** Any method that accepts a `Class` parameter, e.g.:
+
 - `NSKeyedUnarchiver.unarchivedObjectOfClass$fromData$error$`
 - `NSBundle.loadNibNamed$owner$topLevelObjects$`
 - Various `+classForKeyedUnarchiver`, `+classForCoder` style methods
@@ -38,12 +39,13 @@ a Buffer or a new `NobjcPointer` type.
 
 ## Block Parameters (`@?` type encoding)
 
-**Problem:** While blocks can be *received* from Objective-C (as `NobjcObject`), there
-is no way to *pass* a JavaScript function as a block parameter. The `@?` encoding
+**Problem:** While blocks can be _received_ from Objective-C (as `NobjcObject`), there
+is no way to _pass_ a JavaScript function as a block parameter. The `@?` encoding
 matches the `@` case in `AsObjCArgument()`, which expects a `NobjcObject` — not a JS
 function. Creating block objects from JS closures is not supported.
 
 **Affected APIs:** All callback/completion-handler patterns, e.g.:
+
 - `NSURLSession.dataTaskWithURL$completionHandler$`
 - `NSAnimationContext.runAnimationGroup$completionHandler$`
 - `dispatch_async` style APIs
@@ -68,9 +70,9 @@ method) for JS callbacks to write values into out-parameters.
 
 ## Summary Table
 
-| Feature | Type Encoding | Runtime Behavior | TS Workaround |
-|---------|--------------|------------------|---------------|
-| Class params | `#` | Throws TypeError | `NobjcObject` |
-| Pointer returns | `^v`, `^{...}` | Throws TypeError | `NobjcObject` |
-| JS → Block params | `@?` | Must pass `NobjcObject` | `NobjcObject` |
-| Block out-params | `^@` in block sig | Passed as `null` | N/A |
+| Feature           | Type Encoding     | Runtime Behavior        | TS Workaround |
+| ----------------- | ----------------- | ----------------------- | ------------- |
+| Class params      | `#`               | Throws TypeError        | `NobjcObject` |
+| Pointer returns   | `^v`, `^{...}`    | Throws TypeError        | `NobjcObject` |
+| JS → Block params | `@?`              | Must pass `NobjcObject` | `NobjcObject` |
+| Block out-params  | `^@` in block sig | Passed as `null`        | N/A           |

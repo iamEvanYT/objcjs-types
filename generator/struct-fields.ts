@@ -7,15 +7,7 @@
 import { join } from "path";
 
 /** Path to the objc-js struct-utils.h header containing KNOWN_STRUCT_FIELDS. */
-const STRUCT_UTILS_PATH = join(
-  import.meta.dir,
-  "..",
-  "node_modules",
-  "objc-js",
-  "src",
-  "native",
-  "struct-utils.h"
-);
+const STRUCT_UTILS_PATH = join(import.meta.dir, "..", "node_modules", "objc-js", "src", "native", "struct-utils.h");
 
 /**
  * Parse the KNOWN_STRUCT_FIELDS C++ map from struct-utils.h.

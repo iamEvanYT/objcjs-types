@@ -66,15 +66,10 @@ async function ensureCompiled(): Promise<string> {
 
   const outputPath = join(tmpDir, "resolve_strings");
 
-  const proc = Bun.spawn(
-    [
-      "clang",
-      "-framework", "Foundation",
-      "-o", outputPath,
-      join(tmpDir, "resolve_strings.m"),
-    ],
-    { stdout: "pipe", stderr: "pipe" }
-  );
+  const proc = Bun.spawn(["clang", "-framework", "Foundation", "-o", outputPath, join(tmpDir, "resolve_strings.m")], {
+    stdout: "pipe",
+    stderr: "pipe"
+  });
 
   const stderr = await new Response(proc.stderr).text();
   const exitCode = await proc.exited;
@@ -107,10 +102,7 @@ export async function resolveStringConstants(
 
   // Batch all symbols into a single invocation for efficiency.
   // macOS has a ~256KB arg limit, which supports thousands of symbol names.
-  const proc = Bun.spawn(
-    [binaryPath, frameworkBinaryPath, ...symbolNames],
-    { stdout: "pipe", stderr: "pipe" }
-  );
+  const proc = Bun.spawn([binaryPath, frameworkBinaryPath, ...symbolNames], { stdout: "pipe", stderr: "pipe" });
 
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();

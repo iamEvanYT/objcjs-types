@@ -49,9 +49,7 @@ const NS_STRING_ENUM_RE = /typedef\s+NSString\s*\*\s*(\w+)\s+NS_(?:TYPED_EXTENSI
  * Protocol declarations: `@protocol Foo <Bar>` (not forward decls like `@protocol Foo;`)
  * Skipped: categories (`@interface Foo (Cat)`), extensions (`@interface Foo ()`)
  */
-export async function discoverFramework(
-  headersPath: string
-): Promise<DiscoveryResult> {
+export async function discoverFramework(headersPath: string): Promise<DiscoveryResult> {
   const classes = new Map<string, string>();
   const protocols = new Map<string, string>();
   const integerEnums = new Map<string, string>();

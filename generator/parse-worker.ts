@@ -64,21 +64,14 @@ self.onmessage = async (event: MessageEvent) => {
       // Read all header files for deprecation scanning concurrently with clang.
       const [headerLinesMap, ast] = await Promise.all([
         readHeaderLinesMap(headerPaths),
-        clangBatchASTDump(headerPaths, preIncludes),
+        clangBatchASTDump(headerPaths, preIncludes)
       ]);
 
-      const classes = classTargetSet.size > 0
-        ? parseAST(ast, classTargetSet, undefined, headerLinesMap)
-        : new Map();
-      const protocols = protocolTargetSet.size > 0
-        ? parseProtocols(ast, protocolTargetSet, undefined, headerLinesMap)
-        : new Map();
-      const integerEnums = integerTargetSet.size > 0
-        ? parseIntegerEnums(ast, integerTargetSet)
-        : new Map();
-      const stringEnums = stringTargetSet.size > 0
-        ? parseStringEnums(ast, stringTargetSet)
-        : new Map();
+      const classes = classTargetSet.size > 0 ? parseAST(ast, classTargetSet, undefined, headerLinesMap) : new Map();
+      const protocols =
+        protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, undefined, headerLinesMap) : new Map();
+      const integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
+      const stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       const structResult = parseStructs(ast);
 
       postMessage({
@@ -94,7 +87,7 @@ self.onmessage = async (event: MessageEvent) => {
         foundClasses: classes.size,
         foundProtocols: protocols.size,
         foundIntegerEnums: integerEnums.size,
-        foundStringEnums: stringEnums.size,
+        foundStringEnums: stringEnums.size
       });
     } else if (msg.type === "parse-all") {
       // Unified task: parse classes, protocols, and enums from a single clang AST.
@@ -174,7 +167,7 @@ self.onmessage = async (event: MessageEvent) => {
         integerEnums: [...integerEnums.entries()],
         stringEnums: [...stringEnums.entries()],
         structs: [...structResult.structs.entries()],
-        structAliases: structResult.aliases,
+        structAliases: structResult.aliases
       });
     } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);
@@ -194,7 +187,7 @@ self.onmessage = async (event: MessageEvent) => {
         type: "classes-result",
         // Convert Map to entries array for structured clone fast path
         classes: [...parsed.entries()],
-        targets: msg.targets,
+        targets: msg.targets
       });
     } else if (msg.type === "parse-protocols") {
       const targetSet = new Set<string>(msg.targets);
@@ -212,7 +205,7 @@ self.onmessage = async (event: MessageEvent) => {
         id: msg.id,
         type: "protocols-result",
         protocols: [...parsed.entries()],
-        targets: msg.targets,
+        targets: msg.targets
       });
     } else if (msg.type === "parse-enums") {
       const integerTargetSet = new Set<string>(msg.integerTargets ?? []);
@@ -234,14 +227,14 @@ self.onmessage = async (event: MessageEvent) => {
         integerEnums: [...integerEnums.entries()],
         stringEnums: [...stringEnums.entries()],
         integerTargets: msg.integerTargets ?? [],
-        stringTargets: msg.stringTargets ?? [],
+        stringTargets: msg.stringTargets ?? []
       });
     }
   } catch (error) {
     postMessage({
       id: msg.id,
       type: "error",
-      error: String(error),
+      error: String(error)
     });
   }
 };

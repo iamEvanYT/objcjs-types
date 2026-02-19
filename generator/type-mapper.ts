@@ -82,7 +82,7 @@ const NUMERIC_TYPES = new Set([
   "NSWindowLevel",
   "NSModalResponse",
   "NSComparisonResult",
-  "NSStringEncoding",
+  "NSStringEncoding"
 ]);
 
 /**
@@ -130,7 +130,7 @@ const DIRECT_MAPPINGS: Record<string, string> = {
   NSPointPointer: "NobjcObject",
   NSSizeArray: "NobjcObject",
   NSSizePointer: "NobjcObject",
-  NSRangePointer: "NobjcObject",
+  NSRangePointer: "NobjcObject"
   // CoreFoundation opaque types — these are C struct pointers (type encoding `^{...}`),
   // NOT ObjC objects. Handled separately in mapParamType/mapReturnType.
 };
@@ -153,21 +153,14 @@ const CF_OPAQUE_TYPES = new Set([
   "CFTypeRef",
   "SecTrustRef",
   "SecIdentityRef",
-  "IOSurfaceRef",
+  "IOSurfaceRef"
 ]);
 
 /**
  * ObjC generic type parameters that should map to NobjcObject.
  * These are erased at runtime; the bridge just sees "id".
  */
-const GENERIC_TYPE_PARAMS = new Set([
-  "ObjectType",
-  "KeyType",
-  "ValueType",
-  "ElementType",
-  "ResultType",
-  "ContentType",
-]);
+const GENERIC_TYPE_PARAMS = new Set(["ObjectType", "KeyType", "ValueType", "ElementType", "ResultType", "ContentType"]);
 
 /**
  * Maps ObjC struct type names to their TypeScript interface names (defined in src/structs.ts).
@@ -232,11 +225,7 @@ export function selectorToJS(selector: string): string {
  * Parse the nullable status from a qualType string.
  */
 function isNullableType(qualType: string): boolean {
-  return (
-    qualType.includes("_Nullable") ||
-    qualType.includes("nullable") ||
-    qualType.startsWith("nullable ")
-  );
+  return qualType.includes("_Nullable") || qualType.includes("nullable") || qualType.startsWith("nullable ");
 }
 
 /**
@@ -249,19 +238,21 @@ function isNullableType(qualType: string): boolean {
  * macros (NS_REFINED_FOR_SWIFT, NS_SWIFT_UI_ACTOR, etc.).
  */
 function cleanQualType(qualType: string): string {
-  return qualType
-    .replace(/_Nonnull/g, "")
-    .replace(/_Nullable/g, "")
-    .replace(/_Null_unspecified/g, "")
-    .replace(/\b__kindof\b/g, "")
-    .replace(/\b__unsafe_unretained\b/g, "")
-    .replace(/\b__strong\b/g, "")
-    .replace(/\b__weak\b/g, "")
-    .replace(/\b__autoreleasing\b/g, "")
-    // Attribute macros: NS_*, API_*, CF_*, XPC_* (e.g. API_AVAILABLE, CF_RETURNS_RETAINED)
-    .replace(/\b(?:NS|API|CF|XPC)_[A-Z_]+\b/g, "")
-    .replace(/^struct\s+/, "")
-    .trim();
+  return (
+    qualType
+      .replace(/_Nonnull/g, "")
+      .replace(/_Nullable/g, "")
+      .replace(/_Null_unspecified/g, "")
+      .replace(/\b__kindof\b/g, "")
+      .replace(/\b__unsafe_unretained\b/g, "")
+      .replace(/\b__strong\b/g, "")
+      .replace(/\b__weak\b/g, "")
+      .replace(/\b__autoreleasing\b/g, "")
+      // Attribute macros: NS_*, API_*, CF_*, XPC_* (e.g. API_AVAILABLE, CF_RETURNS_RETAINED)
+      .replace(/\b(?:NS|API|CF|XPC)_[A-Z_]+\b/g, "")
+      .replace(/^struct\s+/, "")
+      .trim()
+  );
 }
 
 /**
@@ -430,10 +421,7 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
  * The objc-js bridge throws TypeError for pointer return types, so we type
  * them as NobjcObject (the call will fail at runtime regardless).
  */
-export function mapReturnType(
-  qualType: string,
-  containingClass: string
-): string {
+export function mapReturnType(qualType: string, containingClass: string): string {
   const cleaned = cleanQualType(qualType);
   if (CF_OPAQUE_TYPES.has(cleaned)) {
     return "NobjcObject";
@@ -449,10 +437,7 @@ export function mapReturnType(
  * at runtime (type encoding `^`). We type these as `Uint8Array` so callers
  * can pass `Buffer` or `Uint8Array` without casting.
  */
-export function mapParamType(
-  qualType: string,
-  containingClass: string
-): string {
+export function mapParamType(qualType: string, containingClass: string): string {
   const cleaned = cleanQualType(qualType);
   // Raw void pointers
   if (cleaned === "void *" || cleaned === "const void *") {

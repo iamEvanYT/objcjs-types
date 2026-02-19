@@ -20,12 +20,7 @@ const styleMask = options(
 const backingStoreType = 2;
 
 // Create the window
-const window = NSWindow.alloc().initWithContentRect$styleMask$backing$defer$(
-  rect,
-  styleMask,
-  backingStoreType,
-  false
-);
+const window = NSWindow.alloc().initWithContentRect$styleMask$backing$defer$(rect, styleMask, backingStoreType, false);
 
 // Set window title
 const title = NSString.stringWithUTF8String$("My Window");
@@ -56,7 +51,7 @@ const delegate = createDelegate("NSWindowDelegate", {
   windowWillClose$(notification) {
     console.log("Window closing, terminating app...");
     app.terminate$(null as any);
-  },
+  }
 });
 window.setDelegate$(delegate);
 

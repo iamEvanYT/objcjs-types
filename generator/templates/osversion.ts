@@ -6,7 +6,7 @@
  * so `NSProcessInfo` is only called once per process lifetime.
  */
 
-import { NSProcessInfo } from "./Foundation";
+import { NSProcessInfo } from "./Foundation/index.js";
 
 // --- Types ---
 
@@ -66,11 +66,7 @@ export function isExactly(target: OSVersion): boolean {
 // --- Convenience constructors ---
 
 /** Build a version object from major/minor/patch components. */
-export function version(
-  major: number,
-  minor: number = 0,
-  patch: number = 0
-): OSVersion {
+export function version(major: number, minor: number = 0, patch: number = 0): OSVersion {
   return { major, minor, patch };
 }
 
@@ -91,5 +87,5 @@ export const macOS = {
   Catalina: version(10, 15),
   Mojave: version(10, 14),
   HighSierra: version(10, 13),
-  Sierra: version(10, 12),
+  Sierra: version(10, 12)
 } as const;

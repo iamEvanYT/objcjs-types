@@ -53,14 +53,14 @@ const EXTRA_HEADERS: Record<string, Record<string, string>> = {
   Foundation: {
     // alloc, init, new, copy, isKindOfClass:, respondsToSelector:, etc.
     // are defined in the ObjC runtime header, not the Foundation NSObject.h
-    NSObject: `${SDK_PATH}/usr/include/objc/NSObject.h`,
-  },
+    NSObject: `${SDK_PATH}/usr/include/objc/NSObject.h`
+  }
 };
 
 /** Additional pre-includes for fallback clang mode (without -fmodules). */
 const PRE_INCLUDES: Record<string, string[]> = {
   WebKit: ["WebKit/WKFoundation.h"],
-  AuthenticationServices: ["AuthenticationServices/ASFoundation.h"],
+  AuthenticationServices: ["AuthenticationServices/ASFoundation.h"]
 };
 
 /**
@@ -93,7 +93,7 @@ export async function discoverAllFrameworks(): Promise<FrameworkBase[]> {
       libraryPath: `/System/Library/Frameworks/${entry}/${name}`,
       headersPath,
       ...(EXTRA_HEADERS[name] ? { extraHeaders: EXTRA_HEADERS[name] } : {}),
-      ...(PRE_INCLUDES[name] ? { preIncludes: PRE_INCLUDES[name] } : {}),
+      ...(PRE_INCLUDES[name] ? { preIncludes: PRE_INCLUDES[name] } : {})
     };
 
     frameworks.push(fw);
@@ -112,10 +112,7 @@ export async function discoverAllFrameworks(): Promise<FrameworkBase[]> {
 /**
  * Get the header file path for a class using discovered header mapping.
  */
-export function getHeaderPath(
-  framework: FrameworkConfig,
-  className: string
-): string {
+export function getHeaderPath(framework: FrameworkConfig, className: string): string {
   const headerName = framework.classHeaders.get(className) ?? className;
   return `${framework.headersPath}/${headerName}.h`;
 }
@@ -123,10 +120,7 @@ export function getHeaderPath(
 /**
  * Get the header file path for a protocol using discovered header mapping.
  */
-export function getProtocolHeaderPath(
-  framework: FrameworkConfig,
-  protocolName: string
-): string {
+export function getProtocolHeaderPath(framework: FrameworkConfig, protocolName: string): string {
   const headerName = framework.protocolHeaders.get(protocolName) ?? protocolName;
   return `${framework.headersPath}/${headerName}.h`;
 }
@@ -134,11 +128,7 @@ export function getProtocolHeaderPath(
 /**
  * Get the header file path for an enum using discovered header mapping.
  */
-export function getEnumHeaderPath(
-  framework: FrameworkConfig,
-  enumName: string,
-  kind: "integer" | "string"
-): string {
+export function getEnumHeaderPath(framework: FrameworkConfig, enumName: string, kind: "integer" | "string"): string {
   const headers = kind === "integer" ? framework.integerEnumHeaders : framework.stringEnumHeaders;
   const headerName = headers.get(enumName) ?? enumName;
   return `${framework.headersPath}/${headerName}.h`;

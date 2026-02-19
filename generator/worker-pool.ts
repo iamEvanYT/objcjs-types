@@ -7,7 +7,14 @@
  * tasks to idle workers and queues excess tasks until a worker is free.
  */
 
-import type { ObjCClass, ObjCProtocol, ObjCIntegerEnum, ObjCStringEnum, ObjCStruct, ObjCStructAlias } from "./ast-parser.ts";
+import type {
+  ObjCClass,
+  ObjCProtocol,
+  ObjCIntegerEnum,
+  ObjCStringEnum,
+  ObjCStruct,
+  ObjCStructAlias
+} from "./ast-parser.ts";
 
 /** Result from a unified parse-all task (classes + protocols + enums + structs from one clang invocation) */
 export interface UnifiedParseResult {
@@ -143,21 +150,17 @@ export class WorkerPool {
    * Parse classes from a header file using a worker thread.
    * Automatically retries with fallback pre-includes if initial parse finds nothing.
    */
-  async parseClasses(
-    headerPath: string,
-    targets: string[],
-    fallbackPreIncludes?: string[]
-  ): Promise<ClassParseResult> {
+  async parseClasses(headerPath: string, targets: string[], fallbackPreIncludes?: string[]): Promise<ClassParseResult> {
     const result = await this.dispatch({
       id: this.nextId++,
       type: "parse-classes",
       headerPath,
       targets,
-      fallbackPreIncludes,
+      fallbackPreIncludes
     });
     return {
       classes: new Map(result.classes),
-      targets: result.targets,
+      targets: result.targets
     };
   }
 
@@ -175,11 +178,11 @@ export class WorkerPool {
       type: "parse-protocols",
       headerPath,
       targets,
-      fallbackPreIncludes,
+      fallbackPreIncludes
     });
     return {
       protocols: new Map(result.protocols),
-      targets: result.targets,
+      targets: result.targets
     };
   }
 
@@ -200,13 +203,13 @@ export class WorkerPool {
       headerPath,
       integerTargets,
       stringTargets,
-      fallbackPreIncludes,
+      fallbackPreIncludes
     });
     return {
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
       integerTargets: result.integerTargets,
-      stringTargets: result.stringTargets,
+      stringTargets: result.stringTargets
     };
   }
 
@@ -230,7 +233,7 @@ export class WorkerPool {
       protocolTargets,
       integerEnumTargets,
       stringEnumTargets,
-      fallbackPreIncludes,
+      fallbackPreIncludes
     });
     return {
       classes: new Map(result.classes),
@@ -238,7 +241,7 @@ export class WorkerPool {
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
-      structAliases: result.structAliases ?? [],
+      structAliases: result.structAliases ?? []
     };
   }
 
@@ -270,7 +273,7 @@ export class WorkerPool {
       protocolTargets,
       integerEnumTargets,
       stringEnumTargets,
-      preIncludes,
+      preIncludes
     });
     return {
       classes: new Map(result.classes),
@@ -278,7 +281,7 @@ export class WorkerPool {
       integerEnums: new Map(result.integerEnums),
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
-      structAliases: result.structAliases ?? [],
+      structAliases: result.structAliases ?? []
     };
   }
 

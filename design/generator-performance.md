@@ -36,6 +36,7 @@ sorted largest-first so expensive frameworks (AppKit, Foundation) start immediat
 don't create tail latency.
 
 Each batch task:
+
 1. Creates a temp `.m` file with `#include` directives for all framework headers
 2. Runs `clang -Xclang -ast-dump=json` (without `-fmodules`, using pre-includes)
 3. Reads stdout as text (~200-800MB JSON per batch)
@@ -64,6 +65,7 @@ per-framework pre-includes are used to ensure macros expand correctly.
 ### Iteration 2: Secondary Optimizations
 
 Applied several smaller improvements:
+
 - **Sorted tasks largest-first** to reduce tail latency from work imbalance
 - **Overlapped header file reads with clang** via `Promise.all` in workers
 - **Removed `Bun.gc(true)`** that was synchronously blocking worker threads after each batch
@@ -77,10 +79,10 @@ Attempted to reduce memory by using `@streamparser/json` (SAX-style streaming pa
 instead of `JSON.parse()`. This would process the JSON byte-by-byte, only materializing
 nodes matching the 7 relevant kinds.
 
-| Approach | Parse Time | Peak RSS |
-|----------|-----------|----------|
-| `JSON.parse` + `pruneAST` (4 workers) | ~55s | ~28 GB |
-| `@streamparser/json` (4 workers) | ~141s | ~6.2 GB |
+| Approach                              | Parse Time | Peak RSS |
+| ------------------------------------- | ---------- | -------- |
+| `JSON.parse` + `pruneAST` (4 workers) | ~55s       | ~28 GB   |
+| `@streamparser/json` (4 workers)      | ~141s      | ~6.2 GB  |
 
 The streaming parser was ~2.5x slower because V8's native `JSON.parse()` is implemented
 in optimized C++, while the streaming parser is pure JavaScript processing byte-by-byte.
@@ -95,10 +97,10 @@ Attempted to use `jq` as a subprocess to pre-filter the clang JSON output before
 reaches JavaScript. The idea was to strip irrelevant nodes at the JSON level before
 `JSON.parse()`.
 
-| Approach | Parse Time | Peak RSS |
-|----------|-----------|----------|
-| `JSON.parse` + `pruneAST` (4 workers) | ~55s | ~28 GB |
-| `jq` pre-filter pipeline (8 workers) | ~171s | ~13.4 GB |
+| Approach                              | Parse Time | Peak RSS |
+| ------------------------------------- | ---------- | -------- |
+| `JSON.parse` + `pruneAST` (4 workers) | ~55s       | ~28 GB   |
+| `jq` pre-filter pipeline (8 workers)  | ~171s      | ~13.4 GB |
 
 `jq` itself is slow on 400MB files (~3-5s per invocation), making the cure worse than
 the disease.
@@ -121,6 +123,7 @@ Added timing instrumentation to workers to understand the per-task time breakdow
 ```
 
 Key findings:
+
 - **95% of per-task time is clang execution + JSON.parse** (irreducible without fewer/smaller clang invocations)
 - **5% is the 5 AST extraction passes** (merging them into a single pass would save ~2-3s total across all 154 tasks -- not worth the complexity)
 - The memory pressure per worker is **transient** -- each worker only holds the full AST during `JSON.parse()` + `pruneAST()`, after which ~50-70% is GC-eligible
@@ -131,10 +134,10 @@ focus shifted to increasing parallelism.
 Increased worker pool from 4 to 8 threads. On a 16-core / 48GB system:
 
 | Workers | Parse Time | Total Time |
-|---------|-----------|------------|
-| 2 | ~107s | ~122s |
-| 4 | ~55s | ~73s |
-| 8 | ~31s | ~50s |
+| ------- | ---------- | ---------- |
+| 2       | ~107s      | ~122s      |
+| 4       | ~55s       | ~73s       |
+| 8       | ~31s       | ~50s       |
 
 The scaling is nearly linear (4->8 workers gives ~1.8x speedup) because the workload
 is dominated by independent clang subprocesses with minimal shared-state contention.
@@ -164,6 +167,7 @@ Native `JSON.parse()` is implemented in V8's C++ layer with SIMD optimizations. 
 400MB scale, it is ~3x faster than any JavaScript-based alternative and ~2x faster
 than piping through `jq`. The memory cost (~1-2GB per batch during parse) is acceptable
 because:
+
 1. `pruneAST()` immediately filters to relevant nodes, allowing GC
 2. The memory spike is transient (parse + prune takes ~200-500ms)
 3. Target machines have 32+GB RAM (Xcode requirement)
@@ -195,13 +199,13 @@ benefit of separate, focused functions outweighs the minor performance gain.
 
 ## Files Modified
 
-| File | Change |
-|------|--------|
-| `generator/index.ts` | Worker pool sizing (4->8), batch task sorting, phase 2-4 rewrite for batched tasks |
-| `generator/clang.ts` | `clangBatchASTDump()` function, `pruneAST()` filter |
-| `generator/parse-worker.ts` | `parse-batch` message handler, overlapped I/O, removed sync GC |
-| `generator/worker-pool.ts` | `parseBatch()` dispatch method |
-| `package.json` | Removed unused `@streamparser/json` dependency |
+| File                        | Change                                                                             |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `generator/index.ts`        | Worker pool sizing (4->8), batch task sorting, phase 2-4 rewrite for batched tasks |
+| `generator/clang.ts`        | `clangBatchASTDump()` function, `pruneAST()` filter                                |
+| `generator/parse-worker.ts` | `parse-batch` message handler, overlapped I/O, removed sync GC                     |
+| `generator/worker-pool.ts`  | `parseBatch()` dispatch method                                                     |
+| `package.json`              | Removed unused `@streamparser/json` dependency                                     |
 
 ## Future Optimization Opportunities
 

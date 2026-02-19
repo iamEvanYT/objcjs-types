@@ -2,8 +2,7 @@
  * Runs clang to produce AST JSON dumps from Objective-C header files.
  */
 
-const SDK_PATH =
-  "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
+const SDK_PATH = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
 
 export interface ClangASTNode {
   id: string;
@@ -49,7 +48,7 @@ const RELEVANT_KINDS = new Set([
   "EnumDecl",
   "RecordDecl",
   "TypedefDecl",
-  "VarDecl",
+  "VarDecl"
 ]);
 
 /**
@@ -86,7 +85,7 @@ export async function clangASTDump(headerPath: string): Promise<ClangASTNode> {
       "-fmodules",
       "-Xclang",
       "-fparse-all-comments",
-      headerPath,
+      headerPath
     ],
     { stdout: "pipe", stderr: "ignore" }
   );
@@ -100,20 +99,8 @@ export async function clangASTDump(headerPath: string): Promise<ClangASTNode> {
  * This is needed for some WebKit headers where -fmodules causes macro
  * resolution issues (e.g., WK_EXTERN, API_AVAILABLE not expanding properly).
  */
-export async function clangASTDumpWithPreIncludes(
-  headerPath: string,
-  preIncludes: string[]
-): Promise<ClangASTNode> {
-  const args = [
-    "clang",
-    "-Xclang",
-    "-ast-dump=json",
-    "-fsyntax-only",
-    "-x",
-    "objective-c",
-    "-isysroot",
-    SDK_PATH,
-  ];
+export async function clangASTDumpWithPreIncludes(headerPath: string, preIncludes: string[]): Promise<ClangASTNode> {
+  const args = ["clang", "-Xclang", "-ast-dump=json", "-fsyntax-only", "-x", "objective-c", "-isysroot", SDK_PATH];
   for (const inc of preIncludes) {
     args.push("-include", inc);
   }
@@ -138,26 +125,14 @@ export async function clangASTDumpWithPreIncludes(
  * @param headerPaths - Array of absolute paths to .h header files to include
  * @param preIncludes - Headers to include before the batch (e.g., Foundation/Foundation.h)
  */
-export async function clangBatchASTDump(
-  headerPaths: string[],
-  preIncludes: string[]
-): Promise<ClangASTNode> {
+export async function clangBatchASTDump(headerPaths: string[], preIncludes: string[]): Promise<ClangASTNode> {
   // Create a temporary .m file that includes all headers
   const includes = headerPaths.map((p) => `#include "${p}"`).join("\n");
   const tmpPath = `${Bun.env.TMPDIR ?? "/tmp"}/objcjs-batch-${Date.now()}-${Math.random().toString(36).slice(2)}.m`;
   await Bun.write(tmpPath, includes + "\n");
 
   try {
-    const args = [
-      "clang",
-      "-Xclang",
-      "-ast-dump=json",
-      "-fsyntax-only",
-      "-x",
-      "objective-c",
-      "-isysroot",
-      SDK_PATH,
-    ];
+    const args = ["clang", "-Xclang", "-ast-dump=json", "-fsyntax-only", "-x", "objective-c", "-isysroot", SDK_PATH];
     for (const inc of preIncludes) {
       args.push("-include", inc);
     }
@@ -170,7 +145,9 @@ export async function clangBatchASTDump(
     return pruneAST(JSON.parse(text) as ClangASTNode);
   } finally {
     // Clean up temp file
-    try { await Bun.write(tmpPath, ""); } catch {}
+    try {
+      await Bun.write(tmpPath, "");
+    } catch {}
     try {
       const { unlink } = await import("fs/promises");
       await unlink(tmpPath);

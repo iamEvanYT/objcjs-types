@@ -1,5 +1,5 @@
-import { NSData, type _NSData } from "./Foundation";
-import { NSStringFromString } from "./helpers";
+import { NSData, type _NSData } from "./Foundation/index.js";
+import { NSStringFromString } from "./helpers.js";
 
 /**
  * Create NSData from a JavaScript Buffer
@@ -81,9 +81,7 @@ export function NSDataFromBase64(base64String: string): _NSData {
   const nsDataAlloc = NSData.alloc();
   const nsData = nsDataAlloc.initWithBase64EncodedString$options$(nsString, 0);
   if (!nsData) {
-    throw new Error(
-      `Failed to create NSData from base64 string: ${base64String}`
-    );
+    throw new Error(`Failed to create NSData from base64 string: ${base64String}`);
   }
   return nsData;
 }

@@ -10,12 +10,12 @@ is committed to the repo.
 
 ## Build / Run Commands
 
-| Command | Purpose |
-|---------|---------|
-| `bun run generate` | Regenerate all type files from SDK headers (requires Xcode, ~50s) |
-| `bun run generate Foundation AppKit` | Regenerate specific frameworks only |
-| `bunx tsc --noEmit` | Typecheck the entire project (36 pre-existing errors in generated output) |
-| `bun run tests/window.ts` | Run a test file (requires macOS with GUI) |
+| Command                              | Purpose                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| `bun run generate`                   | Regenerate all type files from SDK headers (requires Xcode, ~50s)         |
+| `bun run generate Foundation AppKit` | Regenerate specific frameworks only                                       |
+| `bunx tsc --noEmit`                  | Typecheck the entire project (36 pre-existing errors in generated output) |
+| `bun run tests/window.ts`            | Run a test file (requires macOS with GUI)                                 |
 
 There is no build step — the package exports raw `.ts` files. There is no test runner
 or linter configured; tests are manual `bun run tests/*.ts` scripts. Always use Bun,
@@ -56,6 +56,7 @@ templates instead and re-run `bun run generate`.
 ## TypeScript Configuration
 
 Strict mode with these notable flags:
+
 - `verbatimModuleSyntax` — must use `import type` for type-only imports
 - `noUncheckedIndexedAccess` — indexed access returns `T | undefined`
 - `noImplicitOverride` — subclass overrides require `override` keyword
@@ -66,10 +67,12 @@ Strict mode with these notable flags:
 ## Code Style
 
 ### Formatting
+
 - 2-space indentation, double quotes, semicolons always
 - Trailing commas in multi-line constructs
 
 ### Imports
+
 - Use `import type` for type-only imports (enforced by `verbatimModuleSyntax`)
 - **Generator files** (hand-written): use `.ts` extensions (`"./frameworks.ts"`)
 - **Generated output files**: use `.js` extensions (`"./NSButton.js"`, `"../structs.js"`)
@@ -77,6 +80,7 @@ Strict mode with these notable flags:
 - Named exports only — no default exports anywhere
 
 ### Naming Conventions
+
 - **Interfaces/Types:** PascalCase (`ObjCClass`, `FrameworkConfig`, `ClangASTNode`)
 - **Functions:** camelCase (`parseAST`, `mapReturnType`, `emitClassFile`)
 - **Lookup-table constants:** UPPER_SNAKE_CASE (`NUMERIC_TYPES`, `STRUCT_TYPE_MAP`)
@@ -85,6 +89,7 @@ Strict mode with these notable flags:
 - **Struct dual declarations:** same name for interface and factory (`CGPoint` type + `CGPoint()` function)
 
 ### Comments
+
 - JSDoc `/** ... */` on all exported functions and module-level descriptions
 - Inline `//` comments for non-obvious logic
 - Section headers with `// ---` separators
@@ -92,22 +97,26 @@ Strict mode with these notable flags:
 ## Key Type Patterns
 
 ### Generated class files
+
 ```ts
 import type { NobjcObject } from "objc-js";
 import type { _NSResponder } from "./NSResponder.js";
 export declare class _NSWindow extends _NSResponder { ... }
 ```
+
 Structure: auto-generated header, objc-js import, type imports for referenced
 classes/structs, `export declare class` with alloc/new/init overrides, static methods,
 instance methods, properties.
 
 ### Framework index files
+
 ```ts
 export const NSWindow = AppKit["NSWindow"] as unknown as typeof _NSWindow;
 export type { _NSWindow };
 ```
 
 ### ObjC method naming
+
 Selectors use `$`: `initWithContentRect:styleMask:` becomes
 `initWithContentRect$styleMask$`. Properties emit getters (`title(): _NSString`) and
 setters for readwrite (`setTitle$(value: _NSString): void`).
@@ -133,6 +142,7 @@ The pipeline runs in 4 phases using a worker pool (8 threads):
 4. **Emission** — `type-mapper.ts` maps ObjC types to TS; `emitter.ts` writes `.ts` files
 
 Key considerations:
+
 - Batched clang (all framework headers in one invocation) without `-fmodules`
 - `instancetype` returns require `alloc`/`new`/`init` overrides on every subclass
 - Override conflicts: skip child methods returning `NobjcObject` when parent is more specific
@@ -141,5 +151,6 @@ Key considerations:
 ## Cursor Rules
 
 Always use Bun instead of Node.js/npm/npx/pnpm:
+
 - `bun run`, `bun test`, `bun install`, `bunx`
 - Prefer `Bun.spawn`, `Bun.file`, `Bun.write` over Node.js equivalents
