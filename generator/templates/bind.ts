@@ -78,7 +78,7 @@ function _isKindOfClass(obj: any, cls: any): boolean {
  * }
  * ```
  */
-export function isKindOfClass<T extends NobjcObject>(obj: NobjcObject, cls: NobjcObject): obj is T {
+export function isKindOfClass<T extends NobjcObject>(obj: NobjcObject, cls: any): obj is T {
   return _isKindOfClass(obj, cls);
 }
 

@@ -619,19 +619,8 @@ async function main(): Promise<void> {
 
   console.log(`  Resolved ${totalResolved}/${totalStringSymbols} string enum values\n`);
 
-  // Build protocol -> conforming classes map from all parsed classes.
-  // This must happen after ALL parsing completes so every conformance is known.
-  const protocolConformers = new Map<string, Set<string>>();
-  for (const [className, cls] of allParsedClasses) {
-    if (!allKnownClasses.has(className)) continue;
-    for (const protoName of cls.protocols) {
-      if (!protocolConformers.has(protoName)) {
-        protocolConformers.set(protoName, new Set());
-      }
-      protocolConformers.get(protoName)!.add(className);
-    }
-  }
-  setProtocolConformers(protocolConformers);
+  // Protocol conformer map is built later, after allParsedProtocols is available,
+  // so we can expand conformances transitively through the protocol hierarchy.
 
   // Print parse summary per framework
   for (const fw of frameworksToProcess) {
@@ -689,6 +678,55 @@ async function main(): Promise<void> {
 
   setKnownClasses(parsedClassNames);
   setKnownProtocols(allParsedProtocolNames);
+
+  // Build protocol -> conforming classes map from all parsed classes.
+  // This must happen after ALL parsing completes so every conformance is known.
+  // We also expand conformances transitively through the protocol hierarchy:
+  // if class X conforms to protocol A, and A extends B, then X also conforms to B.
+  // This ensures that return type union expansion (e.g., credential() returning a
+  // union of all ASAuthorizationCredential-conforming classes) includes classes that
+  // conform indirectly through protocol inheritance chains.
+  const protocolConformers = new Map<string, Set<string>>();
+  for (const [className, cls] of allParsedClasses) {
+    if (!parsedClassNames.has(className)) continue;
+    for (const protoName of cls.protocols) {
+      if (!protocolConformers.has(protoName)) {
+        protocolConformers.set(protoName, new Set());
+      }
+      protocolConformers.get(protoName)!.add(className);
+    }
+  }
+
+  // Expand conformances transitively: walk each protocol's extendedProtocols chain
+  // and propagate all conforming classes upward.
+  function getTransitiveParentProtocols(protoName: string, visited: Set<string>): string[] {
+    if (visited.has(protoName)) return [];
+    visited.add(protoName);
+    const proto = allParsedProtocols.get(protoName);
+    if (!proto) return [];
+    const parents: string[] = [];
+    for (const parent of proto.extendedProtocols) {
+      parents.push(parent);
+      parents.push(...getTransitiveParentProtocols(parent, visited));
+    }
+    return parents;
+  }
+
+  // For each protocol that has direct conformers, propagate those conformers
+  // to all ancestor protocols in the hierarchy.
+  for (const [protoName, conformers] of [...protocolConformers]) {
+    const ancestors = getTransitiveParentProtocols(protoName, new Set());
+    for (const ancestor of ancestors) {
+      if (!protocolConformers.has(ancestor)) {
+        protocolConformers.set(ancestor, new Set());
+      }
+      for (const cls of conformers) {
+        protocolConformers.get(ancestor)!.add(cls);
+      }
+    }
+  }
+
+  setProtocolConformers(protocolConformers);
 
   // ========================================
   // Phase 4b: Build struct definitions from parsed AST + KNOWN_STRUCT_FIELDS

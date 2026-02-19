@@ -485,8 +485,10 @@ function getMergedProtocols(
     const parentCls = allParsedClasses.get(current);
     if (!parentCls) break;
 
-    // Class's own properties
+    // Class's own instance properties (skip class properties — they're static
+    // in TS and don't conflict with protocol instance members in declaration merging)
     for (const prop of parentCls.properties) {
+      if (prop.isClassProperty) continue;
       if (!inherited.has(prop.name)) {
         inherited.set(prop.name, {
           returnType: mapReturnType(prop.type, parentCls.name),
@@ -506,8 +508,10 @@ function getMergedProtocols(
       }
     }
 
-    // Class's own methods
-    for (const method of [...parentCls.instanceMethods, ...parentCls.classMethods]) {
+    // Class's own instance methods (skip class methods — they're static in TS
+    // and live on the constructor type, not the instance type, so they can't
+    // conflict with protocol interface members in declaration merging)
+    for (const method of parentCls.instanceMethods) {
       const jsName = selectorToJS(method.selector);
       if (!inherited.has(jsName)) {
         inherited.set(jsName, {
@@ -530,8 +534,10 @@ function getMergedProtocols(
     current = parentCls.superclass ?? "";
   }
 
-  // Also include this class's own method/property signatures
-  for (const method of [...cls.instanceMethods, ...cls.classMethods]) {
+  // Also include this class's own instance method/property signatures
+  // (only instance-level — class/static members don't participate in
+  // interface declaration merging)
+  for (const method of cls.instanceMethods) {
     const jsName = selectorToJS(method.selector);
     if (!inherited.has(jsName)) {
       inherited.set(jsName, {
@@ -542,6 +548,7 @@ function getMergedProtocols(
     }
   }
   for (const prop of cls.properties) {
+    if (prop.isClassProperty) continue;
     if (!inherited.has(prop.name)) {
       inherited.set(prop.name, {
         returnType: mapReturnType(prop.type, cls.name),
@@ -591,7 +598,9 @@ function collectProtocolSignatures(
   sigs: Map<string, { returnType: string; paramTypes: string[]; isOptional: boolean }>,
   allParsedProtocols: Map<string, ObjCProtocol>
 ): void {
-  for (const method of [...proto.instanceMethods, ...proto.classMethods]) {
+  // Only collect instance methods — class methods from protocols are not emitted
+  // in the TS interface, so they can't cause declaration merging conflicts.
+  for (const method of proto.instanceMethods) {
     const jsName = selectorToJS(method.selector);
     if (!sigs.has(jsName)) {
       sigs.set(jsName, {
@@ -601,7 +610,9 @@ function collectProtocolSignatures(
       });
     }
   }
+  // Only collect instance properties (not class properties)
   for (const prop of proto.properties) {
+    if (prop.isClassProperty) continue;
     if (!sigs.has(prop.name)) {
       sigs.set(prop.name, {
         returnType: mapReturnType(prop.type, containingClass),
@@ -632,6 +643,9 @@ function collectProtocolSignatures(
 /**
  * Check if a protocol's methods/properties conflict with inherited signatures.
  * Recursively checks extended protocols too.
+ *
+ * Only checks instance methods/properties since protocol class methods are not
+ * emitted in the TypeScript interface and can't cause declaration merging conflicts.
  */
 function checkProtocolConflicts(
   proto: ObjCProtocol,
@@ -639,8 +653,9 @@ function checkProtocolConflicts(
   inherited: Map<string, { returnType: string; paramTypes: string[]; isOptional: boolean }>,
   allParsedProtocols: Map<string, ObjCProtocol>
 ): boolean {
-  // Check this protocol's own methods and properties
-  for (const method of [...proto.instanceMethods, ...proto.classMethods]) {
+  // Check this protocol's own instance methods (class methods are not emitted
+  // in the TS interface, so they can't conflict)
+  for (const method of proto.instanceMethods) {
     const jsName = selectorToJS(method.selector);
     const parentSig = inherited.get(jsName);
     if (!parentSig) continue;
@@ -661,7 +676,9 @@ function checkProtocolConflicts(
     }
   }
 
+  // Check instance properties only (class properties are static in TS)
   for (const prop of proto.properties) {
+    if (prop.isClassProperty) continue;
     const parentSig = inherited.get(prop.name);
     if (parentSig) {
       const tsType = mapReturnType(prop.type, containingClass);

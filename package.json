@@ -18,6 +18,10 @@
       "types": "./dist/helpers.d.ts",
       "default": "./dist/helpers.js"
     },
+    "./nsdata": {
+      "types": "./dist/nsdata.d.ts",
+      "default": "./dist/nsdata.js"
+    },
     "./*": {
       "types": "./dist/*/index.d.ts",
       "default": "./dist/*/index.js"
