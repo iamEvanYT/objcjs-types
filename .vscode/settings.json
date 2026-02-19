@@ -1,4 +1,5 @@
 {
   "explorer.excludeGitIgnore": false,
-  "search.useIgnoreFiles": false
+  "search.useIgnoreFiles": false,
+  "typescript.experimental.useTsgo": true
 }
