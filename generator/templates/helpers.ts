@@ -1,4 +1,4 @@
-import { NSString, type _NSError, type _NSString } from "../../src/Foundation";
+import { NSString, type _NSError, type _NSString } from "./Foundation";
 
 /**
  * Create NSString from a JavaScript string

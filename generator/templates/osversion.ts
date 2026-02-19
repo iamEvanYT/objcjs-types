@@ -6,7 +6,7 @@
  * so `NSProcessInfo` is only called once per process lifetime.
  */
 
-import { NSProcessInfo } from "../../src/Foundation";
+import { NSProcessInfo } from "./Foundation";
 
 // --- Types ---
 

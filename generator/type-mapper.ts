@@ -388,20 +388,21 @@ function mapTypeInner(cleaned: string, containingClass: string): string {
   }
 
   // Protocol-qualified id: "id<ASAuthorizationCredential>" or "id<Proto1, Proto2>"
+  // Always prefer the protocol interface type rather than expanding to conforming
+  // classes — the union-of-conformers approach breaks override compatibility across
+  // inheritance chains (e.g. NSText.delegate returns _NSTextDelegate, but
+  // NSTextView.delegate would expand to _NSTableView | _SLComposeServiceViewController,
+  // which is not assignable to _NSTextDelegate).
   const protoMatch = cleaned.match(/^id<(.+)>$/);
   if (protoMatch) {
     const protoNames = protoMatch[1]!.split(/,\s*/);
     const unionParts: string[] = [];
 
     for (const protoName of protoNames) {
-      const conformers = protocolConformers.get(protoName);
-      if (conformers && conformers.size > 0) {
-        // Use union of all conforming classes
-        for (const cls of [...conformers].sort()) {
-          unionParts.push(`_${cls}`);
-        }
-      } else if (knownProtocols.has(protoName)) {
-        // Fallback to protocol interface type
+      if (knownProtocols.has(protoName)) {
+        unionParts.push(`_${protoName}`);
+      } else if (knownClasses.has(protoName)) {
+        // Sometimes a "protocol" name is actually a class name
         unionParts.push(`_${protoName}`);
       }
     }

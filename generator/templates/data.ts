@@ -1,4 +1,4 @@
-import { NSData, type _NSData } from "../../src/Foundation";
+import { NSData, type _NSData } from "./Foundation";
 import { NSStringFromString } from "./helpers";
 
 /**

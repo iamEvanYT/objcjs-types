@@ -598,12 +598,37 @@ function emitClassBody(
     const parentSig = parentSignatures.get(jsName);
     if (!parentSig) return false;
 
+    // Rule 1: Child returns NobjcObject but parent is more specific — skip
     if (tsReturnType === "NobjcObject" && parentSig.returnType !== "NobjcObject") {
       return true;
     }
+    // Rule 2: Child adds nullability that parent doesn't have — skip
     if (tsReturnType.includes(" | null") && !parentSig.returnType.includes(" | null")) {
       return true;
     }
+    // Rule 3: Return types differ — skip unless child is a known subclass of parent
+    const childBase = tsReturnType.replace(/ \| null$/, "");
+    const parentBase = parentSig.returnType.replace(/ \| null$/, "");
+    if (childBase !== parentBase && parentBase !== "NobjcObject") {
+      // Extract class names from _ClassName types and walk inheritance
+      const childClassName = childBase.startsWith("_") ? childBase.slice(1) : null;
+      const parentClassName = parentBase.startsWith("_") ? parentBase.slice(1) : null;
+      if (childClassName && parentClassName && allParsedClasses) {
+        let current: string | undefined = childClassName;
+        let isSubclass = false;
+        while (current) {
+          if (current === parentClassName) { isSubclass = true; break; }
+          const parentCls = allParsedClasses.get(current);
+          if (!parentCls) break;
+          current = parentCls.superclass ?? undefined;
+        }
+        if (!isSubclass) return true;
+      } else if (childBase !== parentBase) {
+        // Can't verify subclass relationship (e.g. protocol types) — skip to be safe
+        return true;
+      }
+    }
+    // Rule 4: Parameter types differ — skip
     if (childParamTypes && parentSig.paramTypes.length === childParamTypes.length) {
       for (let i = 0; i < childParamTypes.length; i++) {
         const childParam = childParamTypes[i]!;
@@ -1118,7 +1143,10 @@ export function emitStringEnumFile(
 
   if (resolvedValues.length > 0) {
     lines.push(`export const ${enumDef.name} = {`);
+    const seenShortNames = new Set<string>();
     for (const v of resolvedValues) {
+      if (seenShortNames.has(v.shortName)) continue;
+      seenShortNames.add(v.shortName);
       // JSON.stringify handles escaping of special characters in the value
       lines.push(`  ${v.shortName}: ${JSON.stringify(v.value)},`);
     }
@@ -1277,8 +1305,13 @@ export function emitFrameworkIndex(
   lines.push(AUTOGEN_HEADER);
   lines.push(`import { NobjcLibrary } from "objc-js";`);
   lines.push("");
+
+  // Use a different variable name for the library if a class has the same name
+  // as the framework (e.g. IOSurface framework has an IOSurface class)
+  const classNames = new Set(generatedClasses);
+  const libVar = classNames.has(framework.name) ? `${framework.name}_lib` : framework.name;
   lines.push(
-    `const ${framework.name} = new NobjcLibrary("${framework.libraryPath}");`
+    `const ${libVar} = new NobjcLibrary("${framework.libraryPath}");`
   );
   lines.push("");
 
@@ -1298,7 +1331,7 @@ export function emitFrameworkIndex(
       `import type { _${className} } from "./${fileName}.js";`
     );
     lines.push(
-      `export const ${className} = ${framework.name}["${className}"] as unknown as typeof _${className};`
+      `export const ${className} = ${libVar}["${className}"] as unknown as typeof _${className};`
     );
     lines.push(`export type { _${className} };`);
     lines.push("");
