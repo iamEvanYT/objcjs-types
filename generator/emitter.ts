@@ -1329,7 +1329,7 @@ export function emitFrameworkIndex(
   // as the framework (e.g. IOSurface framework has an IOSurface class)
   const classNames = new Set(generatedClasses);
   const libVar = classNames.has(framework.name) ? `${framework.name}_lib` : framework.name;
-  lines.push(`const ${libVar} = new NobjcLibrary("${framework.libraryPath}");`);
+  lines.push(`export const ${libVar} = new NobjcLibrary("${framework.libraryPath}");`);
   lines.push("");
 
   // Build a reverse lookup: className → canonical filename for collision groups
