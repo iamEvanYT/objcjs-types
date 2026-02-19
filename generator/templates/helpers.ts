@@ -1,5 +1,4 @@
-import type { NobjcObject } from "objc-js";
-import { NSString, type _NSError, type _NSString } from "./Foundation/index.js";
+import { NSString, type _NSString } from "./Foundation/index.js";
 
 /**
  * Create NSString from a JavaScript string
@@ -40,38 +39,4 @@ export function options<T extends number>(...values: T[]): T {
   return result as T;
 }
 
-/**
- * Type guard that narrows an ObjC object to a specific class type using
- * the Objective-C runtime's `-[NSObject isKindOfClass:]` check.
- *
- * Returns `true` if `obj` is an instance of `cls` or any of its subclasses,
- * and narrows the TypeScript type accordingly.
- *
- * @param obj  - The object to check
- * @param cls  - The runtime class constant (e.g. `NSWindow`, `NSString`)
- * @returns `true` if `obj` is a kind of `cls`
- *
- * @example
- * ```ts
- * import {
- *   ASAuthorizationAppleIDCredential,
- *   type _ASAuthorizationAppleIDCredential,
- *   ASPasswordCredential,
- *   type _ASPasswordCredential,
- * } from "./AuthenticationServices";
- * import { isKindOfClass } from "./helpers";
- *
- * const cred = authorization.credential();
- *
- * if (isKindOfClass<_ASAuthorizationAppleIDCredential>(cred, ASAuthorizationAppleIDCredential)) {
- *   cred.user();   // narrowed to _ASAuthorizationAppleIDCredential
- *   cred.email();
- * } else if (isKindOfClass<_ASPasswordCredential>(cred, ASPasswordCredential)) {
- *   cred.user();
- *   cred.password();
- * }
- * ```
- */
-export function isKindOfClass<T extends NobjcObject>(obj: NobjcObject, cls: NobjcObject): obj is T {
-  return (obj as any).isKindOfClass$(cls);
-}
+export { isKindOfClass } from "./bind.js";
