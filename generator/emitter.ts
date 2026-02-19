@@ -271,12 +271,19 @@ function emitMethodSignature(
   const jsName = selectorToJS(method.selector);
   const returnType = mapReturnType(method.returnType, containingClass);
 
-  // Build parameter list
+  // Build parameter list (with deduplication for repeated names)
   const params: string[] = [];
+  const seenNames = new Map<string, number>();
   for (const param of method.parameters) {
     const tsType = mapParamType(param.type, containingClass);
     // Sanitize param name (avoid TS reserved words)
-    const safeName = sanitizeParamName(param.name);
+    let safeName = sanitizeParamName(param.name);
+    // Deduplicate: append numeric suffix for repeated parameter names
+    const prev = seenNames.get(safeName) ?? 0;
+    seenNames.set(safeName, prev + 1);
+    if (prev > 0) {
+      safeName = `${safeName}${prev + 1}`;
+    }
     params.push(`${safeName}: ${tsType}`);
   }
 
@@ -299,6 +306,8 @@ const TS_RESERVED = new Set([
   "import", "super", "implements", "interface", "let", "package", "private",
   "protected", "public", "static", "yield", "object", "string", "number",
   "boolean", "symbol", "any", "never", "unknown",
+  // Not keywords, but cannot be used as parameter names in strict mode (modules)
+  "arguments", "eval",
 ]);
 
 function sanitizeParamName(name: string): string {
@@ -949,9 +958,16 @@ export function emitProtocolFile(
       const jsName = selectorToJS(method.selector);
       const returnType = mapReturnType(method.returnType, proto.name);
       const params: string[] = [];
+      const seenNames = new Map<string, number>();
       for (const param of method.parameters) {
         const tsType = mapParamType(param.type, proto.name);
-        const safeName = sanitizeParamName(param.name);
+        let safeName = sanitizeParamName(param.name);
+        // Deduplicate: append numeric suffix for repeated parameter names
+        const prev = seenNames.get(safeName) ?? 0;
+        seenNames.set(safeName, prev + 1);
+        if (prev > 0) {
+          safeName = `${safeName}${prev + 1}`;
+        }
         params.push(`${safeName}: ${tsType}`);
       }
       const jsdoc = buildJSDoc({
@@ -1245,6 +1261,7 @@ export function emitStructIndex(structDefs: StructDef[]): string {
  * @param generatedIntegerEnums - Names of integer enums generated for this framework.
  * @param generatedStringEnums - Names of string enums with resolved values (value + type export).
  * @param generatedStringEnumsTypeOnly - Names of string enums without resolved values (type-only export).
+ * @param enumToFile - Map from colliding enum name → canonical filename (for case-insensitive collision handling).
  */
 export function emitFrameworkIndex(
   framework: FrameworkConfig,
@@ -1253,7 +1270,8 @@ export function emitFrameworkIndex(
   caseCollisions?: Map<string, string[]>,
   generatedIntegerEnums?: string[],
   generatedStringEnums?: string[],
-  generatedStringEnumsTypeOnly?: string[]
+  generatedStringEnumsTypeOnly?: string[],
+  enumToFile?: Map<string, string>
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
@@ -1300,8 +1318,9 @@ export function emitFrameworkIndex(
   // Export integer enums (re-export value + type)
   if (generatedIntegerEnums && generatedIntegerEnums.length > 0) {
     for (const enumName of generatedIntegerEnums) {
+      const fileName = enumToFile?.get(enumName) ?? enumName;
       lines.push(
-        `export { ${enumName} } from "./${enumName}.js";`
+        `export { ${enumName} } from "./${fileName}.js";`
       );
       lines.push("");
     }
@@ -1310,8 +1329,9 @@ export function emitFrameworkIndex(
   // Export string enums (re-export value + type)
   if (generatedStringEnums && generatedStringEnums.length > 0) {
     for (const enumName of generatedStringEnums) {
+      const fileName = enumToFile?.get(enumName) ?? enumName;
       lines.push(
-        `export { ${enumName} } from "./${enumName}.js";`
+        `export { ${enumName} } from "./${fileName}.js";`
       );
       lines.push("");
     }
@@ -1320,8 +1340,9 @@ export function emitFrameworkIndex(
   // Export unresolved string enums (type-only, no runtime value available)
   if (generatedStringEnumsTypeOnly && generatedStringEnumsTypeOnly.length > 0) {
     for (const enumName of generatedStringEnumsTypeOnly) {
+      const fileName = enumToFile?.get(enumName) ?? enumName;
       lines.push(
-        `export type { ${enumName} } from "./${enumName}.js";`
+        `export type { ${enumName} } from "./${fileName}.js";`
       );
       lines.push("");
     }

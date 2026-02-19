@@ -973,6 +973,11 @@ async function main(): Promise<void> {
 
     // First: emit merged files for collision groups
     for (const [canonical, group] of collisions) {
+      // Delete stale files first — on case-insensitive filesystems (macOS APFS),
+      // writing to a different-cased filename doesn't update the on-disk name.
+      for (const name of group) {
+        try { await unlink(join(frameworkDir, `${name}.ts`)); } catch {}
+      }
       const groupClasses: ObjCClass[] = [];
       for (const name of group) {
         const cls = fwClasses.get(name);
@@ -1043,15 +1048,13 @@ async function main(): Promise<void> {
     // Emit integer enum files
     const generatedIntegerEnums: string[] = [];
     const enumWritePromises: Promise<void>[] = [];
+    const enumContents = new Map<string, string>(); // enumName -> file content
 
     for (const enumName of framework.integerEnums) {
       const enumDef = fwIntEnums.get(enumName);
       if (!enumDef) continue;
 
-      const content = emitIntegerEnumFile(enumDef);
-      enumWritePromises.push(
-        writeFile(join(frameworkDir, `${enumName}.ts`), content)
-      );
+      enumContents.set(enumName, emitIntegerEnumFile(enumDef));
       generatedIntegerEnums.push(enumName);
     }
 
@@ -1063,10 +1066,7 @@ async function main(): Promise<void> {
       const enumDef = fwStrEnums.get(enumName);
       if (!enumDef) continue;
 
-      const content = emitStringEnumFile(enumDef, framework.name);
-      enumWritePromises.push(
-        writeFile(join(frameworkDir, `${enumName}.ts`), content)
-      );
+      enumContents.set(enumName, emitStringEnumFile(enumDef, framework.name));
 
       // Enums with resolved values export a const + type; unresolved ones are type-only
       const hasResolvedValues = enumDef.values.some((v) => v.value !== null);
@@ -1075,6 +1075,59 @@ async function main(): Promise<void> {
       } else {
         generatedStringEnumsTypeOnly.push(enumName);
       }
+    }
+
+    // Detect enum case collisions (names that produce the same filename on
+    // case-insensitive filesystems like macOS HFS+/APFS)
+    const allGenEnumNames = [...generatedIntegerEnums, ...generatedStringEnums, ...generatedStringEnumsTypeOnly];
+    const enumCollisions = groupCaseCollisions(allGenEnumNames);
+    const enumCollisionMembers = new Set<string>();
+    const enumToFile = new Map<string, string>();
+    for (const [canonical, group] of enumCollisions) {
+      for (const name of group) {
+        enumCollisionMembers.add(name);
+        enumToFile.set(name, canonical);
+      }
+    }
+
+    if (enumCollisions.size > 0) {
+      console.log(
+        `  ${framework.name}: ${enumCollisions.size} enum case-collision group(s) — merging into shared files`
+      );
+    }
+
+    // Write merged files for enum collision groups
+    for (const [canonical, group] of enumCollisions) {
+      // Delete stale files first — on case-insensitive filesystems (macOS APFS),
+      // writing to a different-cased filename doesn't update the on-disk name.
+      for (const name of group) {
+        try { await unlink(join(frameworkDir, `${name}.ts`)); } catch {}
+      }
+      const parts: string[] = [];
+      let isFirst = true;
+      for (const name of group) {
+        const content = enumContents.get(name);
+        if (!content) continue;
+        if (isFirst) {
+          parts.push(content);
+          isFirst = false;
+        } else {
+          // Strip the AUTO-GENERATED header from subsequent entries
+          const withoutHeader = content.replace(/^\/\/ AUTO-GENERATED[^\n]*\n/, "");
+          parts.push(withoutHeader);
+        }
+      }
+      enumWritePromises.push(
+        writeFile(join(frameworkDir, `${canonical}.ts`), parts.join("\n"))
+      );
+    }
+
+    // Write individual (non-colliding) enum files
+    for (const [enumName, content] of enumContents) {
+      if (enumCollisionMembers.has(enumName)) continue;
+      enumWritePromises.push(
+        writeFile(join(frameworkDir, `${enumName}.ts`), content)
+      );
     }
 
     // Wait for all file writes in this framework to complete
@@ -1088,7 +1141,8 @@ async function main(): Promise<void> {
       collisions,
       generatedIntegerEnums,
       generatedStringEnums,
-      generatedStringEnumsTypeOnly
+      generatedStringEnumsTypeOnly,
+      enumToFile
     );
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
