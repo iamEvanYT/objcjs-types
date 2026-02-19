@@ -288,7 +288,7 @@ export function mapType(qualType: string, containingClass: string): string {
 
   let tsType = mapTypeInner(cleaned, containingClass);
 
-  if (nullable && tsType !== "void" && tsType !== "NobjcObject") {
+  if (nullable && tsType !== "void") {
     tsType = `${tsType} | null`;
   }
 

@@ -1,7 +1,8 @@
 import { getPointer } from "objc-js";
-import { CGRect, createDelegate, options } from "../src";
+import { CGRect, createDelegate } from "../src";
 import { NSString } from "../src/Foundation";
 import { NSApplication, NSWindow, NSWindowStyleMask } from "../src/AppKit";
+import { options } from "../src/helpers";
 
 console.log("Hello via Bun!");
 
@@ -50,7 +51,7 @@ const delegate = createDelegate("NSWindowDelegate", {
   },
   windowWillClose$(notification) {
     console.log("Window closing, terminating app...");
-    app.terminate$(null as any);
+    app.terminate$(null);
   }
 });
 window.setDelegate$(delegate);
