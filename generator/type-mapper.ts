@@ -268,8 +268,11 @@ function cleanQualType(qualType: string): string {
  * Extract the base class name from a pointer type like "NSArray<ObjectType> *".
  */
 function extractClassName(cleaned: string): string | null {
-  // Match "ClassName *" or "ClassName<...> *" (with optional const prefix)
-  const match = cleaned.match(/^(?:const\s+)?(\w+)\s*(?:<[^>]*>)?\s*\*$/);
+  // Match "ClassName *" or "ClassName<...> *" (with optional const prefix).
+  // The generic parameter section may contain nested angle brackets
+  // (e.g., "NSArray<id<NSAccessibilityRow>> *"), so we match from the
+  // first '<' to the last '>' instead of using [^>]*.
+  const match = cleaned.match(/^(?:const\s+)?(\w+)\s*(?:<.*>)?\s*\*$/);
   if (match) return match[1]!;
 
   return null;
@@ -280,13 +283,14 @@ function extractClassName(cleaned: string): string | null {
  *
  * @param qualType The clang qualType string (e.g., "NSArray<ObjectType> * _Nonnull")
  * @param containingClass The class this type appears in (for resolving `instancetype`)
+ * @param isReturnType Whether this type is used in a return position (enables conformer union expansion)
  * @returns The TypeScript type string
  */
-export function mapType(qualType: string, containingClass: string): string {
+export function mapType(qualType: string, containingClass: string, isReturnType = false): string {
   const nullable = isNullableType(qualType);
   const cleaned = cleanQualType(qualType);
 
-  let tsType = mapTypeInner(cleaned, containingClass);
+  let tsType = mapTypeInner(cleaned, containingClass, undefined, isReturnType);
 
   if (nullable && tsType !== "void") {
     tsType = `${tsType} | null`;
@@ -295,7 +299,7 @@ export function mapType(qualType: string, containingClass: string): string {
   return tsType;
 }
 
-function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<string>): string {
+function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<string>, isReturnType = false): string {
   // Direct mappings
   if (cleaned in DIRECT_MAPPINGS) {
     return DIRECT_MAPPINGS[cleaned]!;
@@ -380,19 +384,38 @@ function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<
     if (!seen.has(cleaned)) {
       seen.add(cleaned);
       const underlying = knownTypedefs.get(cleaned)!;
-      return mapTypeInner(cleanQualType(underlying), containingClass, seen);
+      return mapTypeInner(cleanQualType(underlying), containingClass, seen, isReturnType);
     }
   }
 
   // Protocol-qualified id: "id<ASAuthorizationCredential>" or "id<Proto1, Proto2>"
-  // Always prefer the protocol interface type rather than expanding to conforming
-  // classes — the union-of-conformers approach breaks override compatibility across
-  // inheritance chains (e.g. NSText.delegate returns _NSTextDelegate, but
-  // NSTextView.delegate would expand to _NSTableView | _SLComposeServiceViewController,
-  // which is not assignable to _NSTextDelegate).
+  //
+  // For RETURN types: if the protocol has a small number of known conforming classes
+  // (≤ MAX_CONFORMERS_FOR_UNION), expand to a union of those concrete classes.
+  // This gives callers useful type information — e.g., credential() returns the
+  // union of all ASAuthorizationCredential-conforming classes rather than an empty
+  // protocol interface. The conformers set is deterministic (same for parent and
+  // child classes), so override compatibility is preserved.
+  //
+  // For PARAMETER types: keep the protocol interface type. Expanding to a union
+  // would incorrectly restrict which objects can be passed (any conforming object
+  // should be accepted, not just known SDK conformers).
+  const MAX_CONFORMERS_FOR_UNION = 30;
   const protoMatch = cleaned.match(/^id<(.+)>$/);
   if (protoMatch) {
     const protoNames = protoMatch[1]!.split(/,\s*/);
+
+    // For return types with a single protocol, try conformer union expansion
+    if (isReturnType && protoNames.length === 1) {
+      const protoName = protoNames[0]!;
+      const conformers = protocolConformers.get(protoName);
+      if (conformers && conformers.size > 0 && conformers.size <= MAX_CONFORMERS_FOR_UNION) {
+        const sorted = [...conformers].sort();
+        return sorted.map((c) => `_${c}`).join(" | ");
+      }
+    }
+
+    // Fallback: use the protocol interface type(s)
     const unionParts: string[] = [];
 
     for (const protoName of protoNames) {
@@ -426,13 +449,17 @@ function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<
  * CF opaque types (CGContextRef, etc.) are struct pointers at the ABI level.
  * The objc-js bridge throws TypeError for pointer return types, so we type
  * them as NobjcObject (the call will fail at runtime regardless).
+ *
+ * For protocol-qualified id types (e.g., id<ASAuthorizationCredential>),
+ * returns a union of known conforming classes when the conformer set is small
+ * enough, providing concrete type information to callers.
  */
 export function mapReturnType(qualType: string, containingClass: string): string {
   const cleaned = cleanQualType(qualType);
   if (CF_OPAQUE_TYPES.has(cleaned)) {
     return "NobjcObject";
   }
-  return mapType(qualType, containingClass);
+  return mapType(qualType, containingClass, true);
 }
 
 /**

@@ -150,6 +150,15 @@ function collectReferencedClasses(
     refs.add(cls.superclass);
   }
 
+  // Conformed protocols (for the declaration-merging interface line)
+  if (allKnownProtocols) {
+    for (const protoName of cls.protocols) {
+      if (allKnownProtocols.has(protoName)) {
+        refs.add(protoName);
+      }
+    }
+  }
+
   function extractClassRefs(typeStr: string): void {
     // Find all _ClassName references that mapType would produce
     const regex = /_(\w+)/g;
@@ -424,6 +433,265 @@ function emitImports(
 }
 
 /**
+ * Cache for getMergedProtocols — avoids recomputing the same class's merged
+ * protocol set when multiple subclasses reference the same ancestor.
+ */
+const _mergedProtocolsCache = new Map<string, Set<string>>();
+
+/** Reset the merged protocols cache (call between generation runs). */
+export function resetMergedProtocolsCache(): void {
+  _mergedProtocolsCache.clear();
+}
+
+/**
+ * Determine which of a class's declared protocols can be safely merged via
+ * TypeScript declaration merging without causing type conflicts.
+ *
+ * A protocol conflicts if any of its methods/properties (including those
+ * inherited through extended protocols) have incompatible signatures with
+ * what the class inherits from its superclass chain + the protocols
+ * already merged onto ancestor classes.
+ *
+ * Returns the set of protocol names that are conflict-free and can be
+ * included in the `export interface _ClassName extends ...` merge line.
+ */
+function getMergedProtocols(
+  cls: ObjCClass,
+  allParsedClasses: Map<string, ObjCClass>,
+  allParsedProtocols: Map<string, ObjCProtocol>,
+  allKnownProtocols: Set<string>
+): Set<string> {
+  if (_mergedProtocolsCache.has(cls.name)) {
+    return _mergedProtocolsCache.get(cls.name)!;
+  }
+
+  // Build the inherited signature map: what TypeScript sees as the type of this
+  // class based on (a) superclass chain methods/properties, and (b) protocols
+  // ACTUALLY merged onto ancestor classes.
+  interface Sig {
+    returnType: string;
+    paramTypes: string[];
+    /** Whether this signature came from a protocol (optional in TS) vs a class body (non-optional). */
+    isOptional: boolean;
+  }
+  const inherited = new Map<string, Sig>();
+
+  // Walk the superclass chain (farthest ancestor first, so nearer ancestors
+  // override — but we use "first writer wins" so walk order matters: we want
+  // to walk from immediate parent upward)
+  let current = cls.superclass;
+  while (current) {
+    const parentCls = allParsedClasses.get(current);
+    if (!parentCls) break;
+
+    // Class's own properties
+    for (const prop of parentCls.properties) {
+      if (!inherited.has(prop.name)) {
+        inherited.set(prop.name, {
+          returnType: mapReturnType(prop.type, parentCls.name),
+          paramTypes: [],
+          isOptional: false
+        });
+      }
+      if (!prop.readonly) {
+        const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
+        if (!inherited.has(setterName)) {
+          inherited.set(setterName, {
+            returnType: "void",
+            paramTypes: [mapParamType(prop.type, parentCls.name)],
+            isOptional: false
+          });
+        }
+      }
+    }
+
+    // Class's own methods
+    for (const method of [...parentCls.instanceMethods, ...parentCls.classMethods]) {
+      const jsName = selectorToJS(method.selector);
+      if (!inherited.has(jsName)) {
+        inherited.set(jsName, {
+          returnType: mapReturnType(method.returnType, parentCls.name),
+          paramTypes: method.parameters.map((p) => mapParamType(p.type, parentCls.name)),
+          isOptional: false
+        });
+      }
+    }
+
+    // Only include protocols that were ACTUALLY merged onto this ancestor
+    // (i.e., passed conflict detection for that ancestor class)
+    const mergedProtos = getMergedProtocols(parentCls, allParsedClasses, allParsedProtocols, allKnownProtocols);
+    for (const mergedProtoName of mergedProtos) {
+      const mp = allParsedProtocols.get(mergedProtoName);
+      if (!mp) continue;
+      collectProtocolSignatures(mp, parentCls.name, inherited, allParsedProtocols);
+    }
+
+    current = parentCls.superclass ?? "";
+  }
+
+  // Also include this class's own method/property signatures
+  for (const method of [...cls.instanceMethods, ...cls.classMethods]) {
+    const jsName = selectorToJS(method.selector);
+    if (!inherited.has(jsName)) {
+      inherited.set(jsName, {
+        returnType: mapReturnType(method.returnType, cls.name),
+        paramTypes: method.parameters.map((p) => mapParamType(p.type, cls.name)),
+        isOptional: false
+      });
+    }
+  }
+  for (const prop of cls.properties) {
+    if (!inherited.has(prop.name)) {
+      inherited.set(prop.name, {
+        returnType: mapReturnType(prop.type, cls.name),
+        paramTypes: [],
+        isOptional: false
+      });
+    }
+  }
+
+  // Now determine which of this class's declared protocols are conflict-free
+  const merged = new Set<string>();
+  for (const protoName of cls.protocols) {
+    if (!allKnownProtocols.has(protoName)) continue;
+    const proto = allParsedProtocols.get(protoName);
+    if (!proto) continue;
+    if (!checkProtocolConflicts(proto, cls.name, inherited, allParsedProtocols)) {
+      merged.add(protoName);
+    }
+  }
+
+  _mergedProtocolsCache.set(cls.name, merged);
+  return merged;
+}
+
+/**
+ * Check whether a protocol would conflict with a class's inherited signatures.
+ * Used by `getMergedProtocols` — prefer calling that function directly.
+ */
+function protocolConflictsWithClass(
+  cls: ObjCClass,
+  protoName: string,
+  allParsedClasses: Map<string, ObjCClass>,
+  allParsedProtocols: Map<string, ObjCProtocol>,
+  allKnownProtocols: Set<string>
+): boolean {
+  const merged = getMergedProtocols(cls, allParsedClasses, allParsedProtocols, allKnownProtocols);
+  return !merged.has(protoName);
+}
+
+/**
+ * Recursively collect method/property signatures from a protocol and its
+ * extended protocols into the given map.
+ */
+function collectProtocolSignatures(
+  proto: ObjCProtocol,
+  containingClass: string,
+  sigs: Map<string, { returnType: string; paramTypes: string[]; isOptional: boolean }>,
+  allParsedProtocols: Map<string, ObjCProtocol>
+): void {
+  for (const method of [...proto.instanceMethods, ...proto.classMethods]) {
+    const jsName = selectorToJS(method.selector);
+    if (!sigs.has(jsName)) {
+      sigs.set(jsName, {
+        returnType: mapReturnType(method.returnType, containingClass),
+        paramTypes: method.parameters.map((p) => mapParamType(p.type, containingClass)),
+        isOptional: true
+      });
+    }
+  }
+  for (const prop of proto.properties) {
+    if (!sigs.has(prop.name)) {
+      sigs.set(prop.name, {
+        returnType: mapReturnType(prop.type, containingClass),
+        paramTypes: [],
+        isOptional: true
+      });
+    }
+    if (!prop.readonly) {
+      const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
+      if (!sigs.has(setterName)) {
+        sigs.set(setterName, {
+          returnType: "void",
+          paramTypes: [mapParamType(prop.type, containingClass)],
+          isOptional: true
+        });
+      }
+    }
+  }
+  // Recurse into extended protocols
+  for (const ext of proto.extendedProtocols) {
+    const extProto = allParsedProtocols.get(ext);
+    if (extProto) {
+      collectProtocolSignatures(extProto, containingClass, sigs, allParsedProtocols);
+    }
+  }
+}
+
+/**
+ * Check if a protocol's methods/properties conflict with inherited signatures.
+ * Recursively checks extended protocols too.
+ */
+function checkProtocolConflicts(
+  proto: ObjCProtocol,
+  containingClass: string,
+  inherited: Map<string, { returnType: string; paramTypes: string[]; isOptional: boolean }>,
+  allParsedProtocols: Map<string, ObjCProtocol>
+): boolean {
+  // Check this protocol's own methods and properties
+  for (const method of [...proto.instanceMethods, ...proto.classMethods]) {
+    const jsName = selectorToJS(method.selector);
+    const parentSig = inherited.get(jsName);
+    if (!parentSig) continue;
+
+    const retType = mapReturnType(method.returnType, containingClass);
+    if (retType !== parentSig.returnType) return true;
+
+    // Protocol methods are emitted as optional (foo?()) but class methods are
+    // non-optional (foo()). TypeScript considers these "not identical" in an
+    // interface extends clause, producing TS2320.
+    if (!parentSig.isOptional) return true;
+
+    const paramTypes = method.parameters.map((p) => mapParamType(p.type, containingClass));
+    if (paramTypes.length === parentSig.paramTypes.length) {
+      for (let i = 0; i < paramTypes.length; i++) {
+        if (paramTypes[i] !== parentSig.paramTypes[i]) return true;
+      }
+    }
+  }
+
+  for (const prop of proto.properties) {
+    const parentSig = inherited.get(prop.name);
+    if (parentSig) {
+      const tsType = mapReturnType(prop.type, containingClass);
+      if (tsType !== parentSig.returnType) return true;
+      if (!parentSig.isOptional) return true;
+    }
+    if (!prop.readonly) {
+      const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
+      const parentSetterSig = inherited.get(setterName);
+      if (parentSetterSig) {
+        if (!parentSetterSig.isOptional) return true;
+        const paramType = mapParamType(prop.type, containingClass);
+        if (parentSetterSig.paramTypes.length > 0 && paramType !== parentSetterSig.paramTypes[0]) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // Recursively check extended protocols
+  for (const ext of proto.extendedProtocols) {
+    const extProto = allParsedProtocols.get(ext);
+    if (extProto && checkProtocolConflicts(extProto, containingClass, inherited, allParsedProtocols)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Generate a .ts file for a single ObjC class.
  */
 export function emitClassFile(
@@ -433,7 +701,8 @@ export function emitClassFile(
   allKnownClasses: Set<string>,
   allParsedClasses?: Map<string, ObjCClass>,
   allKnownProtocols?: Set<string>,
-  classToFile?: Map<string, string>
+  classToFile?: Map<string, string>,
+  allParsedProtocols?: Map<string, ObjCProtocol>
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
@@ -457,6 +726,24 @@ export function emitClassFile(
 
   lines.push("");
   lines.push(...emitClassBody(cls, allKnownClasses, allParsedClasses));
+
+  // Emit protocol conformance via TypeScript declaration merging.
+  // This establishes the subtyping relationship: _ClassName is assignable to _ProtocolName.
+  // Skip protocols whose methods conflict with the class's inherited signatures
+  // (e.g., different return types for the same method name).
+  if (allKnownProtocols && cls.protocols.length > 0) {
+    let knownProtos = cls.protocols.filter((p) => allKnownProtocols.has(p));
+    if (allParsedClasses && allParsedProtocols) {
+      knownProtos = knownProtos.filter(
+        (p) => !protocolConflictsWithClass(cls, p, allParsedClasses, allParsedProtocols, allKnownProtocols)
+      );
+    }
+    if (knownProtos.length > 0) {
+      const extendsList = knownProtos.map((p) => `_${p}`).join(", ");
+      lines.push(`export interface _${cls.name} extends ${extendsList} {}`);
+    }
+  }
+
   lines.push("");
 
   return lines.join("\n");
@@ -477,7 +764,8 @@ export function emitMergedClassFile(
   allKnownClasses: Set<string>,
   allParsedClasses?: Map<string, ObjCClass>,
   allKnownProtocols?: Set<string>,
-  classToFile?: Map<string, string>
+  classToFile?: Map<string, string>,
+  allParsedProtocols?: Map<string, ObjCProtocol>
 ): string {
   // Set of class names in this merged file — these are "siblings"
   const siblingNames = new Set(classes.map((c) => c.name));
@@ -547,6 +835,21 @@ export function emitMergedClassFile(
   for (const cls of sorted) {
     lines.push("");
     lines.push(...emitClassBody(cls, allKnownClasses, allParsedClasses));
+
+    // Emit protocol conformance via TypeScript declaration merging.
+    // Skip protocols whose methods conflict with the class's inherited signatures.
+    if (allKnownProtocols && cls.protocols.length > 0) {
+      let knownProtos = cls.protocols.filter((p) => allKnownProtocols.has(p));
+      if (allParsedClasses && allParsedProtocols) {
+        knownProtos = knownProtos.filter(
+          (p) => !protocolConflictsWithClass(cls, p, allParsedClasses, allParsedProtocols, allKnownProtocols)
+        );
+      }
+      if (knownProtos.length > 0) {
+        const extendsList = knownProtos.map((p) => `_${p}`).join(", ");
+        lines.push(`export interface _${cls.name} extends ${extendsList} {}`);
+      }
+    }
   }
 
   lines.push("");

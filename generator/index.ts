@@ -666,9 +666,11 @@ async function main(): Promise<void> {
   // a previous full run.
   const parsedClassNames = new Set(allParsedClasses.keys());
   const allParsedProtocolNames = new Set<string>();
+  const allParsedProtocols = new Map<string, ObjCProtocol>();
   for (const fwProtos of frameworkProtocolsParsed.values()) {
-    for (const name of fwProtos.keys()) {
+    for (const [name, proto] of fwProtos) {
       allParsedProtocolNames.add(name);
+      allParsedProtocols.set(name, proto);
     }
   }
 
@@ -1028,7 +1030,8 @@ async function main(): Promise<void> {
         parsedClassNames,
         allParsedClasses,
         allParsedProtocolNames,
-        globalClassToFile
+        globalClassToFile,
+        allParsedProtocols
       );
       classWritePromises.push(writeFile(join(frameworkDir, `${canonical}.ts`), content));
     }
@@ -1046,7 +1049,8 @@ async function main(): Promise<void> {
         parsedClassNames,
         allParsedClasses,
         allParsedProtocolNames,
-        globalClassToFile
+        globalClassToFile,
+        allParsedProtocols
       );
       classWritePromises.push(writeFile(join(frameworkDir, `${className}.ts`), content));
       generatedClasses.push(className);
