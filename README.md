@@ -69,6 +69,45 @@ const delegate = createDelegate("NSWindowDelegate", {
 window.setDelegate$(delegate);
 ```
 
+### `instanceof` narrowing
+
+Class constants have `Symbol.hasInstance` patched so that `instanceof` works with ObjC objects, using the runtime's `isKindOfClass:` check:
+
+```ts
+import {
+  ASAuthorizationAppleIDCredential,
+  ASPasswordCredential,
+  type _ASAuthorization
+} from "objcjs-types/AuthenticationServices";
+
+declare const auth: _ASAuthorization;
+const cred = auth.credential();
+
+if (cred instanceof ASAuthorizationAppleIDCredential) {
+  cred.user(); // narrowed to _ASAuthorizationAppleIDCredential
+  cred.email();
+} else if (cred instanceof ASPasswordCredential) {
+  cred.user();
+  cred.password();
+}
+```
+
+There's also an `isKindOfClass` type guard for explicit narrowing with a generic type parameter:
+
+```ts
+import { isKindOfClass } from "objcjs-types/helpers";
+import {
+  ASAuthorizationAppleIDCredential,
+  type _ASAuthorizationAppleIDCredential
+} from "objcjs-types/AuthenticationServices";
+
+if (isKindOfClass<_ASAuthorizationAppleIDCredential>(cred, ASAuthorizationAppleIDCredential)) {
+  cred.user(); // narrowed
+}
+```
+
+Both `instanceof` and `isKindOfClass` cache results per (object, class) pair so repeated checks skip the native boundary.
+
 ### NS_OPTIONS
 
 Use `options()` to combine bitmask flags with type safety:
@@ -94,13 +133,56 @@ const point: CGPoint = { x: 100, y: 200 };
 const size: CGSize = { width: 800, height: 600 };
 ```
 
-### Helpers
+### NSData conversion (`objcjs-types/nsdata`)
+
+Utilities for converting between NSData and JavaScript Buffers:
 
 ```ts
-import { NSStringFromString } from "objcjs-types/helpers";
+import { NSDataFromBuffer, bufferFromNSData, NSDataFromBase64, base64FromNSData } from "objcjs-types/nsdata";
 
-const nsStr = NSStringFromString("hello"); // NSString from JS string
+const nsData = NSDataFromBuffer(Buffer.from("hello"));
+const buffer = bufferFromNSData(nsData);
+const b64 = base64FromNSData(nsData);
 ```
+
+### OS version detection (`objcjs-types/osversion`)
+
+Cached macOS version queries with named release constants:
+
+```ts
+import { getOSVersion, isAtLeast, macOS, formatVersion } from "objcjs-types/osversion";
+
+console.log(formatVersion(getOSVersion())); // "15.3.1"
+
+if (isAtLeast(macOS.Sequoia)) {
+  // Sequoia+ only APIs
+}
+```
+
+### Helpers (`objcjs-types/helpers`)
+
+```ts
+import {
+  NSStringFromString,
+  NSArrayFromObjects,
+  NSDictionaryFromKeysAndValues,
+  options,
+  isKindOfClass
+} from "objcjs-types/helpers";
+
+const nsStr = NSStringFromString("hello");
+```
+
+## Subpath exports
+
+| Import path                | Contents                                               |
+| -------------------------- | ------------------------------------------------------ |
+| `objcjs-types`             | Structs, `createDelegate`, barrel re-exports           |
+| `objcjs-types/helpers`     | `NSStringFromString`, `options`, `isKindOfClass`, etc. |
+| `objcjs-types/nsdata`      | NSData/Buffer conversion utilities                     |
+| `objcjs-types/osversion`   | macOS version detection and comparison                 |
+| `objcjs-types/delegates`   | `createDelegate` and `ProtocolMap` type                |
+| `objcjs-types/<Framework>` | Framework exports (e.g. `objcjs-types/AppKit`)         |
 
 ## ObjC selector naming
 
