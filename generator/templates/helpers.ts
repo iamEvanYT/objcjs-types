@@ -1,4 +1,12 @@
-import { NSString, type _NSString } from "./Foundation/index.js";
+import type { NobjcObject } from "objc-js";
+import {
+  NSArray,
+  NSDictionary,
+  NSString,
+  type _NSArray,
+  type _NSDictionary,
+  type _NSString
+} from "../Foundation/index.js";
 
 /**
  * Create NSString from a JavaScript string
@@ -37,6 +45,26 @@ export function options<T extends number>(...values: T[]): T {
     result |= v;
   }
   return result as T;
+}
+
+export function NSArrayFromObjects(objects: NobjcObject[]): _NSArray {
+  if (objects.length === 0) {
+    return NSArray.array();
+  }
+  let array = NSArray.arrayWithObject$(objects[0]!);
+  for (let i = 1; i < objects.length; i++) {
+    array = array.arrayByAddingObject$(objects[i]!);
+  }
+  return array;
+}
+
+export function NSDictionaryFromKeysAndValues(keys: NobjcObject[], values: NobjcObject[]): _NSDictionary {
+  if (keys.length !== values.length) {
+    throw new Error("Keys and values arrays must have the same length");
+  }
+  const keysArray = NSArrayFromObjects(keys);
+  const valuesArray = NSArrayFromObjects(values);
+  return NSDictionary.dictionaryWithObjects$forKeys$(valuesArray, keysArray);
 }
 
 export { isKindOfClass } from "./bind.js";
