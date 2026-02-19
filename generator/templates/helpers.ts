@@ -12,3 +12,29 @@ export function NSStringFromString(str: string): _NSString {
   }
   return nsString;
 }
+
+/**
+ * Combine NS_OPTIONS values using bitwise OR.
+ *
+ * Accepts any number of option flag values and returns their bitwise
+ * combination, preserving the NS_OPTIONS type for type safety.
+ *
+ * @example
+ * ```ts
+ * import { NSWindowStyleMask } from "./AppKit";
+ * import { options } from "./helpers";
+ *
+ * const mask = options(
+ *   NSWindowStyleMask.Titled,
+ *   NSWindowStyleMask.Closable,
+ *   NSWindowStyleMask.Resizable,
+ * );
+ * ```
+ */
+export function options<T extends number>(...values: T[]): T {
+  let result = 0;
+  for (const v of values) {
+    result |= v;
+  }
+  return result as T;
+}

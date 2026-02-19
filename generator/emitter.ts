@@ -1094,16 +1094,16 @@ export function emitIntegerEnumFile(enumDef: ObjCIntegerEnum): string {
   }
   lines.push(`} as const;`);
 
-  // NS_OPTIONS bitmask types should always accept 0 ("no options").
-  // If the enum doesn't already define a 0 constant, prepend `0 |` to the type.
-  const hasZero = entries.some((e) => e.value === "0");
-  const zeroPrefix = enumDef.isOptions && !hasZero ? "0 | " : "";
+  // NS_OPTIONS bitmask types should accept any numeric combination of flags.
+  // `number & {}` widens the type to accept any number while preserving
+  // autocomplete for the known constant values.
+  const optionsPrefix = enumDef.isOptions ? "number & {} | " : "";
 
   lines.push(
     `export type ${enumDef.name} =`
   );
   lines.push(
-    `  ${zeroPrefix}typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
+    `  ${optionsPrefix}typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`
   );
 
   lines.push("");
@@ -1398,6 +1398,7 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   lines.push(`export * from "./structs/index.js";`);
   lines.push(`export { createDelegate } from "./delegates.js";`);
   lines.push(`export type { ProtocolMap } from "./delegates.js";`);
+  lines.push(`export { NSStringFromString, options } from "./helpers.js";`);
   lines.push("");
 
   return lines.join("\n");

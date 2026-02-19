@@ -1,16 +1,20 @@
 import { getPointer } from "objc-js";
-import { CGRect, createDelegate } from "../src";
+import { CGRect, createDelegate, options } from "../src";
 import { NSString } from "../src/Foundation";
-import { NSApplication, NSWindow, type NSWindowStyleMask } from "../src/AppKit";
+import { NSApplication, NSWindow, NSWindowStyleMask } from "../src/AppKit";
 
 console.log("Hello via Bun!");
 
 // Create a CGRect structure for the window frame
 const rect = CGRect(100, 100, 800, 600);
 
-// Define window style mask
-// NSWindowStyleMaskTitled (1) | NSWindowStyleMaskClosable (2) | NSWindowStyleMaskMiniaturizable (4) | NSWindowStyleMaskResizable (8)
-const styleMask = (1 | 2 | 4 | 8) as NSWindowStyleMask; // = 15
+// Define window style mask using the options() helper
+const styleMask = options(
+  NSWindowStyleMask.Titled,
+  NSWindowStyleMask.Closable,
+  NSWindowStyleMask.Miniaturizable,
+  NSWindowStyleMask.Resizable
+);
 
 // NSBackingStoreBuffered = 2
 const backingStoreType = 2;
