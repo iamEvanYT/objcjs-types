@@ -1635,6 +1635,21 @@ export function emitFrameworkIndex(
   lines.push(`export const ${libVar} = new NobjcLibrary("${framework.libraryPath}");`);
   lines.push("");
 
+  // Emit _bindClass helper — loads a class from the library and patches
+  // Symbol.hasInstance so that `obj instanceof ClassName` works at runtime
+  // by delegating to the ObjC runtime's -[NSObject isKindOfClass:] check.
+  if (generatedClasses.length > 0) {
+    lines.push(`/** @internal Load a class constant and enable \`instanceof\` via ObjC runtime. */`);
+    lines.push(`function _bindClass<T>(lib: any, name: string): T {`);
+    lines.push(`  const cls = lib[name];`);
+    lines.push(`  Object.defineProperty(cls, Symbol.hasInstance, {`);
+    lines.push(`    value: (obj: any) => { try { return obj.isKindOfClass$(cls); } catch { return false; } },`);
+    lines.push(`  });`);
+    lines.push(`  return cls as unknown as T;`);
+    lines.push(`}`);
+    lines.push("");
+  }
+
   // Build a reverse lookup: className → canonical filename for collision groups
   const classToFile = new Map<string, string>();
   if (caseCollisions) {
@@ -1648,7 +1663,7 @@ export function emitFrameworkIndex(
   for (const className of generatedClasses) {
     const fileName = classToFile.get(className) ?? className;
     lines.push(`import type { _${className} } from "./${fileName}.js";`);
-    lines.push(`export const ${className} = ${libVar}["${className}"] as unknown as typeof _${className};`);
+    lines.push(`export const ${className} = _bindClass<typeof _${className}>(${libVar}, "${className}");`);
     lines.push(`export type { _${className} };`);
     lines.push("");
   }

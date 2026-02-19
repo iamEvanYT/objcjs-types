@@ -20,5 +20,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
+  "exclude": ["generator/templates"],
   "include": ["src"]
 }
