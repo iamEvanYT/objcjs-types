@@ -183,10 +183,11 @@ function collectReferencedClasses(
     }
   }
 
-  // Check properties
+  // Check properties (both getter return type and setter param type,
+  // which may differ due to conformer union expansion)
   for (const prop of cls.properties) {
-    const pType = mapReturnType(prop.type, cls.name);
-    extractClassRefs(pType);
+    extractClassRefs(mapReturnType(prop.type, cls.name));
+    extractClassRefs(mapParamType(prop.type, cls.name));
   }
 
   // Remove self-reference
@@ -1239,8 +1240,8 @@ function collectProtocolReferencedClasses(
   }
 
   for (const prop of proto.properties) {
-    const pType = mapReturnType(prop.type, proto.name);
-    extractClassRefs(pType);
+    extractClassRefs(mapReturnType(prop.type, proto.name));
+    extractClassRefs(mapParamType(prop.type, proto.name));
   }
 
   // Remove self-reference
@@ -1626,6 +1627,9 @@ export function emitFrameworkIndex(
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
   lines.push(`import { NobjcLibrary } from "objc-js";`);
+  if (generatedClasses.length > 0) {
+    lines.push(`import { _bindClass } from "../bind.js";`);
+  }
   lines.push("");
 
   // Use a different variable name for the library if a class has the same name
@@ -1634,21 +1638,6 @@ export function emitFrameworkIndex(
   const libVar = classNames.has(framework.name) ? `${framework.name}_lib` : framework.name;
   lines.push(`export const ${libVar} = new NobjcLibrary("${framework.libraryPath}");`);
   lines.push("");
-
-  // Emit _bindClass helper — loads a class from the library and patches
-  // Symbol.hasInstance so that `obj instanceof ClassName` works at runtime
-  // by delegating to the ObjC runtime's -[NSObject isKindOfClass:] check.
-  if (generatedClasses.length > 0) {
-    lines.push(`/** @internal Load a class constant and enable \`instanceof\` via ObjC runtime. */`);
-    lines.push(`function _bindClass<T>(lib: any, name: string): T {`);
-    lines.push(`  const cls = lib[name];`);
-    lines.push(`  Object.defineProperty(cls, Symbol.hasInstance, {`);
-    lines.push(`    value: (obj: any) => { try { return obj.isKindOfClass$(cls); } catch { return false; } },`);
-    lines.push(`  });`);
-    lines.push(`  return cls as unknown as T;`);
-    lines.push(`}`);
-    lines.push("");
-  }
 
   // Build a reverse lookup: className → canonical filename for collision groups
   const classToFile = new Map<string, string>();
