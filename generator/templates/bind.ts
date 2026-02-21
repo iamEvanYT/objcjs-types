@@ -93,6 +93,10 @@ export function isKindOfClass<T extends NobjcObject>(obj: NobjcObject, cls: any)
  */
 export function _bindClass<T>(lib: any, name: string): T {
   const cls = lib[name];
+  if (!cls) {
+    // Very unlikely to happen, but just in case, return undefined.
+    return undefined as unknown as T;
+  }
   Object.defineProperty(cls, Symbol.hasInstance, {
     value: (obj: any) => _isKindOfClass(obj, cls)
   });

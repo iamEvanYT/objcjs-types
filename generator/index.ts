@@ -329,7 +329,7 @@ async function main(): Promise<void> {
   // The actual per-task bottleneck is clang execution + JSON.parse (~95% of
   // task time), not the AST walk passes (~5%). Any Xcode-capable Mac with
   // 32+GB RAM handles 8 workers comfortably.
-  const cpuCount = navigator.hardwareConcurrency ?? 4;
+  const cpuCount = navigator.hardwareConcurrency || 4;
   const poolSize = Math.min(cpuCount, 8);
   const pool = new WorkerPool(poolSize);
   const totalBatchTasks = batchTasks.length;
