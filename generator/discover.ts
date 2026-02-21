@@ -27,11 +27,12 @@ const CATEGORY_RE = /@interface\s+\w+(?:<[^>]*>)?\s*\(/;
 const PROTOCOL_RE = /@protocol\s+(\w+)/;
 
 /**
- * Matches NS_ENUM / NS_OPTIONS integer enum declarations.
+ * Matches NS_ENUM / NS_OPTIONS / NS_CLOSED_ENUM integer enum declarations.
  * e.g., `typedef NS_ENUM(NSInteger, NSWindowStyleMask) {`
  * e.g., `typedef NS_OPTIONS(NSUInteger, NSWindowStyleMask) {`
+ * e.g., `typedef NS_CLOSED_ENUM(NSInteger, NSComparisonResult) {`
  */
-const NS_ENUM_RE = /typedef\s+NS_(?:ENUM|OPTIONS)\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
+const NS_ENUM_RE = /typedef\s+NS_(?:ENUM|OPTIONS|CLOSED_ENUM)\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
 
 /**
  * Matches NS_TYPED_EXTENSIBLE_ENUM / NS_STRING_ENUM / NS_TYPED_ENUM string enum declarations.
@@ -49,6 +50,13 @@ const NS_STRING_ENUM_RE = /typedef\s+NSString\s*\*\s*(\w+)\s+NS_(?:TYPED_EXTENSI
  * Their values are declared as `static TypeName const ConstantName = value;`.
  */
 const NS_INTEGER_TYPED_ENUM_RE = /typedef\s+NSU?Integer\s+(\w+)\s+NS_(?:TYPED_EXTENSIBLE_ENUM|TYPED_ENUM)/;
+
+/**
+ * Matches NS_ERROR_ENUM declarations.
+ * e.g., `typedef NS_ERROR_ENUM(NSURLErrorDomain, NSURLError) {`
+ * Captures the error type name (second parameter), not the domain.
+ */
+const NS_ERROR_ENUM_RE = /typedef\s+NS_ERROR_ENUM\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
 
 /**
  * Scan all .h files in a framework's Headers directory and discover
@@ -119,6 +127,16 @@ export async function discoverFramework(headersPath: string): Promise<DiscoveryR
       const intTypedEnumMatch = NS_INTEGER_TYPED_ENUM_RE.exec(line);
       if (intTypedEnumMatch) {
         const name = intTypedEnumMatch[1]!;
+        if (!integerEnums.has(name)) {
+          integerEnums.set(name, headerName);
+        }
+      }
+
+      // --- Error enum declarations (NS_ERROR_ENUM) ---
+      // e.g., `typedef NS_ERROR_ENUM(WKWebExtensionErrorDomain, WKWebExtensionError) {`
+      const errorEnumMatch = NS_ERROR_ENUM_RE.exec(line);
+      if (errorEnumMatch) {
+        const name = errorEnumMatch[1]!;
         if (!integerEnums.has(name)) {
           integerEnums.set(name, headerName);
         }
