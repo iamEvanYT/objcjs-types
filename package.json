@@ -65,7 +65,10 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@typescript/native-preview": "^7.0.0-dev.20260218.1",
-    "objc-js": "^1.1.0",
+    "objc-js": "^1.2.1",
     "prettier": "^3.8.1"
-  }
+  },
+  "trustedDependencies": [
+    "objc-js"
+  ]
 }
