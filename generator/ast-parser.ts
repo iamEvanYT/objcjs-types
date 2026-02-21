@@ -1033,6 +1033,117 @@ export function parseStringEnums(root: ClangASTNode, targetEnums: Set<string>): 
   return enums;
 }
 
+/**
+ * Parse a clang AST root node and extract integer typed extensible enums.
+ *
+ * These appear as TypedefDecl nodes with a SwiftNewTypeAttr child and an
+ * NSInteger/NSUInteger underlying type (e.g., `typedef NSInteger ASCOSEAlgorithmIdentifier
+ * NS_TYPED_EXTENSIBLE_ENUM;`). Their values are static const VarDecl nodes
+ * whose type.typeAliasDeclId links back to the TypedefDecl.
+ *
+ * @param targetEnums - Set of integer typed enum names to extract (from discovery)
+ */
+export function parseIntegerTypedEnums(root: ClangASTNode, targetEnums: Set<string>): Map<string, ObjCIntegerEnum> {
+  const enums = new Map<string, ObjCIntegerEnum>();
+  // Map from TypedefDecl id → enum name, for linking VarDecls
+  const typedefIdToName = new Map<string, string>();
+
+  function walkForTypedefs(node: ClangASTNode): void {
+    if (node.kind === "TypedefDecl" && node.name && targetEnums.has(node.name)) {
+      // Check for SwiftNewTypeAttr in inner (marks NS_TYPED_EXTENSIBLE_ENUM)
+      const hasSwiftNewType = node.inner?.some((child) => child.kind === "SwiftNewTypeAttr") ?? false;
+
+      // Check that the underlying type is an integer type
+      const qualType = node.type?.qualType ?? "";
+      const desugared = node.type?.desugaredQualType ?? "";
+      const isIntegerType =
+        qualType === "NSInteger" || qualType === "NSUInteger" || desugared === "long" || desugared === "unsigned long";
+
+      if (hasSwiftNewType && isIntegerType) {
+        typedefIdToName.set(node.id, node.name);
+        if (!enums.has(node.name)) {
+          enums.set(node.name, {
+            kind: "integer",
+            name: node.name,
+            underlyingType: qualType,
+            isOptions: false,
+            values: []
+          });
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForTypedefs(child);
+      }
+    }
+  }
+
+  function walkForVarDecls(node: ClangASTNode): void {
+    if (node.kind === "VarDecl" && node.name && node.storageClass === "static" && node.type?.typeAliasDeclId) {
+      const enumName = typedefIdToName.get(node.type.typeAliasDeclId);
+      if (enumName) {
+        const enumDef = enums.get(enumName);
+        if (enumDef) {
+          // Extract integer value from the initializer expression tree
+          const value = extractIntegerValue(node);
+          if (value !== null) {
+            enumDef.values.push({ name: node.name, value });
+          }
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForVarDecls(child);
+      }
+    }
+  }
+
+  // First pass: find TypedefDecl nodes
+  walkForTypedefs(root);
+  // Second pass: find VarDecl nodes that reference the typedefs
+  walkForVarDecls(root);
+
+  return enums;
+}
+
+/**
+ * Extract an integer value from a VarDecl's initializer expression tree.
+ * Handles IntegerLiteral, UnaryOperator("-"), and ImplicitCastExpr wrappers.
+ * Returns the value as a string, or null if it can't be extracted.
+ */
+function extractIntegerValue(node: ClangASTNode): string | null {
+  if (!node.inner) return null;
+
+  function evaluate(n: ClangASTNode): number | null {
+    if (n.kind === "IntegerLiteral" && n.value !== undefined) {
+      return parseInt(n.value, 10);
+    }
+    if (n.kind === "UnaryOperator" && (n as any).opcode === "-" && n.inner?.length === 1) {
+      const operand = evaluate(n.inner[0]!);
+      return operand !== null ? -operand : null;
+    }
+    // Walk through transparent wrappers (ImplicitCastExpr, ParenExpr, ConstantExpr, etc.)
+    if (n.inner?.length === 1) {
+      return evaluate(n.inner[0]!);
+    }
+    // Try all children for multi-child wrappers
+    if (n.inner) {
+      for (const child of n.inner) {
+        const val = evaluate(child);
+        if (val !== null) return val;
+      }
+    }
+    return null;
+  }
+
+  const val = evaluate(node);
+  return val !== null ? String(val) : null;
+}
+
 // --- Struct parsing ---
 
 /**

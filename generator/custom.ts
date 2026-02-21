@@ -23,6 +23,7 @@ import {
   parseAST,
   parseProtocols,
   parseIntegerEnums,
+  parseIntegerTypedEnums,
   parseStringEnums,
   parseStructs,
   parseTypedefs
@@ -839,6 +840,11 @@ async function main(): Promise<void> {
   const parsedClasses = parseAST(ast, customDiscovery.classes);
   const parsedProtocols = parseProtocols(ast, customDiscovery.protocols);
   const parsedIntegerEnums = parseIntegerEnums(ast, customDiscovery.integerEnums);
+  // Also parse integer typed extensible enums (typedef NSInteger Foo NS_TYPED_EXTENSIBLE_ENUM)
+  const intTypedEnums = parseIntegerTypedEnums(ast, customDiscovery.integerEnums);
+  for (const [name, enumDef] of intTypedEnums) {
+    if (!parsedIntegerEnums.has(name)) parsedIntegerEnums.set(name, enumDef);
+  }
   const parsedStringEnums = parseStringEnums(ast, customDiscovery.stringEnums);
 
   const parseTime = ((performance.now() - parseStart) / 1000).toFixed(1);

@@ -14,6 +14,7 @@ import {
   parseAST,
   parseProtocols,
   parseIntegerEnums,
+  parseIntegerTypedEnums,
   parseStringEnums,
   parseStructs,
   parseTypedefs,
@@ -79,6 +80,13 @@ self.onmessage = async (event: MessageEvent) => {
       const protocols =
         protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, undefined, headerLinesMap) : new Map();
       const integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
+      // Also parse integer typed extensible enums (typedef NSInteger Foo NS_TYPED_EXTENSIBLE_ENUM)
+      if (integerTargetSet.size > 0) {
+        const intTypedEnums = parseIntegerTypedEnums(ast, integerTargetSet);
+        for (const [name, enumDef] of intTypedEnums) {
+          if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+        }
+      }
       const stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       const structResult = parseStructs(ast);
       const typedefs = parseTypedefs(ast);
@@ -118,6 +126,13 @@ self.onmessage = async (event: MessageEvent) => {
       let classes = classTargetSet.size > 0 ? parseAST(ast, classTargetSet, headerLines) : new Map();
       let protocols = protocolTargetSet.size > 0 ? parseProtocols(ast, protocolTargetSet, headerLines) : new Map();
       let integerEnums = integerTargetSet.size > 0 ? parseIntegerEnums(ast, integerTargetSet) : new Map();
+      // Also parse integer typed extensible enums (typedef NSInteger Foo NS_TYPED_EXTENSIBLE_ENUM)
+      if (integerTargetSet.size > 0) {
+        const intTypedEnums = parseIntegerTypedEnums(ast, integerTargetSet);
+        for (const [name, enumDef] of intTypedEnums) {
+          if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+        }
+      }
       let stringEnums = stringTargetSet.size > 0 ? parseStringEnums(ast, stringTargetSet) : new Map();
       let structResult = parseStructs(ast);
       let typedefs = parseTypedefs(ast);
@@ -154,6 +169,10 @@ self.onmessage = async (event: MessageEvent) => {
         if (missingIntEnums) {
           const fallbackIntEnums = parseIntegerEnums(fallbackAst, integerTargetSet);
           for (const [name, enumDef] of fallbackIntEnums) {
+            if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+          }
+          const fallbackIntTypedEnums = parseIntegerTypedEnums(fallbackAst, integerTargetSet);
+          for (const [name, enumDef] of fallbackIntTypedEnums) {
             if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
           }
         }
@@ -235,12 +254,21 @@ self.onmessage = async (event: MessageEvent) => {
       const stringTargetSet = new Set<string>(msg.stringTargets ?? []);
       let ast = await clangASTDump(msg.headerPath);
       let integerEnums = parseIntegerEnums(ast, integerTargetSet);
+      // Also parse integer typed extensible enums
+      const intTypedEnums = parseIntegerTypedEnums(ast, integerTargetSet);
+      for (const [name, enumDef] of intTypedEnums) {
+        if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+      }
       let stringEnums = parseStringEnums(ast, stringTargetSet);
 
       // Fallback: retry without -fmodules using pre-includes
       if (integerEnums.size === 0 && stringEnums.size === 0 && msg.fallbackPreIncludes) {
         ast = await clangASTDumpWithPreIncludes(msg.headerPath, msg.fallbackPreIncludes);
         integerEnums = parseIntegerEnums(ast, integerTargetSet);
+        const fallbackIntTypedEnums = parseIntegerTypedEnums(ast, integerTargetSet);
+        for (const [name, enumDef] of fallbackIntTypedEnums) {
+          if (!integerEnums.has(name)) integerEnums.set(name, enumDef);
+        }
         stringEnums = parseStringEnums(ast, stringTargetSet);
       }
 

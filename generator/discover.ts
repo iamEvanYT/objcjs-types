@@ -42,6 +42,15 @@ const NS_ENUM_RE = /typedef\s+NS_(?:ENUM|OPTIONS)\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
 const NS_STRING_ENUM_RE = /typedef\s+NSString\s*\*\s*(\w+)\s+NS_(?:TYPED_EXTENSIBLE_ENUM|STRING_ENUM|TYPED_ENUM)/;
 
 /**
+ * Matches integer-typed NS_TYPED_EXTENSIBLE_ENUM / NS_TYPED_ENUM declarations.
+ * These are NSInteger/NSUInteger typedefs with the macro trailing after the name.
+ * e.g., `typedef NSInteger ASCOSEAlgorithmIdentifier NS_TYPED_EXTENSIBLE_ENUM;`
+ * e.g., `typedef NSInteger NSModalResponse NS_TYPED_EXTENSIBLE_ENUM;`
+ * Their values are declared as `static TypeName const ConstantName = value;`.
+ */
+const NS_INTEGER_TYPED_ENUM_RE = /typedef\s+NSU?Integer\s+(\w+)\s+NS_(?:TYPED_EXTENSIBLE_ENUM|TYPED_ENUM)/;
+
+/**
  * Scan all .h files in a framework's Headers directory and discover
  * every ObjC class and protocol declaration, mapping each to its header file.
  *
@@ -102,6 +111,16 @@ export async function discoverFramework(headersPath: string): Promise<DiscoveryR
         const name = stringEnumMatch[1]!;
         if (!stringEnums.has(name)) {
           stringEnums.set(name, headerName);
+        }
+      }
+
+      // --- Integer typed extensible enum declarations ---
+      // e.g., `typedef NSInteger ASCOSEAlgorithmIdentifier NS_TYPED_EXTENSIBLE_ENUM;`
+      const intTypedEnumMatch = NS_INTEGER_TYPED_ENUM_RE.exec(line);
+      if (intTypedEnumMatch) {
+        const name = intTypedEnumMatch[1]!;
+        if (!integerEnums.has(name)) {
+          integerEnums.set(name, headerName);
         }
       }
     }
