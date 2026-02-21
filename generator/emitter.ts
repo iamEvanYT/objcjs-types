@@ -111,10 +111,11 @@ function collectReferencedStructs(cls: ObjCClass): Set<string> {
   const refs = new Set<string>();
 
   function extractStructRefs(typeStr: string): void {
-    // Match capitalized identifiers and check against known struct types.
-    // This handles structs appearing anywhere in the type string, including
-    // inside block/function types like "(arg0: CGRect) => void".
-    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    // Match all identifiers and check against known struct types.
+    // Uses [a-zA-Z_] to catch both uppercase (CGRect) and lowercase (simd_float4x4,
+    // timespec, ether_addr) struct type names appearing anywhere in the type string,
+    // including inside block/function types like "(arg0: CGRect) => void".
+    const words = typeStr.match(/\b[a-zA-Z_]\w*\b/g);
     if (!words) return;
     for (const word of words) {
       if (STRUCT_TS_TYPES.has(word)) {
@@ -1210,7 +1211,8 @@ function collectProtocolReferencedStructs(proto: ObjCProtocol): Set<string> {
   const refs = new Set<string>();
 
   function extractStructRefs(typeStr: string): void {
-    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    // Match all identifiers (including lowercase like simd_float4x4, timespec, ether_addr)
+    const words = typeStr.match(/\b[a-zA-Z_]\w*\b/g);
     if (!words) return;
     for (const word of words) {
       if (STRUCT_TS_TYPES.has(word)) {
