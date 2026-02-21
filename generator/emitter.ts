@@ -111,11 +111,14 @@ function collectReferencedStructs(cls: ObjCClass): Set<string> {
   const refs = new Set<string>();
 
   function extractStructRefs(typeStr: string): void {
-    for (const structName of STRUCT_TS_TYPES) {
-      // Match the struct name as a whole word in the mapped type string.
-      // Struct types appear as bare names (e.g., "CGRect") or in union (e.g., "CGRect | null").
-      if (typeStr === structName || typeStr.startsWith(structName + " ")) {
-        refs.add(structName);
+    // Match capitalized identifiers and check against known struct types.
+    // This handles structs appearing anywhere in the type string, including
+    // inside block/function types like "(arg0: CGRect) => void".
+    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    if (!words) return;
+    for (const word of words) {
+      if (STRUCT_TS_TYPES.has(word)) {
+        refs.add(word);
       }
     }
   }
@@ -291,7 +294,7 @@ function emitMethodSignature(method: ObjCMethod, containingClass: string): strin
   const params: string[] = [];
   const seenNames = new Map<string, number>();
   for (const param of method.parameters) {
-    const tsType = mapParamType(param.type, containingClass);
+    const tsType = mapParamType(param.type, containingClass, param.blockParamNames);
     // Sanitize param name (avoid TS reserved words)
     let safeName = sanitizeParamName(param.name);
     // Deduplicate: append numeric suffix for repeated parameter names
@@ -1101,13 +1104,14 @@ function collectReferencedEnums(cls: ObjCClass): Set<string> {
   const strEnums = getKnownStringEnums();
 
   function extractEnumRefs(typeStr: string): void {
-    // Enum types appear as bare names (e.g., "ASAuthorizationPublicKeyCredentialAttestationKind")
-    // or in union with null (e.g., "ASAuthorizationPublicKeyCredentialAttestationKind | null").
-    // Split on " | " to handle union types.
-    for (const part of typeStr.split(" | ")) {
-      const trimmed = part.trim();
-      if (intEnums.has(trimmed) || strEnums.has(trimmed)) {
-        refs.add(trimmed);
+    // Match capitalized identifiers and check against known enum types.
+    // This handles enums appearing anywhere in the type string, including
+    // inside block/function types like "(arg0: NobjcObject) => NSComparisonResult".
+    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    if (!words) return;
+    for (const word of words) {
+      if (intEnums.has(word) || strEnums.has(word)) {
+        refs.add(word);
       }
     }
   }
@@ -1136,10 +1140,11 @@ function collectProtocolReferencedEnums(proto: ObjCProtocol): Set<string> {
   const strEnums = getKnownStringEnums();
 
   function extractEnumRefs(typeStr: string): void {
-    for (const part of typeStr.split(" | ")) {
-      const trimmed = part.trim();
-      if (intEnums.has(trimmed) || strEnums.has(trimmed)) {
-        refs.add(trimmed);
+    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    if (!words) return;
+    for (const word of words) {
+      if (intEnums.has(word) || strEnums.has(word)) {
+        refs.add(word);
       }
     }
   }
@@ -1205,9 +1210,11 @@ function collectProtocolReferencedStructs(proto: ObjCProtocol): Set<string> {
   const refs = new Set<string>();
 
   function extractStructRefs(typeStr: string): void {
-    for (const structName of STRUCT_TS_TYPES) {
-      if (typeStr === structName || typeStr.startsWith(structName + " ")) {
-        refs.add(structName);
+    const words = typeStr.match(/\b[A-Z]\w*\b/g);
+    if (!words) return;
+    for (const word of words) {
+      if (STRUCT_TS_TYPES.has(word)) {
+        refs.add(word);
       }
     }
   }
@@ -1339,7 +1346,7 @@ export function emitProtocolFile(
       const params: string[] = [];
       const seenNames = new Map<string, number>();
       for (const param of method.parameters) {
-        const tsType = mapParamType(param.type, proto.name);
+        const tsType = mapParamType(param.type, proto.name, param.blockParamNames);
         let safeName = sanitizeParamName(param.name);
         // Deduplicate: append numeric suffix for repeated parameter names
         const prev = seenNames.get(safeName) ?? 0;
@@ -1819,18 +1826,17 @@ function extractFunctionTypeRefs(
     classRefs.add(match[1]!);
   }
 
-  // Struct references
-  for (const structName of STRUCT_TS_TYPES) {
-    if (typeStr === structName || typeStr.startsWith(structName + " ")) {
-      structRefs.add(structName);
-    }
-  }
-
-  // Enum references
-  for (const part of typeStr.split(" | ")) {
-    const trimmed = part.trim();
-    if (intEnums.has(trimmed) || strEnums.has(trimmed)) {
-      enumRefs.add(trimmed);
+  // Struct and enum references: match capitalized identifiers anywhere in
+  // the type string (handles block/function types like "(arg0: CGRect) => void").
+  const words = typeStr.match(/\b[A-Z]\w*\b/g);
+  if (words) {
+    for (const word of words) {
+      if (STRUCT_TS_TYPES.has(word)) {
+        structRefs.add(word);
+      }
+      if (intEnums.has(word) || strEnums.has(word)) {
+        enumRefs.add(word);
+      }
     }
   }
 }

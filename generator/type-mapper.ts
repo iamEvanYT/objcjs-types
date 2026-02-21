@@ -286,20 +286,37 @@ function extractClassName(cleaned: string): string | null {
  * @param isReturnType Whether this type is used in a return position (enables conformer union expansion)
  * @returns The TypeScript type string
  */
-export function mapType(qualType: string, containingClass: string, isReturnType = false): string {
+export function mapType(
+  qualType: string,
+  containingClass: string,
+  isReturnType = false,
+  blockParamNames?: string[]
+): string {
   const nullable = isNullableType(qualType);
   const cleaned = cleanQualType(qualType);
 
-  let tsType = mapTypeInner(cleaned, containingClass, undefined, isReturnType);
+  let tsType = mapTypeInner(cleaned, containingClass, undefined, isReturnType, blockParamNames);
 
   if (nullable && tsType !== "void") {
-    tsType = `${tsType} | null`;
+    // Wrap function types in parentheses to avoid `() => void | null` being parsed as
+    // "function returning (void | null)" instead of "(function returning void) | null"
+    if (tsType.includes("=>")) {
+      tsType = `(${tsType}) | null`;
+    } else {
+      tsType = `${tsType} | null`;
+    }
   }
 
   return tsType;
 }
 
-function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<string>, isReturnType = false): string {
+function mapTypeInner(
+  cleaned: string,
+  containingClass: string,
+  resolving?: Set<string>,
+  isReturnType = false,
+  blockParamNames?: string[]
+): string {
   // Direct mappings
   if (cleaned in DIRECT_MAPPINGS) {
     return DIRECT_MAPPINGS[cleaned]!;
@@ -326,9 +343,14 @@ function mapTypeInner(cleaned: string, containingClass: string, resolving?: Set<
   }
 
   // Block types: "void (^)(Type1, Type2)" or "ReturnType (^)(Type1, Type2)"
-  // At runtime, blocks have type encoding `@?` which the bridge handles via
-  // the `@` (id) case — only NobjcObject is accepted/returned, not JS functions.
-  if (cleaned.includes("(^") || cleaned.includes("Block_")) {
+  // The objc-js bridge automatically converts JavaScript functions to ObjC blocks
+  // when passed to a method expecting a block parameter.
+  if (cleaned.includes("(^")) {
+    return parseBlockType(cleaned, containingClass, blockParamNames);
+  }
+
+  // Named block reference types (rare internal types like Block_copy/Block_release)
+  if (cleaned.includes("Block_")) {
     return "NobjcObject";
   }
 
@@ -578,17 +600,256 @@ export function qualTypeToEncoding(qualType: string): string | null {
   if (NUMERIC_TYPES.has(cleaned)) return "d";
 
   // Block types, function pointers, pointer-to-pointer — cannot encode simply
-  if (
-    cleaned.includes("(^") ||
-    cleaned.includes("Block_") ||
-    cleaned.includes("(*)") ||
-    cleaned.match(/\w+\s*\*\s*\*/)
-  ) {
+  if (cleaned.includes("(^") || cleaned.includes("Block_")) {
+    return "@?";
+  }
+  if (cleaned.includes("(*)") || cleaned.match(/\w+\s*\*\s*\*/)) {
     return null;
   }
 
   // Unknown — default to object pointer
   return "@";
+}
+
+// --- Block type parsing ---
+
+/**
+ * Split a block's parameter list by commas, respecting nested angle brackets,
+ * parentheses, and square brackets.
+ *
+ * e.g., "NSArray<NSString *> *, NSError *" → ["NSArray<NSString *> *", "NSError *"]
+ */
+function splitBlockParams(paramStr: string): string[] {
+  const params: string[] = [];
+  let depth = 0;
+  let current = "";
+
+  for (let i = 0; i < paramStr.length; i++) {
+    const ch = paramStr[i]!;
+    if (ch === "(" || ch === "<" || ch === "[") depth++;
+    else if (ch === ")" || ch === ">" || ch === "]") depth--;
+    else if (ch === "," && depth === 0) {
+      params.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) params.push(current);
+
+  return params;
+}
+
+/**
+ * Parse an ObjC block type string into a TypeScript function type.
+ *
+ * Handles block qualType strings like:
+ * - `void (^)(id, NSUInteger, BOOL *)` → `(arg0: NobjcObject, arg1: number, arg2: NobjcObject) => void`
+ * - `NSComparisonResult (^)(id, id)` → `(arg0: NobjcObject, arg1: NobjcObject) => NSComparisonResult`
+ * - `void (^)(void)` → `() => void`
+ * - `void (^)(NSArray<NSString *> *, NSError *)` → `(arg0: _NSArray, arg1: _NSError) => void`
+ *
+ * Nested blocks are handled recursively (the inner block triggers `mapTypeInner`
+ * which calls `parseBlockType` again).
+ *
+ * @param cleaned The cleaned qualType string (nullability annotations already removed)
+ * @param containingClass The class context for `instancetype` resolution
+ */
+function parseBlockType(cleaned: string, containingClass: string, blockParamNames?: string[]): string {
+  // Find the (^ ...) separator between return type and parameter list
+  const caretIdx = cleaned.indexOf("(^");
+  if (caretIdx === -1) return "NobjcObject";
+
+  // Return type is everything before (^
+  let returnTypeStr = cleaned.slice(0, caretIdx).trim();
+  if (!returnTypeStr) returnTypeStr = "void";
+
+  // Find matching ) for the (^ ...) part
+  let i = caretIdx + 1; // points to '^'
+  let depth = 1;
+  i++; // skip '^'
+  while (i < cleaned.length && depth > 0) {
+    if (cleaned[i] === "(") depth++;
+    else if (cleaned[i] === ")") depth--;
+    i++;
+  }
+  // i now points past the closing ) of (^...)
+
+  // Skip whitespace to find the parameter list
+  while (i < cleaned.length && cleaned[i] === " ") i++;
+
+  // If no parameter list follows, treat as no-arg block
+  if (i >= cleaned.length || cleaned[i] !== "(") {
+    const tsReturn = mapTypeInner(cleanQualType(returnTypeStr), containingClass);
+    return `() => ${tsReturn}`;
+  }
+
+  // Extract the parameter list
+  const paramListStart = i + 1;
+  depth = 1;
+  i++;
+  while (i < cleaned.length && depth > 0) {
+    if (cleaned[i] === "(") depth++;
+    else if (cleaned[i] === ")") depth--;
+    i++;
+  }
+  const paramListEnd = i - 1;
+  const paramStr = cleaned.slice(paramListStart, paramListEnd).trim();
+
+  // Map return type
+  const tsReturn = mapTypeInner(cleanQualType(returnTypeStr), containingClass);
+
+  // Handle void/empty parameter list
+  if (paramStr === "void" || paramStr === "") {
+    return `() => ${tsReturn}`;
+  }
+
+  // Split and map parameter types, extracting names when present
+  const paramTypes = splitBlockParams(paramStr);
+  const tsParams = paramTypes.map((p, idx) => {
+    const cleaned = cleanQualType(p.trim());
+    const { type: typeStr, name: qualTypeName } = extractBlockParamName(cleaned);
+    const tsType = mapTypeInner(typeStr, containingClass);
+    // Prefer header-sourced names over qualType-embedded names (which clang usually strips)
+    const headerName = blockParamNames?.[idx];
+    const paramName = headerName
+      ? sanitizeBlockParamName(headerName)
+      : qualTypeName
+        ? sanitizeBlockParamName(qualTypeName)
+        : `arg${idx}`;
+    return `${paramName}: ${tsType}`;
+  });
+
+  return `(${tsParams.join(", ")}) => ${tsReturn}`;
+}
+
+/**
+ * C/ObjC type keywords that should NOT be treated as block parameter names.
+ * When parsing a block param like "NSUInteger idx", the last word is the name —
+ * but in "unsigned long", "long" is part of the type, not a name.
+ */
+const C_TYPE_WORDS = new Set([
+  "int",
+  "long",
+  "short",
+  "char",
+  "float",
+  "double",
+  "unsigned",
+  "signed",
+  "void",
+  "id",
+  "bool",
+  "BOOL",
+  "const",
+  "volatile",
+  "restrict",
+  "extern",
+  "static",
+  "inline",
+  "struct",
+  "union",
+  "enum"
+]);
+
+/**
+ * TS/JS reserved words that cannot be used as parameter names.
+ * When a block parameter name collides, we append an underscore.
+ */
+const BLOCK_PARAM_RESERVED = new Set([
+  "break",
+  "case",
+  "catch",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "in",
+  "instanceof",
+  "new",
+  "return",
+  "switch",
+  "this",
+  "throw",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "class",
+  "const",
+  "enum",
+  "export",
+  "extends",
+  "import",
+  "super",
+  "implements",
+  "interface",
+  "let",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "static",
+  "yield",
+  "arguments",
+  "eval"
+]);
+
+/**
+ * Extract the parameter name from a block parameter string, if present.
+ *
+ * ObjC block qualType strings can include parameter names:
+ * - `NSUInteger idx` → type: `NSUInteger`, name: `idx`
+ * - `BOOL *stop` → type: `BOOL *`, name: `stop`
+ * - `id obj` → type: `id`, name: `obj`
+ * - `NSData *` → type: `NSData *`, name: null
+ * - `id` → type: `id`, name: null
+ *
+ * For pointer types, the name follows the last `*`.
+ * For non-pointer types, the name is the last word (if it's not a C type keyword).
+ */
+function extractBlockParamName(paramStr: string): { type: string; name: string | null } {
+  const trimmed = paramStr.trim();
+
+  // Nested block types — don't extract name from the inner signature
+  if (trimmed.includes("(^")) return { type: trimmed, name: null };
+
+  // Pointer types: check for an identifier after the last *
+  const lastStar = trimmed.lastIndexOf("*");
+  if (lastStar !== -1) {
+    const afterStar = trimmed.slice(lastStar + 1).trim();
+    if (afterStar && /^[a-zA-Z_]\w*$/.test(afterStar) && !C_TYPE_WORDS.has(afterStar)) {
+      return { type: trimmed.slice(0, lastStar + 1).trim(), name: afterStar };
+    }
+    return { type: trimmed, name: null };
+  }
+
+  // Non-pointer types: check if the last word is a parameter name.
+  // Match "TypePart(s) paramName" where paramName is a simple identifier
+  // that is not a C type keyword.
+  const match = trimmed.match(/^(.+?)\s+([a-zA-Z_]\w*)$/);
+  if (match && !C_TYPE_WORDS.has(match[2]!)) {
+    return { type: match[1]!, name: match[2]! };
+  }
+
+  return { type: trimmed, name: null };
+}
+
+/**
+ * Sanitize a block parameter name for use in TypeScript function types.
+ */
+function sanitizeBlockParamName(name: string): string {
+  if (BLOCK_PARAM_RESERVED.has(name)) return `${name}_`;
+  if (!name || /^\d/.test(name)) return "arg";
+  return name;
 }
 
 /**
@@ -599,7 +860,7 @@ export function qualTypeToEncoding(qualType: string): string | null {
  * at runtime (type encoding `^`). We type these as `Uint8Array` so callers
  * can pass `Buffer` or `Uint8Array` without casting.
  */
-export function mapParamType(qualType: string, containingClass: string): string {
+export function mapParamType(qualType: string, containingClass: string, blockParamNames?: string[]): string {
   const cleaned = cleanQualType(qualType);
   // Raw void pointers
   if (cleaned === "void *" || cleaned === "const void *") {
@@ -611,5 +872,5 @@ export function mapParamType(qualType: string, containingClass: string): string 
     const nullable = isNullableType(qualType);
     return nullable ? "Uint8Array | null" : "Uint8Array";
   }
-  return mapType(qualType, containingClass);
+  return mapType(qualType, containingClass, false, blockParamNames);
 }

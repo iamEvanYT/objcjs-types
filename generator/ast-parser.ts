@@ -7,7 +7,7 @@ import type { ClangASTNode } from "./clang.ts";
 export interface ObjCMethod {
   selector: string;
   returnType: string;
-  parameters: { name: string; type: string }[];
+  parameters: { name: string; type: string; blockParamNames?: string[] }[];
   isClassMethod: boolean;
   isDeprecated: boolean;
   deprecationMessage?: string;
@@ -484,6 +484,224 @@ function scanForDeprecation(
   return { isDeprecated: false };
 }
 
+// --- Block parameter name extraction from header source ---
+
+/**
+ * Extract block parameter names from header source text for a method declaration.
+ *
+ * Clang's AST strips parameter names from block qualType strings. For example,
+ * `void (^)(ObjectType obj, NSUInteger idx, BOOL *stop)` becomes
+ * `void (^)(ObjectType _Nonnull, NSUInteger, BOOL * _Nonnull)` in the AST.
+ *
+ * This function reads the raw header source text around the method declaration line
+ * and extracts the actual parameter names from the block's inner parameter list.
+ *
+ * @returns An array of block param name arrays, one per block-typed parameter,
+ *   in the order they appear in the method declaration. Returns empty array if
+ *   no block parameters are found or source is unavailable.
+ */
+function extractBlockParamNamesFromMethod(
+  methodNode: ClangASTNode,
+  headerLines: string[] | undefined,
+  headerLinesMap?: Map<string, string[]>,
+  contextFile?: string
+): string[][] {
+  const lines = resolveHeaderLines(methodNode, headerLines, headerLinesMap, contextFile);
+  if (!lines) return [];
+
+  const line = getLocLine(methodNode);
+  if (!line || line < 1 || line > lines.length) return [];
+
+  // Grab a window of source text: the declaration line + up to 20 lines after
+  // (ObjC method declarations can span many lines with long block param types)
+  const startLine = Math.max(0, line - 1);
+  const endLine = Math.min(lines.length, line + 20);
+  const sourceChunk = lines.slice(startLine, endLine).join(" ");
+
+  return extractBlockParamNamesFromText(sourceChunk);
+}
+
+/**
+ * Extract block parameter names from a chunk of ObjC source text.
+ *
+ * Finds all block parameter patterns `(^...)(param_list)` and extracts the
+ * last identifier from each comma-separated parameter in the inner list.
+ *
+ * For example, from:
+ *   `- (void)enumerateObjectsUsingBlock:(void (NS_NOESCAPE ^)(ObjectType obj, NSUInteger idx, BOOL *stop))block;`
+ * Extracts: `[["obj", "idx", "stop"]]`
+ */
+function extractBlockParamNamesFromText(source: string): string[][] {
+  const results: string[][] = [];
+
+  // Find each block type pattern in ObjC source.
+  // Block types appear as: ReturnType (^)(ParamList) or ReturnType (NS_NOESCAPE ^)(ParamList)
+  // The caret (^) marks a block pointer, possibly preceded by annotations like NS_NOESCAPE.
+  // We search for ^ and then look for the enclosing (...) and the parameter list (...) after it.
+  let pos = 0;
+  while (pos < source.length) {
+    const caretIdx = source.indexOf("^", pos);
+    if (caretIdx === -1) break;
+
+    // Find the opening ( that contains this ^
+    // Walk backward from ^ to find the matching (
+    let openParen = caretIdx - 1;
+    while (openParen >= 0 && source[openParen] !== "(") {
+      // Only skip whitespace and known annotations between ( and ^
+      if (/\s/.test(source[openParen]!) || /[A-Za-z_]/.test(source[openParen]!)) {
+        openParen--;
+      } else {
+        break;
+      }
+    }
+
+    if (openParen < 0 || source[openParen] !== "(") {
+      pos = caretIdx + 1;
+      continue;
+    }
+
+    // Verify the text between ( and ^ is whitespace or known annotations
+    const betweenText = source.slice(openParen + 1, caretIdx).trim();
+    const validAnnotations =
+      /^(NS_NOESCAPE|NS_SWIFT_SENDABLE|NS_SWIFT_NONISOLATED|NS_SWIFT_UI_ACTOR|__nullable|__nonnull|_Nullable|_Nonnull|\s)*$/;
+    if (betweenText && !validAnnotations.test(betweenText)) {
+      pos = caretIdx + 1;
+      continue;
+    }
+
+    // Find the closing ) of (^...) from the caret position
+    let i = caretIdx + 1;
+    let depth = 1; // We're inside the ( that openParen points to
+    while (i < source.length && depth > 0) {
+      if (source[i] === "(") depth++;
+      else if (source[i] === ")") depth--;
+      i++;
+    }
+    // i now points past the closing ) of (^...)
+
+    // Skip whitespace
+    while (i < source.length && /\s/.test(source[i]!)) i++;
+
+    // Expect opening ( for the parameter list
+    if (i >= source.length || source[i] !== "(") {
+      pos = i;
+      continue;
+    }
+
+    // Find the matching close paren for the parameter list
+    const paramStart = i + 1;
+    depth = 1;
+    i++;
+    while (i < source.length && depth > 0) {
+      if (source[i] === "(") depth++;
+      else if (source[i] === ")") depth--;
+      i++;
+    }
+    const paramEnd = i - 1;
+    const paramStr = source.slice(paramStart, paramEnd).trim();
+
+    pos = i;
+
+    // Skip void / empty parameter lists
+    if (paramStr === "void" || paramStr === "") {
+      results.push([]);
+      continue;
+    }
+
+    // Split by comma, respecting nested parens (for nested blocks/function pointers)
+    const params = splitByComma(paramStr);
+    const names: string[] = [];
+    for (const p of params) {
+      const name = extractLastIdentifier(p.trim());
+      names.push(name ?? "");
+    }
+    results.push(names);
+  }
+
+  return results;
+}
+
+/**
+ * Split a parameter list string by commas, respecting nested parentheses and angle brackets.
+ */
+function splitByComma(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let angleDepth = 0;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === "<") angleDepth++;
+    else if (ch === ">") angleDepth--;
+    else if (ch === "," && depth === 0 && angleDepth === 0) {
+      parts.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.slice(start));
+  return parts;
+}
+
+/**
+ * Extract the last identifier (parameter name) from a single ObjC parameter declaration.
+ *
+ * Examples:
+ *   "ObjectType obj" → "obj"
+ *   "NSUInteger idx" → "idx"
+ *   "BOOL *stop" → "stop"
+ *   "void (^handler)(BOOL granted)" → null (nested block — name is outside)
+ *   "NSData *" → null (no name)
+ *   "id" → null (type-only)
+ *
+ * Strips nullability annotations and API_AVAILABLE macros first.
+ */
+function extractLastIdentifier(param: string): string | null {
+  // Strip nullability annotations and common macros
+  let cleaned = param
+    .replace(/\b_Nonnull\b/g, "")
+    .replace(/\b_Nullable\b/g, "")
+    .replace(/\b__nonnull\b/g, "")
+    .replace(/\b__nullable\b/g, "")
+    .replace(/\bNS_NOESCAPE\b/g, "")
+    .replace(/\bNS_SWIFT_SENDABLE\b/g, "")
+    .replace(/\bNS_SWIFT_NONISOLATED\b/g, "")
+    .replace(/\bNS_SWIFT_UI_ACTOR\b/g, "")
+    .replace(/\b__kindof\b/g, "")
+    .replace(/\bAPI_AVAILABLE\([^)]*\)/g, "")
+    .replace(/\bAPI_UNAVAILABLE\([^)]*\)/g, "")
+    .replace(/\bAPI_DEPRECATED\([^)]*\)/g, "")
+    .trim();
+
+  // If it contains a nested block `(^`, the name would be inside the (^name) part
+  // or after the whole block type — but those are outer param names, not inner block params.
+  // For nested block params, don't try to extract.
+  if (cleaned.includes("(^")) return null;
+
+  // For pointer types: look for identifier after the last *
+  const lastStar = cleaned.lastIndexOf("*");
+  if (lastStar !== -1) {
+    const afterStar = cleaned.slice(lastStar + 1).trim();
+    if (afterStar && /^[a-zA-Z_]\w*$/.test(afterStar)) {
+      return afterStar;
+    }
+    return null;
+  }
+
+  // For non-pointer types: the last word is the name (if there are multiple words)
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length < 2) return null;
+
+  const lastWord = words[words.length - 1]!;
+  // Verify it looks like an identifier
+  if (/^[a-zA-Z_]\w*$/.test(lastWord)) {
+    return lastWord;
+  }
+
+  return null;
+}
+
 /**
  * Parse a clang AST root node and extract all ObjC class declarations.
  * Merges categories into their base class.
@@ -539,13 +757,32 @@ export function parseAST(
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
     const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
-    const parameters: { name: string; type: string }[] = [];
+    const parameters: { name: string; type: string; blockParamNames?: string[] }[] = [];
+    // Extract block parameter names from header source for this method declaration
+    let blockParamNamesList: string[][] | undefined;
     if (node.inner) {
       for (const child of node.inner) {
         if (child.kind === "ParmVarDecl") {
+          const qualType = child.type?.qualType ?? "id";
+          let blockParamNames: string[] | undefined;
+
+          // For block-typed parameters, extract inner param names from source
+          if (qualType.includes("(^")) {
+            if (!blockParamNamesList) {
+              blockParamNamesList = extractBlockParamNamesFromMethod(node, headerLines, headerLinesMap, contextFile);
+            }
+            // Match this block parameter to the next entry in the extracted names list
+            // by counting which block-typed ParmVarDecl we're on
+            const blockIdx = parameters.filter((p) => p.type.includes("(^")).length;
+            if (blockParamNamesList[blockIdx] && blockParamNamesList[blockIdx]!.length > 0) {
+              blockParamNames = blockParamNamesList[blockIdx];
+            }
+          }
+
           parameters.push({
             name: child.name ?? "arg",
-            type: child.type?.qualType ?? "id"
+            type: qualType,
+            ...(blockParamNames ? { blockParamNames } : {})
           });
         }
       }
@@ -716,13 +953,31 @@ export function parseProtocols(
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
     const description = extractDescription(node) ?? scanForDocComment(node, headerLines, headerLinesMap, contextFile);
 
-    const parameters: { name: string; type: string }[] = [];
+    const parameters: { name: string; type: string; blockParamNames?: string[] }[] = [];
+    // Extract block parameter names from header source for this method declaration
+    let blockParamNamesList: string[][] | undefined;
     if (node.inner) {
       for (const child of node.inner) {
         if (child.kind === "ParmVarDecl") {
+          const qualType = child.type?.qualType ?? "id";
+          let blockParamNames: string[] | undefined;
+
+          // For block-typed parameters, extract inner param names from source
+          if (qualType.includes("(^")) {
+            if (!blockParamNamesList) {
+              blockParamNamesList = extractBlockParamNamesFromMethod(node, headerLines, headerLinesMap, contextFile);
+            }
+            // Match this block parameter to the next entry in the extracted names list
+            const blockIdx = parameters.filter((p) => p.type.includes("(^")).length;
+            if (blockParamNamesList[blockIdx] && blockParamNamesList[blockIdx]!.length > 0) {
+              blockParamNames = blockParamNamesList[blockIdx];
+            }
+          }
+
           parameters.push({
             name: child.name ?? "arg",
-            type: child.type?.qualType ?? "id"
+            type: qualType,
+            ...(blockParamNames ? { blockParamNames } : {})
           });
         }
       }
