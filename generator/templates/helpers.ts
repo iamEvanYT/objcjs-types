@@ -67,4 +67,24 @@ export function NSDictionaryFromKeysAndValues(keys: NobjcObject[], values: Nobjc
   return NSDictionary.dictionaryWithObjects$forKeys$(valuesArray, keysArray);
 }
 
+/**
+ * Wraps a function that accepts a single callback into a Promise.
+ *
+ * @param funcWithCallback - A function that accepts a completion callback and
+ *   invokes it with the result. The function itself returns `void`.
+ * @returns A Promise that resolves with the value passed to the callback.
+ *
+ * @example
+ * ```ts
+ * const authState = await makePromise(
+ *   manager.requestAuthorizationForPublicKeyCredentials$.bind(manager)
+ * );
+ * ```
+ */
+export function makePromise<T>(funcWithCallback: (callback: (result: T) => void) => void): Promise<T> {
+  return new Promise<T>((resolve) => {
+    funcWithCallback(resolve);
+  });
+}
+
 export { isKindOfClass } from "./bind.js";
