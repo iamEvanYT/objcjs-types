@@ -13,7 +13,8 @@ import type {
   ObjCIntegerEnum,
   ObjCStringEnum,
   ObjCStruct,
-  ObjCStructAlias
+  ObjCStructAlias,
+  ObjCFunction
 } from "./ast-parser.ts";
 
 /** Result from a unified parse-all task (classes + protocols + enums + structs from one clang invocation) */
@@ -32,6 +33,8 @@ export interface UnifiedParseResult {
   structAliases: ObjCStructAlias[];
   /** General typedef resolution table (typedef name → underlying qualType) */
   typedefs: Map<string, string>;
+  /** Parsed C function declarations (function name → ObjCFunction) */
+  functions: Map<string, ObjCFunction>;
 }
 
 export interface ClassParseResult {
@@ -244,7 +247,8 @@ export class WorkerPool {
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
       structAliases: result.structAliases ?? [],
-      typedefs: new Map(result.typedefs ?? [])
+      typedefs: new Map(result.typedefs ?? []),
+      functions: new Map(result.functions ?? [])
     };
   }
 
@@ -266,7 +270,8 @@ export class WorkerPool {
     protocolTargets: string[],
     integerEnumTargets: string[],
     stringEnumTargets: string[],
-    preIncludes: string[]
+    preIncludes: string[],
+    frameworkName?: string
   ): Promise<UnifiedParseResult> {
     const result = await this.dispatch({
       id: this.nextId++,
@@ -276,7 +281,8 @@ export class WorkerPool {
       protocolTargets,
       integerEnumTargets,
       stringEnumTargets,
-      preIncludes
+      preIncludes,
+      frameworkName
     });
     return {
       classes: new Map(result.classes),
@@ -285,7 +291,8 @@ export class WorkerPool {
       stringEnums: new Map(result.stringEnums),
       structs: new Map(result.structs ?? []),
       structAliases: result.structAliases ?? [],
-      typedefs: new Map(result.typedefs ?? [])
+      typedefs: new Map(result.typedefs ?? []),
+      functions: new Map(result.functions ?? [])
     };
   }
 

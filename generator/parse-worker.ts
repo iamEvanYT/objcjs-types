@@ -16,7 +16,8 @@ import {
   parseIntegerEnums,
   parseStringEnums,
   parseStructs,
-  parseTypedefs
+  parseTypedefs,
+  parseFunctions
 } from "./ast-parser.ts";
 
 /**
@@ -82,6 +83,10 @@ self.onmessage = async (event: MessageEvent) => {
       const structResult = parseStructs(ast);
       const typedefs = parseTypedefs(ast);
 
+      // Parse C function declarations from this framework's headers
+      const frameworkHeaderPathSet = new Set<string>(headerPaths);
+      const functions = parseFunctions(ast, frameworkHeaderPathSet, msg.frameworkName ?? "");
+
       postMessage({
         id: msg.id,
         type: "batch-result",
@@ -92,6 +97,7 @@ self.onmessage = async (event: MessageEvent) => {
         structs: [...structResult.structs.entries()],
         structAliases: structResult.aliases,
         typedefs: [...typedefs.entries()],
+        functions: [...functions.entries()],
         // Report what was found vs expected for logging
         foundClasses: classes.size,
         foundProtocols: protocols.size,
@@ -183,7 +189,8 @@ self.onmessage = async (event: MessageEvent) => {
         stringEnums: [...stringEnums.entries()],
         structs: [...structResult.structs.entries()],
         structAliases: structResult.aliases,
-        typedefs: [...typedefs.entries()]
+        typedefs: [...typedefs.entries()],
+        functions: [] // parse-all is used for extra headers which don't need function parsing
       });
     } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);

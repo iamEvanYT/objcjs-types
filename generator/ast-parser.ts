@@ -107,6 +107,21 @@ export interface ObjCStringEnum {
   values: ObjCStringEnumValue[];
 }
 
+// --- C function types ---
+
+export interface ObjCFunction {
+  /** The C function name (e.g., "NSHomeDirectory", "CGRectMake") */
+  name: string;
+  /** The return type qualType string (e.g., "NSString *", "void") */
+  returnType: string;
+  /** Ordered parameter list */
+  parameters: { name: string; type: string }[];
+  /** Whether the function accepts variadic arguments (e.g., NSLog) */
+  isVariadic: boolean;
+  /** The framework this function belongs to */
+  frameworkName: string;
+}
+
 // --- Helpers for extracting doc comments and deprecation info ---
 
 /**
@@ -1249,4 +1264,105 @@ export function parseTypedefs(root: ClangASTNode): Map<string, string> {
 
   walk(root);
   return typedefs;
+}
+
+// --- C function parsing ---
+
+/**
+ * Parse a clang AST root node and extract C function declarations.
+ *
+ * FunctionDecl nodes contain the full type signature in node.type.qualType
+ * (e.g., "void (NSString * _Nonnull, ...)"), parameters as ParmVarDecl children,
+ * and a variadic flag. We filter to only functions declared in the framework's
+ * own headers (not system/stdlib functions pulled in transitively).
+ *
+ * @param root - The clang AST root node
+ * @param frameworkHeaderPaths - Set of header file paths belonging to this framework.
+ *   Only functions declared in these headers are included.
+ * @param frameworkName - The framework name to tag on each function
+ */
+export function parseFunctions(
+  root: ClangASTNode,
+  frameworkHeaderPaths: Set<string>,
+  frameworkName: string
+): Map<string, ObjCFunction> {
+  const functions = new Map<string, ObjCFunction>();
+
+  function isDeprecated(node: ClangASTNode): boolean {
+    if (!node.inner) return false;
+    return node.inner.some((child) => child.kind === "DeprecatedAttr");
+  }
+
+  function isUnavailable(node: ClangASTNode): boolean {
+    if (!node.inner) return false;
+    return node.inner.some((child) => child.kind === "UnavailableAttr");
+  }
+
+  // Running file tracker for batched mode
+  let currentFile: string | undefined;
+
+  function walk(node: ClangASTNode): void {
+    const nodeFile = getLocFile(node);
+    if (nodeFile) currentFile = nodeFile;
+
+    if (node.kind === "FunctionDecl" && node.name) {
+      const name = node.name;
+
+      // Skip private/internal functions (underscore-prefixed)
+      if (name.startsWith("_")) {
+        // Allow through if it's in the inner array of root (walk continues)
+      } else if (!isDeprecated(node) && !isUnavailable(node)) {
+        // Skip inline functions (they have a body/CompoundStmt child, or storageClass)
+        const hasBody = node.inner?.some((child) => child.kind === "CompoundStmt") ?? false;
+        if (!hasBody) {
+          // Skip functions with storageClass "static" (internal linkage)
+          if (node.storageClass !== "static") {
+            // Check that this function is declared in a framework header
+            const file = getLocFile(node) ?? currentFile;
+            const inFramework = file ? frameworkHeaderPaths.has(file) : false;
+
+            if (inFramework && !functions.has(name)) {
+              // Extract return type from the full type signature
+              // node.type.qualType looks like "void (NSString *, ...)" or "NSString *(void)"
+              const fullType = node.type?.qualType ?? "void ()";
+              const parenIdx = fullType.indexOf("(");
+              const returnType = parenIdx >= 0 ? fullType.slice(0, parenIdx).trim() : "void";
+
+              // Extract parameters from ParmVarDecl children
+              const parameters: { name: string; type: string }[] = [];
+              if (node.inner) {
+                for (const child of node.inner) {
+                  if (child.kind === "ParmVarDecl") {
+                    parameters.push({
+                      name: child.name ?? "arg",
+                      type: child.type?.qualType ?? "id"
+                    });
+                  }
+                }
+              }
+
+              const isVariadic = node.variadic === true;
+
+              functions.set(name, {
+                name,
+                returnType,
+                parameters,
+                isVariadic,
+                frameworkName
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return functions;
 }

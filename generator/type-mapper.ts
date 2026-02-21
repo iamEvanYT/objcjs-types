@@ -463,6 +463,135 @@ export function mapReturnType(qualType: string, containingClass: string): string
 }
 
 /**
+ * Map an ObjC qualType string to its ObjC type encoding character(s).
+ *
+ * Used by the function emitter to generate `{ returns: "..." }` and
+ * `{ args: [...] }` options for `callFunction()`. The type encodings
+ * follow the ObjC runtime convention:
+ * - `v` = void, `B` = BOOL, `i` = int, `I` = unsigned int
+ * - `s` = short, `S` = unsigned short, `l` = long, `L` = unsigned long
+ * - `q` = long long, `Q` = unsigned long long
+ * - `f` = float, `d` = double
+ * - `@` = ObjC object pointer (id, NSString *, etc.)
+ * - `:` = SEL, `#` = Class
+ * - `*` = char *, `^v` = void *
+ * - `^` = generic pointer (CF opaque types, etc.)
+ *
+ * @returns The type encoding string, or null if the type cannot be encoded
+ *   (e.g., block types, function pointers, pointer-to-pointer).
+ */
+export function qualTypeToEncoding(qualType: string): string | null {
+  const cleaned = cleanQualType(qualType);
+
+  // Void
+  if (cleaned === "void") return "v";
+
+  // Boolean
+  if (cleaned === "BOOL" || cleaned === "bool" || cleaned === "_Bool") return "B";
+
+  // Integer types
+  if (cleaned === "char" || cleaned === "signed char") return "c";
+  if (cleaned === "unsigned char") return "C";
+  if (cleaned === "short" || cleaned === "unsigned short") return cleaned.startsWith("unsigned") ? "S" : "s";
+  if (cleaned === "int") return "i";
+  if (cleaned === "unsigned int") return "I";
+  if (cleaned === "long") return "l";
+  if (cleaned === "unsigned long") return "L";
+  if (cleaned === "long long") return "q";
+  if (cleaned === "unsigned long long") return "Q";
+
+  // Fixed-width integer types
+  if (cleaned === "int8_t") return "c";
+  if (cleaned === "uint8_t") return "C";
+  if (cleaned === "int16_t") return "s";
+  if (cleaned === "uint16_t") return "S";
+  if (cleaned === "int32_t") return "i";
+  if (cleaned === "uint32_t") return "I";
+  if (cleaned === "int64_t") return "q";
+  if (cleaned === "uint64_t") return "Q";
+
+  // Platform-dependent integer types (arm64 macOS: NSInteger = long, NSUInteger = unsigned long)
+  if (cleaned === "NSInteger" || cleaned === "CFIndex" || cleaned === "ssize_t") return "q";
+  if (cleaned === "NSUInteger" || cleaned === "size_t") return "Q";
+
+  // Floating point
+  if (cleaned === "float") return "f";
+  if (cleaned === "double" || cleaned === "CGFloat" || cleaned === "NSTimeInterval" || cleaned === "CFTimeInterval")
+    return "d";
+
+  // Unicode character
+  if (cleaned === "unichar") return "S";
+
+  // Selector
+  if (cleaned === "SEL") return ":";
+
+  // Class
+  if (cleaned === "Class") return "#";
+
+  // C string types
+  if (
+    cleaned === "char *" ||
+    cleaned === "const char *" ||
+    cleaned === "unsigned char *" ||
+    cleaned === "const unsigned char *"
+  )
+    return "*";
+
+  // Void pointer
+  if (cleaned === "void *" || cleaned === "const void *") return "^v";
+
+  // ObjC id (bare)
+  if (cleaned === "id") return "@";
+
+  // ObjC object pointers (NSString *, NSArray<...> *, id<Protocol>, etc.)
+  if (cleaned.endsWith("*") || cleaned.startsWith("id<")) return "@";
+
+  // Enum types that are known integers — map to their underlying integer encoding
+  if (knownIntegerEnums.has(cleaned)) return "q"; // Most NS_ENUM/NS_OPTIONS use NSInteger/NSUInteger
+
+  // String enum types (NSString * typedef aliases)
+  if (knownStringEnums.has(cleaned)) return "@";
+
+  // NSString typedef aliases from DIRECT_MAPPINGS
+  if (cleaned in DIRECT_MAPPINGS) {
+    const mapped = DIRECT_MAPPINGS[cleaned]!;
+    if (mapped === "_NSString" || mapped === "string") return "@";
+    if (mapped === "boolean") return "B";
+    if (mapped === "number") return "q";
+    if (mapped === "void") return "v";
+    if (mapped === "NobjcObject") return "@";
+  }
+
+  // Struct types
+  if (cleaned in STRUCT_TYPE_MAP) return "{" + cleaned + "}";
+
+  // CF opaque types (struct pointers)
+  if (CF_OPAQUE_TYPES.has(cleaned)) return "^";
+
+  // Typedef resolution
+  if (knownTypedefs.has(cleaned)) {
+    const underlying = knownTypedefs.get(cleaned)!;
+    return qualTypeToEncoding(underlying);
+  }
+
+  // Numeric types catch-all
+  if (NUMERIC_TYPES.has(cleaned)) return "d";
+
+  // Block types, function pointers, pointer-to-pointer — cannot encode simply
+  if (
+    cleaned.includes("(^") ||
+    cleaned.includes("Block_") ||
+    cleaned.includes("(*)") ||
+    cleaned.match(/\w+\s*\*\s*\*/)
+  ) {
+    return null;
+  }
+
+  // Unknown — default to object pointer
+  return "@";
+}
+
+/**
  * Map a parameter type.
  *
  * For raw pointer parameters (`void *`, `const void *`) and CF opaque types

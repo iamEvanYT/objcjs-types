@@ -23,7 +23,8 @@ import type {
   ObjCIntegerEnum,
   ObjCStringEnum,
   ObjCStruct,
-  ObjCStructAlias
+  ObjCStructAlias,
+  ObjCFunction
 } from "./ast-parser.ts";
 import {
   setKnownClasses,
@@ -49,6 +50,7 @@ import {
   emitStructIndex,
   emitIntegerEnumFile,
   emitStringEnumFile,
+  emitFunctionsFile,
   groupCaseCollisions
 } from "./emitter.ts";
 import type { StructDef, StructFieldDef } from "./emitter.ts";
@@ -362,7 +364,8 @@ async function main(): Promise<void> {
         task.protocolTargets,
         task.integerEnumTargets,
         task.stringEnumTargets,
-        task.preIncludes
+        task.preIncludes,
+        task.frameworkName
       )
       .then((result) => {
         trackProgress(task.frameworkName);
@@ -522,6 +525,22 @@ async function main(): Promise<void> {
     }
     for (const [name, enumDef] of entry.result.stringEnums) {
       fwStrEnums.set(name, enumDef);
+    }
+  }
+
+  // Organize parsed functions by framework
+  const frameworkFunctions = new Map<string, Map<string, ObjCFunction>>();
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
+    if (entry.result.functions.size === 0) continue;
+
+    if (!frameworkFunctions.has(entry.task.frameworkName)) {
+      frameworkFunctions.set(entry.task.frameworkName, new Map());
+    }
+    const fwFuncs = frameworkFunctions.get(entry.task.frameworkName)!;
+    for (const [name, func] of entry.result.functions) {
+      fwFuncs.set(name, func);
     }
   }
 
@@ -1200,6 +1219,15 @@ async function main(): Promise<void> {
     // Wait for all file writes in this framework to complete
     await Promise.all([...classWritePromises, ...protoWritePromises, ...enumWritePromises]);
 
+    // Emit functions file (typed wrappers for C functions)
+    const fwFuncs = frameworkFunctions.get(framework.name);
+    let hasFunctions = false;
+    if (fwFuncs && fwFuncs.size > 0) {
+      const functionsContent = emitFunctionsFile([...fwFuncs.values()], framework, frameworks, globalClassToFile);
+      await writeFile(join(frameworkDir, "functions.ts"), functionsContent);
+      hasFunctions = true;
+    }
+
     // Emit framework index
     const indexContent = emitFrameworkIndex(
       framework,
@@ -1209,15 +1237,17 @@ async function main(): Promise<void> {
       generatedIntegerEnums,
       generatedStringEnums,
       generatedStringEnumsTypeOnly,
-      enumToFile
+      enumToFile,
+      hasFunctions
     );
     await writeFile(join(frameworkDir, "index.ts"), indexContent);
     generatedProtocolsByFramework.set(framework.name, generatedProtocols);
 
     const totalEnumCount =
       generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
+    const funcCountStr = hasFunctions ? ` + ${fwFuncs!.size} functions` : "";
     console.log(
-      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files + index.ts`
+      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files${funcCountStr} + index.ts`
     );
   }
 
@@ -1276,17 +1306,23 @@ async function main(): Promise<void> {
   let totalClasses = 0;
   let totalProtocols = 0;
   let totalEnums = 0;
+  let totalFunctions = 0;
   for (const fw of frameworksToProcess) {
     const dir = join(SRC_DIR, fw.name);
     const classCount = fw.classes.filter((c) => existsSync(join(dir, `${c}.ts`))).length;
     const protoCount = fw.protocols.filter((p) => existsSync(join(dir, `${p}.ts`))).length;
     const enumCount = [...fw.integerEnums, ...fw.stringEnums].filter((e) => existsSync(join(dir, `${e}.ts`))).length;
-    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums`);
+    const funcCount = frameworkFunctions.get(fw.name)?.size ?? 0;
+    const funcStr = funcCount > 0 ? `, ${funcCount} functions` : "";
+    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums${funcStr}`);
     totalClasses += classCount;
     totalProtocols += protoCount;
     totalEnums += enumCount;
+    totalFunctions += funcCount;
   }
-  console.log(`  Total: ${totalClasses} classes, ${totalProtocols} protocols, ${totalEnums} enums`);
+  console.log(
+    `  Total: ${totalClasses} classes, ${totalProtocols} protocols, ${totalEnums} enums, ${totalFunctions} functions`
+  );
 
   // Clean up the compiled ObjC helper binary
   await cleanupResolver();

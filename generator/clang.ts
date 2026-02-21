@@ -38,6 +38,8 @@ export interface ClangASTNode {
   storageClass?: string;
   // ConstantExpr
   value?: string;
+  // FunctionDecl
+  variadic?: boolean;
 }
 
 /** Node kinds we actually need from the AST (ObjC decls, enums, structs, typedefs, vars for string enums) */
@@ -48,7 +50,8 @@ const RELEVANT_KINDS = new Set([
   "EnumDecl",
   "RecordDecl",
   "TypedefDecl",
-  "VarDecl"
+  "VarDecl",
+  "FunctionDecl"
 ]);
 
 /**

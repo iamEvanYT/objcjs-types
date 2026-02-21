@@ -9,13 +9,15 @@ import type {
   ObjCProtocol,
   ObjCIntegerEnum,
   ObjCStringEnum,
-  ObjCStringEnumValue
+  ObjCStringEnumValue,
+  ObjCFunction
 } from "./ast-parser.ts";
 import type { FrameworkConfig } from "./frameworks.ts";
 import {
   selectorToJS,
   mapReturnType,
   mapParamType,
+  qualTypeToEncoding,
   STRUCT_TS_TYPES,
   getKnownIntegerEnums,
   getKnownStringEnums
@@ -1620,6 +1622,219 @@ export function emitStructIndex(structDefs: StructDef[]): string {
   return lines.join("\n");
 }
 
+// --- C function file generation ---
+
+/**
+ * Generate a functions.ts file for a framework containing typed wrappers
+ * around `callFunction()` / `callVariadicFunction()` from objc-js.
+ *
+ * Each C function gets a TypeScript wrapper that:
+ * - Has typed parameters and return type
+ * - Passes the function name and type encoding options to the runtime
+ * - For variadic functions, uses `callVariadicFunction()` with the fixed arg count
+ *
+ * Example output:
+ * ```ts
+ * import { callFunction, callVariadicFunction } from "objc-js";
+ * import type { _NSString } from "./NSString.js";
+ *
+ * export function NSHomeDirectory(): _NSString {
+ *   return callFunction("NSHomeDirectory", { returns: "@" }) as _NSString;
+ * }
+ * export function NSLog(format: _NSString, ...args: any[]): void {
+ *   callVariadicFunction("NSLog", 1, format, ...args);
+ * }
+ * ```
+ */
+export function emitFunctionsFile(
+  functions: ObjCFunction[],
+  currentFramework: FrameworkConfig,
+  allFrameworks: FrameworkConfig[],
+  classToFile?: Map<string, string>
+): string {
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+
+  // Determine which runtime imports we need
+  const hasNonVariadic = functions.some((f) => !f.isVariadic);
+  const hasVariadic = functions.some((f) => f.isVariadic);
+  const runtimeImports: string[] = [];
+  if (hasNonVariadic) runtimeImports.push("callFunction");
+  if (hasVariadic) runtimeImports.push("callVariadicFunction");
+  lines.push(`import { ${runtimeImports.join(", ")} } from "objc-js";`);
+
+  // Collect all referenced types for imports
+  const classRefs = new Set<string>();
+  const structRefs = new Set<string>();
+  const enumRefs = new Set<string>();
+  const intEnums = getKnownIntegerEnums();
+  const strEnums = getKnownStringEnums();
+  let needsNobjcObject = false;
+
+  for (const func of functions) {
+    // Check return type
+    const retType = mapReturnType(func.returnType, "");
+    if (retType.includes("NobjcObject")) needsNobjcObject = true;
+    extractFunctionTypeRefs(retType, classRefs, structRefs, enumRefs, intEnums, strEnums);
+    // Check param types
+    for (const param of func.parameters) {
+      const paramType = mapParamType(param.type, "");
+      if (paramType.includes("NobjcObject")) needsNobjcObject = true;
+      extractFunctionTypeRefs(paramType, classRefs, structRefs, enumRefs, intEnums, strEnums);
+    }
+  }
+
+  if (needsNobjcObject) {
+    lines.push(`import type { NobjcObject } from "objc-js";`);
+  }
+
+  // Emit class/protocol imports
+  if (classRefs.size > 0) {
+    lines.push(...emitImports(classRefs, currentFramework, allFrameworks, classToFile));
+  }
+
+  // Emit struct imports
+  for (const name of [...structRefs].sort()) {
+    lines.push(`import type { ${name} } from "../structs/${name}.js";`);
+  }
+
+  // Emit enum imports
+  lines.push(...emitEnumImports(enumRefs, currentFramework, allFrameworks));
+
+  lines.push("");
+
+  // Sort functions alphabetically for deterministic output
+  const sorted = [...functions].sort((a, b) => a.name.localeCompare(b.name));
+
+  for (const func of sorted) {
+    const tsReturnType = mapReturnType(func.returnType, "");
+    const returnEncoding = qualTypeToEncoding(func.returnType);
+    const isVoidReturn = tsReturnType === "void";
+
+    // Build parameter list
+    const params: string[] = [];
+    const paramNames: string[] = [];
+    const seenNames = new Map<string, number>();
+
+    for (const param of func.parameters) {
+      const tsType = mapParamType(param.type, "");
+      let safeName = sanitizeParamName(param.name);
+      const prev = seenNames.get(safeName) ?? 0;
+      seenNames.set(safeName, prev + 1);
+      if (prev > 0) {
+        safeName = `${safeName}${prev + 1}`;
+      }
+      params.push(`${safeName}: ${tsType}`);
+      paramNames.push(safeName);
+    }
+
+    if (func.isVariadic) {
+      params.push("...args: any[]");
+    }
+
+    const paramStr = params.join(", ");
+    const returnTypeStr = tsReturnType;
+
+    if (func.isVariadic) {
+      // Variadic function: callVariadicFunction(name, fixedArgCount, ...allArgs)
+      lines.push(`export function ${func.name}(${paramStr}): ${returnTypeStr} {`);
+      const fixedCount = func.parameters.length;
+      const allArgNames = [...paramNames, "...args"];
+      if (isVoidReturn) {
+        lines.push(`  callVariadicFunction("${func.name}", ${fixedCount}, ${allArgNames.join(", ")});`);
+      } else {
+        lines.push(
+          `  return callVariadicFunction("${func.name}", ${fixedCount}, ${allArgNames.join(", ")}) as ${tsReturnType};`
+        );
+      }
+      lines.push(`}`);
+    } else {
+      // Non-variadic function: callFunction(name, options, ...args)
+      lines.push(`export function ${func.name}(${paramStr}): ${returnTypeStr} {`);
+
+      // Build options object
+      const optionParts: string[] = [];
+      if (!isVoidReturn && returnEncoding) {
+        optionParts.push(`returns: "${returnEncoding}"`);
+      }
+
+      // Build arg encodings array if any param needs explicit encoding
+      const argEncodings: (string | null)[] = func.parameters.map((p) => qualTypeToEncoding(p.type));
+      const needsArgEncodings = argEncodings.some((e) => e !== null && e !== "@");
+      if (needsArgEncodings && argEncodings.length > 0) {
+        const encodingStrs = argEncodings.map((e) => (e ? `"${e}"` : `"@"`));
+        optionParts.push(`args: [${encodingStrs.join(", ")}]`);
+      }
+
+      const hasOptions = optionParts.length > 0;
+      const optionsStr = hasOptions ? `{ ${optionParts.join(", ")} }` : "";
+
+      if (isVoidReturn) {
+        if (hasOptions) {
+          lines.push(`  callFunction("${func.name}", ${optionsStr}, ${paramNames.join(", ")});`);
+        } else if (paramNames.length > 0) {
+          lines.push(`  callFunction("${func.name}", undefined, ${paramNames.join(", ")});`);
+        } else {
+          lines.push(`  callFunction("${func.name}");`);
+        }
+      } else {
+        if (hasOptions) {
+          if (paramNames.length > 0) {
+            lines.push(
+              `  return callFunction("${func.name}", ${optionsStr}, ${paramNames.join(", ")}) as ${tsReturnType};`
+            );
+          } else {
+            lines.push(`  return callFunction("${func.name}", ${optionsStr}) as ${tsReturnType};`);
+          }
+        } else if (paramNames.length > 0) {
+          lines.push(`  return callFunction("${func.name}", undefined, ${paramNames.join(", ")}) as ${tsReturnType};`);
+        } else {
+          lines.push(`  return callFunction("${func.name}") as ${tsReturnType};`);
+        }
+      }
+      lines.push(`}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Extract class, struct, and enum references from a mapped TS type string
+ * (used by emitFunctionsFile for collecting imports).
+ */
+function extractFunctionTypeRefs(
+  typeStr: string,
+  classRefs: Set<string>,
+  structRefs: Set<string>,
+  enumRefs: Set<string>,
+  intEnums: Set<string>,
+  strEnums: Set<string>
+): void {
+  // Class/protocol references: _ClassName
+  const classRegex = /_(\w+)/g;
+  let match;
+  while ((match = classRegex.exec(typeStr)) !== null) {
+    classRefs.add(match[1]!);
+  }
+
+  // Struct references
+  for (const structName of STRUCT_TS_TYPES) {
+    if (typeStr === structName || typeStr.startsWith(structName + " ")) {
+      structRefs.add(structName);
+    }
+  }
+
+  // Enum references
+  for (const part of typeStr.split(" | ")) {
+    const trimmed = part.trim();
+    if (intEnums.has(trimmed) || strEnums.has(trimmed)) {
+      enumRefs.add(trimmed);
+    }
+  }
+}
+
 /**
  * Generate the barrel index.ts for a framework.
  *
@@ -1630,6 +1845,7 @@ export function emitStructIndex(structDefs: StructDef[]): string {
  * @param generatedStringEnums - Names of string enums with resolved values (value + type export).
  * @param generatedStringEnumsTypeOnly - Names of string enums without resolved values (type-only export).
  * @param enumToFile - Map from colliding enum name → canonical filename (for case-insensitive collision handling).
+ * @param hasFunctions - Whether a functions.ts file was generated for this framework.
  */
 export function emitFrameworkIndex(
   framework: FrameworkConfig,
@@ -1639,7 +1855,8 @@ export function emitFrameworkIndex(
   generatedIntegerEnums?: string[],
   generatedStringEnums?: string[],
   generatedStringEnumsTypeOnly?: string[],
-  enumToFile?: Map<string, string>
+  enumToFile?: Map<string, string>,
+  hasFunctions?: boolean
 ): string {
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
@@ -1708,6 +1925,12 @@ export function emitFrameworkIndex(
       lines.push(`export type { ${enumName} } from "./${fileName}.js";`);
       lines.push("");
     }
+  }
+
+  // Export C functions (re-export everything from functions.ts)
+  if (hasFunctions) {
+    lines.push(`export * from "./functions.js";`);
+    lines.push("");
   }
 
   return lines.join("\n");
