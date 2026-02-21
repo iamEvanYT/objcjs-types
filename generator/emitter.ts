@@ -1927,12 +1927,6 @@ export function emitFrameworkIndex(
     }
   }
 
-  // Export C functions (re-export everything from functions.ts)
-  if (hasFunctions) {
-    lines.push(`export * from "./functions.js";`);
-    lines.push("");
-  }
-
   return lines.join("\n");
 }
 
