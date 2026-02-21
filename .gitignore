@@ -39,3 +39,6 @@ src-old/
 
 # generator temp files
 .gen-tmp
+
+# output from custom generator
+objcjs-types-output/

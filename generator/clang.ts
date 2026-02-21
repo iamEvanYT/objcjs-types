@@ -124,8 +124,13 @@ export async function clangASTDumpWithPreIncludes(headerPath: string, preInclude
  *
  * @param headerPaths - Array of absolute paths to .h header files to include
  * @param preIncludes - Headers to include before the batch (e.g., Foundation/Foundation.h)
+ * @param extraArgs - Additional clang arguments (e.g., ["-I", "/path/to/includes"])
  */
-export async function clangBatchASTDump(headerPaths: string[], preIncludes: string[]): Promise<ClangASTNode> {
+export async function clangBatchASTDump(
+  headerPaths: string[],
+  preIncludes: string[],
+  extraArgs?: string[]
+): Promise<ClangASTNode> {
   // Create a temporary .m file that includes all headers
   const includes = headerPaths.map((p) => `#include "${p}"`).join("\n");
   const tmpPath = `${Bun.env.TMPDIR ?? "/tmp"}/objcjs-batch-${Date.now()}-${Math.random().toString(36).slice(2)}.m`;
@@ -135,6 +140,9 @@ export async function clangBatchASTDump(headerPaths: string[], preIncludes: stri
     const args = ["clang", "-Xclang", "-ast-dump=json", "-fsyntax-only", "-x", "objective-c", "-isysroot", SDK_PATH];
     for (const inc of preIncludes) {
       args.push("-include", inc);
+    }
+    if (extraArgs) {
+      args.push(...extraArgs);
     }
     args.push("-Xclang", "-fparse-all-comments");
     args.push(tmpPath);

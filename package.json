@@ -32,11 +32,17 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "generator",
+    "bin"
   ],
+  "bin": {
+    "objcjs-types": "./bin/objcjs-types.ts"
+  },
   "scripts": {
     "clear": "rm -rf src && rm -rf dist",
     "generate": "bun run generator/index.ts",
+    "generate:custom": "bun run generator/custom.ts",
     "build": "bun run clear && bun run generate && bunx tsgo",
     "format": "prettier --write ."
   },

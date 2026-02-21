@@ -368,7 +368,7 @@ const TS_RESERVED = new Set([
   "eval"
 ]);
 
-function sanitizeParamName(name: string): string {
+export function sanitizeParamName(name: string): string {
   if (TS_RESERVED.has(name)) return `${name}_`;
   if (!name || /^\d/.test(name)) return `arg`;
   return name;
@@ -879,7 +879,7 @@ export function emitMergedClassFile(
  * without the file-level header/imports. Used by both emitClassFile and
  * emitMergedClassFile.
  */
-function emitClassBody(
+export function emitClassBody(
   cls: ObjCClass,
   allKnownClasses: Set<string>,
   allParsedClasses?: Map<string, ObjCClass>
