@@ -1,6 +1,6 @@
 {
   "name": "objcjs-types",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Auto-generated TypeScript type declarations for macOS Objective-C frameworks",
   "type": "module",
   "main": "./dist/index.js",
