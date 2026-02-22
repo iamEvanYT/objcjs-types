@@ -68,23 +68,56 @@ export function NSDictionaryFromKeysAndValues(keys: NobjcObject[], values: Nobjc
 }
 
 /**
- * Wraps a function that accepts a single callback into a Promise.
+ * Returns the key name for a given numeric value in a const enum-like object.
  *
- * @param funcWithCallback - A function that accepts a completion callback and
- *   invokes it with the result. The function itself returns `void`.
- * @returns A Promise that resolves with the value passed to the callback.
+ * @param enumObj - A const object mapping string keys to numeric values.
+ * @param value - The numeric value to look up.
+ * @returns The matching key name, or `undefined` if not found.
  *
  * @example
  * ```ts
- * const authState = await makePromise(
- *   manager.requestAuthorizationForPublicKeyCredentials$.bind(manager)
- * );
+ * const state = enumFromValue(
+ *   ASAuthorizationWebBrowserPublicKeyCredentialManagerAuthorizationState,
+ *   rawValue
+ * ); // e.g. "Authorized" | "Denied" | "NotDetermined" | undefined
  * ```
  */
-export function makePromise<T>(funcWithCallback: (callback: (result: T) => void) => void): Promise<T> {
-  return new Promise<T>((resolve) => {
-    funcWithCallback(resolve);
+export function enumFromValue<T extends Record<string, number>>(enumObj: T, value: number): keyof T | undefined {
+  return (Object.keys(enumObj) as (keyof T)[]).find((key) => enumObj[key] === value);
+}
+
+function PromiseWithResolvers<T = void>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve: (value: T | PromiseLike<T>) => void;
+  let reject: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
+  return { promise, resolve: resolve!, reject: reject! };
+}
+/**
+ * Converts a callback-based function with a single result parameter into a Promise.
+ *
+ * @template TArgs - The argument types of the original function (excluding the callback)
+ * @template TResult - The type of the result passed to the callback
+ * @param func - A function that takes arguments and a callback with a single result parameter
+ * @param args - The arguments to pass to the function (excluding the callback)
+ * @returns A Promise that resolves with the result passed to the callback
+ */
+export function makePromise1Result<TArgs extends any[], TResult>(
+  func: (...args: [...TArgs, (result: TResult) => void]) => void,
+  ...args: TArgs
+): Promise<TResult> {
+  const { promise, resolve } = PromiseWithResolvers<TResult>();
+  const callback = (result: TResult) => {
+    resolve(result);
+  };
+  func(...args, callback);
+  return promise;
 }
 
 export { isKindOfClass } from "./bind.js";
