@@ -14,7 +14,8 @@ import type {
   ObjCStringEnum,
   ObjCStruct,
   ObjCStructAlias,
-  ObjCFunction
+  ObjCFunction,
+  ObjCNumericConstant
 } from "./ast-parser.ts";
 
 /** Result from a unified parse-all task (classes + protocols + enums + structs from one clang invocation) */
@@ -35,6 +36,8 @@ export interface UnifiedParseResult {
   typedefs: Map<string, string>;
   /** Parsed C function declarations (function name → ObjCFunction) */
   functions: Map<string, ObjCFunction>;
+  /** Parsed standalone numeric constants (constant name → ObjCNumericConstant) */
+  numericConstants: Map<string, ObjCNumericConstant>;
 }
 
 export interface ClassParseResult {
@@ -248,7 +251,8 @@ export class WorkerPool {
       structs: new Map(result.structs ?? []),
       structAliases: result.structAliases ?? [],
       typedefs: new Map(result.typedefs ?? []),
-      functions: new Map(result.functions ?? [])
+      functions: new Map(result.functions ?? []),
+      numericConstants: new Map(result.numericConstants ?? [])
     };
   }
 
@@ -271,7 +275,8 @@ export class WorkerPool {
     integerEnumTargets: string[],
     stringEnumTargets: string[],
     preIncludes: string[],
-    frameworkName?: string
+    frameworkName?: string,
+    numericConstantTargets?: string[]
   ): Promise<UnifiedParseResult> {
     const result = await this.dispatch({
       id: this.nextId++,
@@ -282,7 +287,8 @@ export class WorkerPool {
       integerEnumTargets,
       stringEnumTargets,
       preIncludes,
-      frameworkName
+      frameworkName,
+      numericConstantTargets
     });
     return {
       classes: new Map(result.classes),
@@ -292,7 +298,8 @@ export class WorkerPool {
       structs: new Map(result.structs ?? []),
       structAliases: result.structAliases ?? [],
       typedefs: new Map(result.typedefs ?? []),
-      functions: new Map(result.functions ?? [])
+      functions: new Map(result.functions ?? []),
+      numericConstants: new Map(result.numericConstants ?? [])
     };
   }
 

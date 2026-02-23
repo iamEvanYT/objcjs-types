@@ -24,7 +24,8 @@ import type {
   ObjCStringEnum,
   ObjCStruct,
   ObjCStructAlias,
-  ObjCFunction
+  ObjCFunction,
+  ObjCNumericConstant
 } from "./ast-parser.ts";
 import {
   setKnownClasses,
@@ -51,6 +52,7 @@ import {
   emitIntegerEnumFile,
   emitStringEnumFile,
   emitFunctionsFile,
+  emitConstantsFile,
   groupCaseCollisions
 } from "./emitter.ts";
 import type { StructDef, StructFieldDef } from "./emitter.ts";
@@ -123,7 +125,8 @@ async function main(): Promise<void> {
       discovery.classes.size === 0 &&
       discovery.protocols.size === 0 &&
       discovery.integerEnums.size === 0 &&
-      discovery.stringEnums.size === 0
+      discovery.stringEnums.size === 0 &&
+      discovery.numericConstants.size === 0
     )
       continue;
 
@@ -133,15 +136,20 @@ async function main(): Promise<void> {
       protocols: [...discovery.protocols.keys()].sort(),
       integerEnums: [...discovery.integerEnums.keys()].sort(),
       stringEnums: [...discovery.stringEnums.keys()].sort(),
+      numericConstants: [...discovery.numericConstants.keys()].sort(),
       classHeaders: discovery.classes,
       protocolHeaders: discovery.protocols,
       integerEnumHeaders: discovery.integerEnums,
-      stringEnumHeaders: discovery.stringEnums
+      stringEnumHeaders: discovery.stringEnums,
+      numericConstantHeaders: discovery.numericConstants
     };
     frameworks.push(fw);
 
     const enumCount = fw.integerEnums.length + fw.stringEnums.length;
-    console.log(`  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols, ${enumCount} enums`);
+    const constStr = fw.numericConstants.length > 0 ? `, ${fw.numericConstants.length} constants` : "";
+    console.log(
+      `  ${fw.name}: ${fw.classes.length} classes, ${fw.protocols.length} protocols, ${enumCount} enums${constStr}`
+    );
   }
   const discoveryTime = ((performance.now() - globalStart) / 1000).toFixed(1);
   console.log(`  Discovery completed in ${discoveryTime}s\n`);
@@ -209,6 +217,7 @@ async function main(): Promise<void> {
     protocolTargets: string[];
     integerEnumTargets: string[];
     stringEnumTargets: string[];
+    numericConstantTargets: string[];
     preIncludes: string[];
   }
 
@@ -239,6 +248,7 @@ async function main(): Promise<void> {
     const protocolTargets: string[] = [];
     const integerEnumTargets: string[] = [];
     const stringEnumTargets: string[] = [];
+    const numericConstantTargets: string[] = [];
 
     // --- Class targets ---
     for (const className of fw.classes) {
@@ -284,13 +294,21 @@ async function main(): Promise<void> {
       stringEnumTargets.push(enumName);
     }
 
+    // --- Numeric constant targets ---
+    // No header validation needed — constants are discovered from the same headers
+    // that are already included in allFrameworkHeaders.
+    for (const constName of fw.numericConstants) {
+      numericConstantTargets.push(constName);
+    }
+
     // Only create a batch task if there are targets to parse
     if (
       allFrameworkHeaders.length > 0 &&
       (classTargets.length > 0 ||
         protocolTargets.length > 0 ||
         integerEnumTargets.length > 0 ||
-        stringEnumTargets.length > 0)
+        stringEnumTargets.length > 0 ||
+        numericConstantTargets.length > 0)
     ) {
       batchTasks.push({
         frameworkName: fw.name,
@@ -299,6 +317,7 @@ async function main(): Promise<void> {
         protocolTargets,
         integerEnumTargets,
         stringEnumTargets,
+        numericConstantTargets,
         preIncludes
       });
     }
@@ -365,7 +384,8 @@ async function main(): Promise<void> {
         task.integerEnumTargets,
         task.stringEnumTargets,
         task.preIncludes,
-        task.frameworkName
+        task.frameworkName,
+        task.numericConstantTargets
       )
       .then((result) => {
         trackProgress(task.frameworkName);
@@ -541,6 +561,22 @@ async function main(): Promise<void> {
     const fwFuncs = frameworkFunctions.get(entry.task.frameworkName)!;
     for (const [name, func] of entry.result.functions) {
       fwFuncs.set(name, func);
+    }
+  }
+
+  // Organize parsed numeric constants by framework
+  const frameworkNumericConstants = new Map<string, Map<string, ObjCNumericConstant>>();
+  for (const entry of allResults) {
+    if (entry.isExtra) continue;
+    if (entry.error || !entry.result) continue;
+    if (entry.result.numericConstants.size === 0) continue;
+
+    if (!frameworkNumericConstants.has(entry.task.frameworkName)) {
+      frameworkNumericConstants.set(entry.task.frameworkName, new Map());
+    }
+    const fwConsts = frameworkNumericConstants.get(entry.task.frameworkName)!;
+    for (const [name, constant] of entry.result.numericConstants) {
+      fwConsts.set(name, constant);
     }
   }
 
@@ -1228,6 +1264,15 @@ async function main(): Promise<void> {
       hasFunctions = true;
     }
 
+    // Emit constants file (standalone numeric constants)
+    const fwConsts = frameworkNumericConstants.get(framework.name);
+    let hasConstants = false;
+    if (fwConsts && fwConsts.size > 0) {
+      const constantsContent = emitConstantsFile([...fwConsts.values()]);
+      await writeFile(join(frameworkDir, "constants.ts"), constantsContent);
+      hasConstants = true;
+    }
+
     // Emit framework index
     const indexContent = emitFrameworkIndex(
       framework,
@@ -1246,8 +1291,9 @@ async function main(): Promise<void> {
     const totalEnumCount =
       generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
     const funcCountStr = hasFunctions ? ` + ${fwFuncs!.size} functions` : "";
+    const constCountStr = hasConstants ? ` + ${fwConsts!.size} constants` : "";
     console.log(
-      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files${funcCountStr} + index.ts`
+      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files${funcCountStr}${constCountStr} + index.ts`
     );
   }
 
@@ -1307,21 +1353,27 @@ async function main(): Promise<void> {
   let totalProtocols = 0;
   let totalEnums = 0;
   let totalFunctions = 0;
+  let totalConstants = 0;
   for (const fw of frameworksToProcess) {
     const dir = join(SRC_DIR, fw.name);
     const classCount = fw.classes.filter((c) => existsSync(join(dir, `${c}.ts`))).length;
     const protoCount = fw.protocols.filter((p) => existsSync(join(dir, `${p}.ts`))).length;
     const enumCount = [...fw.integerEnums, ...fw.stringEnums].filter((e) => existsSync(join(dir, `${e}.ts`))).length;
     const funcCount = frameworkFunctions.get(fw.name)?.size ?? 0;
+    const constCount = frameworkNumericConstants.get(fw.name)?.size ?? 0;
     const funcStr = funcCount > 0 ? `, ${funcCount} functions` : "";
-    console.log(`  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums${funcStr}`);
+    const constStr = constCount > 0 ? `, ${constCount} constants` : "";
+    console.log(
+      `  ${fw.name}: ${classCount} classes, ${protoCount} protocols, ${enumCount} enums${funcStr}${constStr}`
+    );
     totalClasses += classCount;
     totalProtocols += protoCount;
     totalEnums += enumCount;
     totalFunctions += funcCount;
+    totalConstants += constCount;
   }
   console.log(
-    `  Total: ${totalClasses} classes, ${totalProtocols} protocols, ${totalEnums} enums, ${totalFunctions} functions`
+    `  Total: ${totalClasses} classes, ${totalProtocols} protocols, ${totalEnums} enums, ${totalFunctions} functions, ${totalConstants} constants`
   );
 
   // Clean up the compiled ObjC helper binary

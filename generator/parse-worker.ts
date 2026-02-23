@@ -18,7 +18,8 @@ import {
   parseStringEnums,
   parseStructs,
   parseTypedefs,
-  parseFunctions
+  parseFunctions,
+  parseNumericConstants
 } from "./ast-parser.ts";
 
 /**
@@ -95,6 +96,10 @@ self.onmessage = async (event: MessageEvent) => {
       const frameworkHeaderPathSet = new Set<string>(headerPaths);
       const functions = parseFunctions(ast, frameworkHeaderPathSet, msg.frameworkName ?? "");
 
+      // Parse standalone numeric constants
+      const numericConstantTargetSet = new Set<string>(msg.numericConstantTargets ?? []);
+      const numericConstants = parseNumericConstants(ast, numericConstantTargetSet);
+
       postMessage({
         id: msg.id,
         type: "batch-result",
@@ -106,6 +111,7 @@ self.onmessage = async (event: MessageEvent) => {
         structAliases: structResult.aliases,
         typedefs: [...typedefs.entries()],
         functions: [...functions.entries()],
+        numericConstants: [...numericConstants.entries()],
         // Report what was found vs expected for logging
         foundClasses: classes.size,
         foundProtocols: protocols.size,
@@ -209,7 +215,8 @@ self.onmessage = async (event: MessageEvent) => {
         structs: [...structResult.structs.entries()],
         structAliases: structResult.aliases,
         typedefs: [...typedefs.entries()],
-        functions: [] // parse-all is used for extra headers which don't need function parsing
+        functions: [], // parse-all is used for extra headers which don't need function parsing
+        numericConstants: [] // parse-all is used for extra headers which don't need constant parsing
       });
     } else if (msg.type === "parse-classes") {
       const targetSet = new Set<string>(msg.targets);

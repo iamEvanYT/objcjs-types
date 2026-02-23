@@ -31,6 +31,8 @@ export interface FrameworkConfig extends FrameworkBase {
   integerEnums: string[];
   /** All discovered string enum names (NS_TYPED_EXTENSIBLE_ENUM etc.) */
   stringEnums: string[];
+  /** All discovered standalone numeric constant names */
+  numericConstants: string[];
   /** Maps class name → header file name (without .h) */
   classHeaders: Map<string, string>;
   /** Maps protocol name → header file name (without .h) */
@@ -39,6 +41,8 @@ export interface FrameworkConfig extends FrameworkBase {
   integerEnumHeaders: Map<string, string>;
   /** Maps string enum name → header file name (without .h) */
   stringEnumHeaders: Map<string, string>;
+  /** Maps numeric constant name → header file name (without .h) */
+  numericConstantHeaders: Map<string, string>;
 }
 
 export const SDK_PATH =

@@ -15,6 +15,8 @@ export interface DiscoveryResult {
   integerEnums: Map<string, string>;
   /** Maps string enum name → header file name (without .h extension) */
   stringEnums: Map<string, string>;
+  /** Maps numeric constant name → header file name (without .h extension) */
+  numericConstants: Map<string, string>;
 }
 
 /** Matches `@interface ClassName` — captures class name */
@@ -59,6 +61,18 @@ const NS_INTEGER_TYPED_ENUM_RE = /typedef\s+NSU?Integer\s+(\w+)\s+NS_(?:TYPED_EX
 const NS_ERROR_ENUM_RE = /typedef\s+NS_ERROR_ENUM\s*\(\s*\w+\s*,\s*(\w+)\s*\)/;
 
 /**
+ * Matches standalone `static const` numeric variable declarations.
+ * These are constants like `NSVariableStatusItemLength`, `NSEventDurationForever`, etc.
+ * Captures the constant name from declarations like:
+ * `static const CGFloat NSVariableStatusItemLength = -1;`
+ * `static const NSInteger NSSearchFieldRecentsTitleMenuItemTag = 1000;`
+ * `static const CGFloat NSStackViewSpacingUseDefault API_AVAILABLE(macos(10.9)) = FLT_MAX;`
+ * Allows optional API_AVAILABLE / NS_AVAILABLE / etc. attributes between name and `=`.
+ */
+const STATIC_CONST_NUMERIC_RE =
+  /static\s+(?:const\s+)?(?:CGFloat|double|float|NSInteger|NSUInteger|NSTimeInterval|int|long)\s+(?:const\s+)?(\w+)\b[^;]*=/;
+
+/**
  * Scan all .h files in a framework's Headers directory and discover
  * every ObjC class and protocol declaration, mapping each to its header file.
  *
@@ -71,6 +85,7 @@ export async function discoverFramework(headersPath: string): Promise<DiscoveryR
   const protocols = new Map<string, string>();
   const integerEnums = new Map<string, string>();
   const stringEnums = new Map<string, string>();
+  const numericConstants = new Map<string, string>();
 
   const entries = await readdir(headersPath);
   const headerFiles = entries.filter((f) => f.endsWith(".h")).sort();
@@ -141,8 +156,18 @@ export async function discoverFramework(headersPath: string): Promise<DiscoveryR
           integerEnums.set(name, headerName);
         }
       }
+
+      // --- Standalone numeric constants ---
+      // e.g., `static const CGFloat NSVariableStatusItemLength = -1;`
+      const numericConstMatch = STATIC_CONST_NUMERIC_RE.exec(line);
+      if (numericConstMatch) {
+        const name = numericConstMatch[1]!;
+        if (!numericConstants.has(name)) {
+          numericConstants.set(name, headerName);
+        }
+      }
     }
   }
 
-  return { classes, protocols, integerEnums, stringEnums };
+  return { classes, protocols, integerEnums, stringEnums, numericConstants };
 }

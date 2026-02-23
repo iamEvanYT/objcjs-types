@@ -122,6 +122,17 @@ export interface ObjCFunction {
   frameworkName: string;
 }
 
+// --- Numeric constant types ---
+
+export interface ObjCNumericConstant {
+  /** The constant name (e.g., "NSVariableStatusItemLength") */
+  name: string;
+  /** The numeric value */
+  value: number;
+  /** Whether the value is a floating-point type (CGFloat, double, float) vs integer (NSInteger, etc.) */
+  isFloat: boolean;
+}
+
 // --- Helpers for extracting doc comments and deprecation info ---
 
 /**
@@ -1397,6 +1408,127 @@ function extractIntegerValue(node: ClangASTNode): string | null {
 
   const val = evaluate(node);
   return val !== null ? String(val) : null;
+}
+
+/**
+ * Extract a numeric value (integer or floating-point) from a VarDecl's initializer expression tree.
+ * Handles IntegerLiteral, FloatingLiteral, UnaryOperator("-"), and ImplicitCastExpr wrappers.
+ * Returns the numeric value, or null if it can't be extracted.
+ */
+function extractNumericValue(node: ClangASTNode): number | null {
+  if (!node.inner) return null;
+
+  function evaluate(n: ClangASTNode): number | null {
+    if (n.kind === "IntegerLiteral" && n.value !== undefined) {
+      return parseInt(n.value, 10);
+    }
+    if (n.kind === "FloatingLiteral" && n.value !== undefined) {
+      return parseFloat(n.value);
+    }
+    if (n.kind === "UnaryOperator" && (n as any).opcode === "-" && n.inner?.length === 1) {
+      const operand = evaluate(n.inner[0]!);
+      return operand !== null ? -operand : null;
+    }
+    // Walk through transparent wrappers (ImplicitCastExpr, ParenExpr, ConstantExpr, etc.)
+    if (n.inner?.length === 1) {
+      return evaluate(n.inner[0]!);
+    }
+    // Try all children for multi-child wrappers
+    if (n.inner) {
+      for (const child of n.inner) {
+        const val = evaluate(child);
+        if (val !== null) return val;
+      }
+    }
+    return null;
+  }
+
+  return evaluate(node);
+}
+
+/**
+ * Parse a clang AST root node and extract standalone numeric constants.
+ *
+ * These are `static const` VarDecl nodes with numeric types (CGFloat, double, float,
+ * NSInteger, NSUInteger, NSTimeInterval, int, long) that are NOT linked to a
+ * NS_TYPED_EXTENSIBLE_ENUM typedef via `typeAliasDeclId`.
+ *
+ * Examples:
+ * - `static const CGFloat NSVariableStatusItemLength = -1;`
+ * - `static const NSInteger NSSearchFieldRecentsTitleMenuItemTag = 1000;`
+ *
+ * @param targetConstants - Set of constant names to extract (from discovery)
+ */
+export function parseNumericConstants(
+  root: ClangASTNode,
+  targetConstants: Set<string>
+): Map<string, ObjCNumericConstant> {
+  const constants = new Map<string, ObjCNumericConstant>();
+  if (targetConstants.size === 0) return constants;
+
+  // Collect all TypedefDecl ids that are NS_TYPED_EXTENSIBLE_ENUM / NS_TYPED_ENUM
+  // so we can exclude VarDecls that are already handled by parseIntegerTypedEnums.
+  const typedEnumIds = new Set<string>();
+  function walkForTypedEnumTypedefs(node: ClangASTNode): void {
+    if (node.kind === "TypedefDecl" && node.id) {
+      const hasSwiftNewType = node.inner?.some((child) => child.kind === "SwiftNewTypeAttr") ?? false;
+      if (hasSwiftNewType) {
+        typedEnumIds.add(node.id);
+      }
+    }
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForTypedEnumTypedefs(child);
+      }
+    }
+  }
+
+  function walkForConstants(node: ClangASTNode): void {
+    if (node.kind === "VarDecl" && node.name && node.storageClass === "static" && targetConstants.has(node.name)) {
+      // Skip VarDecls linked to NS_TYPED_EXTENSIBLE_ENUM typedefs (handled by parseIntegerTypedEnums)
+      if (node.type?.typeAliasDeclId && typedEnumIds.has(node.type.typeAliasDeclId)) {
+        return;
+      }
+
+      // Check that the type is a const numeric type
+      const qualType = node.type?.qualType ?? "";
+      const desugared = node.type?.desugaredQualType ?? "";
+      const isConstNumeric =
+        /\bconst\b/.test(qualType) &&
+        (/\b(CGFloat|double|float|NSInteger|NSUInteger|NSTimeInterval|int|long)\b/.test(qualType) ||
+          /\b(double|float|long|int|unsigned long)\b/.test(desugared));
+
+      if (!isConstNumeric) return;
+
+      const value = extractNumericValue(node);
+      if (value === null) return;
+
+      // Determine if this is a float type
+      const isFloat =
+        /\b(CGFloat|double|float|NSTimeInterval)\b/.test(qualType) || /\b(double|float)\b/.test(desugared);
+
+      if (!constants.has(node.name)) {
+        constants.set(node.name, {
+          name: node.name,
+          value,
+          isFloat
+        });
+      }
+    }
+
+    if (node.inner) {
+      for (const child of node.inner) {
+        walkForConstants(child);
+      }
+    }
+  }
+
+  // First pass: find typed enum typedef IDs to exclude
+  walkForTypedEnumTypedefs(root);
+  // Second pass: find matching VarDecl constants
+  walkForConstants(root);
+
+  return constants;
 }
 
 // --- Struct parsing ---

@@ -33,6 +33,10 @@
     "./*/functions": {
       "types": "./dist/*/functions.d.ts",
       "default": "./dist/*/functions.js"
+    },
+    "./*/constants": {
+      "types": "./dist/*/constants.d.ts",
+      "default": "./dist/*/constants.js"
     }
   },
   "files": [
@@ -63,7 +67,7 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "objc-js": "^1.1.0",
+    "objc-js": "^1.3.1",
     "typescript": "^5"
   },
   "devDependencies": {
