@@ -74,6 +74,73 @@ function buildEnumFrameworkMap(frameworks: FrameworkConfig[]): Map<string, strin
 }
 
 /**
+ * Check if a raw clang returnType string represents `instancetype`.
+ */
+function isInstancetypeReturnType(returnType: string): boolean {
+  const cleaned = returnType
+    .replace(/_Nonnull/g, "")
+    .replace(/_Nullable/g, "")
+    .replace(/_Null_unspecified/g, "")
+    .trim();
+  return cleaned === "instancetype";
+}
+
+/**
+ * Check if a raw clang returnType string has a nullable annotation.
+ */
+function isNullableReturnType(returnType: string): boolean {
+  return returnType.includes("_Nullable") || returnType.includes("nullable");
+}
+
+/**
+ * Create a copy of the class augmented with instancetype-returning methods
+ * inherited from ancestor classes. This lets the import-collection functions
+ * pick up type references from those ancestor method parameters (e.g. struct
+ * or class types used as parameters in inherited init methods).
+ *
+ * Only methods whose raw return type is `instancetype` and that the class
+ * does not already override are included.
+ */
+function augmentWithAncestorInstancetypeMethods(cls: ObjCClass, allParsedClasses?: Map<string, ObjCClass>): ObjCClass {
+  if (!cls.superclass || !allParsedClasses) return cls;
+
+  const extraClassMethods: ObjCMethod[] = [];
+  const extraInstanceMethods: ObjCMethod[] = [];
+  const handledClassSelectors = new Set(cls.classMethods.map((m) => m.selector));
+  const handledInstanceSelectors = new Set(cls.instanceMethods.map((m) => m.selector));
+
+  let ancestor: string | null = cls.superclass;
+  while (ancestor) {
+    const parentCls = allParsedClasses.get(ancestor);
+    if (!parentCls) break;
+
+    for (const method of parentCls.classMethods) {
+      if (handledClassSelectors.has(method.selector)) continue;
+      if (!isInstancetypeReturnType(method.returnType)) continue;
+      extraClassMethods.push(method);
+      handledClassSelectors.add(method.selector);
+    }
+
+    for (const method of parentCls.instanceMethods) {
+      if (handledInstanceSelectors.has(method.selector)) continue;
+      if (!isInstancetypeReturnType(method.returnType)) continue;
+      extraInstanceMethods.push(method);
+      handledInstanceSelectors.add(method.selector);
+    }
+
+    ancestor = parentCls.superclass ?? null;
+  }
+
+  if (extraClassMethods.length === 0 && extraInstanceMethods.length === 0) return cls;
+
+  return {
+    ...cls,
+    classMethods: [...cls.classMethods, ...extraClassMethods],
+    instanceMethods: [...cls.instanceMethods, ...extraInstanceMethods]
+  };
+}
+
+/**
  * Group class names that would collide on a case-insensitive filesystem.
  * Returns a Map from the canonical filename (the name that survives — last in
  * sorted order, since classes are emitted alphabetically and the last write wins)
@@ -733,12 +800,16 @@ export function emitClassFile(
   lines.push(AUTOGEN_HEADER);
   lines.push(`import type { NobjcObject } from "objc-js";`);
 
+  // Augment class with ancestor instancetype methods so import collection
+  // picks up type references from inherited init/factory method parameters.
+  const clsForImports = augmentWithAncestorInstancetypeMethods(cls, allParsedClasses);
+
   // Collect referenced classes for imports
-  const refs = collectReferencedClasses(cls, allKnownClasses, allKnownProtocols);
+  const refs = collectReferencedClasses(clsForImports, allKnownClasses, allKnownProtocols);
   lines.push(...emitImports(refs, currentFramework, allFrameworks, classToFile));
 
   // Collect and emit struct type imports (one import per struct file)
-  const structRefs = collectReferencedStructs(cls);
+  const structRefs = collectReferencedStructs(clsForImports);
   if (structRefs.size > 0) {
     for (const name of [...structRefs].sort()) {
       lines.push(`import type { ${name} } from "../structs/${name}.js";`);
@@ -746,7 +817,7 @@ export function emitClassFile(
   }
 
   // Collect and emit enum type imports
-  const enumRefs = collectReferencedEnums(cls);
+  const enumRefs = collectReferencedEnums(clsForImports);
   lines.push(...emitEnumImports(enumRefs, currentFramework, allFrameworks));
 
   lines.push("");
@@ -821,18 +892,20 @@ export function emitMergedClassFile(
   const allEnumRefs = new Set<string>();
 
   for (const cls of sorted) {
-    const refs = collectReferencedClasses(cls, allKnownClasses, allKnownProtocols);
+    // Augment with ancestor instancetype methods for import collection
+    const clsForImports = augmentWithAncestorInstancetypeMethods(cls, allParsedClasses);
+    const refs = collectReferencedClasses(clsForImports, allKnownClasses, allKnownProtocols);
     for (const ref of refs) {
       // Exclude siblings — they're defined in this same file
       if (!siblingNames.has(ref)) {
         allRefs.add(ref);
       }
     }
-    const structs = collectReferencedStructs(cls);
+    const structs = collectReferencedStructs(clsForImports);
     for (const s of structs) {
       allStructRefs.add(s);
     }
-    const enums = collectReferencedEnums(cls);
+    const enums = collectReferencedEnums(clsForImports);
     for (const e of enums) {
       allEnumRefs.add(e);
     }
@@ -903,26 +976,77 @@ export function emitClassBody(
 
   lines.push(`export declare class _${cls.name} extends ${superType} {`);
 
-  // Emit instancetype overrides for alloc/new/init on subclasses.
+  // Emit instancetype overrides for subclasses.
+  // Walk the ancestor chain and override ALL methods that return `instancetype`
+  // so that subclass instances correctly return their own type (e.g.,
+  // WKWebView.alloc().initWithFrame$() returns _WKWebView, not _NSView).
   const selfType = `_${cls.name}`;
   const ownClassSelectors = new Set(cls.classMethods.map((m) => m.selector));
   const ownInstanceSelectors = new Set(cls.instanceMethods.map((m) => m.selector));
 
   if (cls.superclass) {
-    const instancetypeOverrides: string[] = [];
+    if (allParsedClasses) {
+      const handledClassSelectors = new Set(ownClassSelectors);
+      const handledInstanceSelectors = new Set(ownInstanceSelectors);
 
-    if (!ownClassSelectors.has("alloc")) {
-      instancetypeOverrides.push(`  static alloc(): ${selfType};`);
-    }
-    if (!ownClassSelectors.has("new")) {
-      instancetypeOverrides.push(`  static new(): ${selfType};`);
-    }
-    if (!ownInstanceSelectors.has("init")) {
-      instancetypeOverrides.push(`  init(): ${selfType};`);
-    }
+      let ancestor: string | null = cls.superclass;
+      while (ancestor) {
+        const parentCls = allParsedClasses.get(ancestor);
+        if (!parentCls) break;
 
-    for (const line of instancetypeOverrides) {
-      lines.push(line);
+        for (const method of parentCls.classMethods) {
+          if (handledClassSelectors.has(method.selector)) continue;
+          if (!isInstancetypeReturnType(method.returnType)) continue;
+          const jsName = selectorToJS(method.selector);
+          const nullable = isNullableReturnType(method.returnType);
+          const returnType = nullable ? `${selfType} | null` : selfType;
+          const params: string[] = [];
+          const seenNames = new Map<string, number>();
+          for (const param of method.parameters) {
+            const tsType = mapParamType(param.type, parentCls.name, param.blockParamNames);
+            let safeName = sanitizeParamName(param.name);
+            const prev = seenNames.get(safeName) ?? 0;
+            seenNames.set(safeName, prev + 1);
+            if (prev > 0) safeName = `${safeName}${prev + 1}`;
+            params.push(`${safeName}: ${tsType}`);
+          }
+          lines.push(`  static ${jsName}(${params.join(", ")}): ${returnType};`);
+          handledClassSelectors.add(method.selector);
+        }
+
+        for (const method of parentCls.instanceMethods) {
+          if (handledInstanceSelectors.has(method.selector)) continue;
+          if (!isInstancetypeReturnType(method.returnType)) continue;
+          const jsName = selectorToJS(method.selector);
+          const nullable = isNullableReturnType(method.returnType);
+          const returnType = nullable ? `${selfType} | null` : selfType;
+          const params: string[] = [];
+          const seenNames = new Map<string, number>();
+          for (const param of method.parameters) {
+            const tsType = mapParamType(param.type, parentCls.name, param.blockParamNames);
+            let safeName = sanitizeParamName(param.name);
+            const prev = seenNames.get(safeName) ?? 0;
+            seenNames.set(safeName, prev + 1);
+            if (prev > 0) safeName = `${safeName}${prev + 1}`;
+            params.push(`${safeName}: ${tsType}`);
+          }
+          lines.push(`  ${jsName}(${params.join(", ")}): ${returnType};`);
+          handledInstanceSelectors.add(method.selector);
+        }
+
+        ancestor = parentCls.superclass ?? null;
+      }
+    } else {
+      // Fallback: hardcoded alloc/new/init when ancestor data not available
+      if (!ownClassSelectors.has("alloc")) {
+        lines.push(`  static alloc(): ${selfType};`);
+      }
+      if (!ownClassSelectors.has("new")) {
+        lines.push(`  static new(): ${selfType};`);
+      }
+      if (!ownInstanceSelectors.has("init")) {
+        lines.push(`  init(): ${selfType};`);
+      }
     }
   }
 
@@ -1925,7 +2049,9 @@ export function emitFrameworkIndex(
   for (const className of generatedClasses) {
     const fileName = classToFile.get(className) ?? className;
     lines.push(`import type { _${className} } from "./${fileName}.js";`);
-    lines.push(`export const ${className} = /* @__PURE__ */ _bindClass<typeof _${className}>(${libVar}, "${className}");`);
+    lines.push(
+      `export const ${className} = /* @__PURE__ */ _bindClass<typeof _${className}>(${libVar}, "${className}");`
+    );
     lines.push(`export type { _${className} };`);
     lines.push("");
   }
