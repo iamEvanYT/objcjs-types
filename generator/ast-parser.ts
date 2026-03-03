@@ -19,6 +19,8 @@ export interface ObjCProperty {
   type: string;
   readonly: boolean;
   isClassProperty: boolean;
+  /** Whether the property is null_resettable (getter returns non-null, setter accepts null) */
+  nullResettable: boolean;
   isDeprecated: boolean;
   deprecationMessage?: string;
   description?: string;
@@ -820,6 +822,8 @@ export function parseAST(
     const readonly = node.readonly === true;
     // Class properties have "class": true in the AST node
     const isClassProperty = (node as any)["class"] === true;
+    // null_resettable: getter returns non-null, setter accepts null (resets to default)
+    const nullResettable = (node as any).null_resettable === true;
     const attrDeprecated = isDeprecated(node);
     const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
@@ -830,6 +834,7 @@ export function parseAST(
       type,
       readonly,
       isClassProperty,
+      nullResettable,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
       description
@@ -1013,6 +1018,7 @@ export function parseProtocols(
     const type = node.type?.qualType ?? "id";
     const readonly = node.readonly === true;
     const isClassProperty = (node as any)["class"] === true;
+    const nullResettable = (node as any).null_resettable === true;
     const attrDeprecated = isDeprecated(node);
     const sourceDeprecation = scanForDeprecation(node, headerLines, headerLinesMap, contextFile);
     const deprecated = attrDeprecated || sourceDeprecation.isDeprecated;
@@ -1023,6 +1029,7 @@ export function parseProtocols(
       type,
       readonly,
       isClassProperty,
+      nullResettable,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
       description

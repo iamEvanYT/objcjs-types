@@ -573,9 +573,13 @@ function getMergedProtocols(
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
         if (!inherited.has(setterName)) {
+          let paramType = mapParamType(prop.type, parentCls.name);
+          if (prop.nullResettable && !paramType.includes("| null")) {
+            paramType = `${paramType} | null`;
+          }
           inherited.set(setterName, {
             returnType: "void",
-            paramTypes: [mapParamType(prop.type, parentCls.name)],
+            paramTypes: [paramType],
             isOptional: false
           });
         }
@@ -697,9 +701,13 @@ function collectProtocolSignatures(
     if (!prop.readonly) {
       const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
       if (!sigs.has(setterName)) {
+        let paramType = mapParamType(prop.type, containingClass);
+        if (prop.nullResettable && !paramType.includes("| null")) {
+          paramType = `${paramType} | null`;
+        }
         sigs.set(setterName, {
           returnType: "void",
-          paramTypes: [mapParamType(prop.type, containingClass)],
+          paramTypes: [paramType],
           isOptional: true
         });
       }
@@ -764,7 +772,10 @@ function checkProtocolConflicts(
       const parentSetterSig = inherited.get(setterName);
       if (parentSetterSig) {
         if (!parentSetterSig.isOptional) return true;
-        const paramType = mapParamType(prop.type, containingClass);
+        let paramType = mapParamType(prop.type, containingClass);
+        if (prop.nullResettable && !paramType.includes("| null")) {
+          paramType = `${paramType} | null`;
+        }
         if (parentSetterSig.paramTypes.length > 0 && paramType !== parentSetterSig.paramTypes[0]) {
           return true;
         }
@@ -1069,7 +1080,10 @@ export function emitClassBody(
         if (!prop.readonly) {
           const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
           if (!parentSignatures.has(setterName)) {
-            const paramType = mapParamType(prop.type, parentCls.name);
+            let paramType = mapParamType(prop.type, parentCls.name);
+            if (prop.nullResettable && !paramType.includes("| null")) {
+              paramType = `${paramType} | null`;
+            }
             parentSignatures.set(setterName, { returnType: "void", paramTypes: [paramType] });
           }
         }
@@ -1166,7 +1180,11 @@ export function emitClassBody(
       lines.push(`  static ${prop.name}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
-        const paramType = mapParamType(prop.type, cls.name);
+        let paramType = mapParamType(prop.type, cls.name);
+        // null_resettable: setter accepts null to reset to default value
+        if (prop.nullResettable && !paramType.includes("| null")) {
+          paramType = `${paramType} | null`;
+        }
         if (!shouldSkipOverride(setterName, "void", [paramType])) {
           lines.push(`  static ${setterName}(value: ${paramType}): void;`);
         }
@@ -1207,7 +1225,11 @@ export function emitClassBody(
       lines.push(`  ${prop.name}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
-        const paramType = mapParamType(prop.type, cls.name);
+        let paramType = mapParamType(prop.type, cls.name);
+        // null_resettable: setter accepts null to reset to default value
+        if (prop.nullResettable && !paramType.includes("| null")) {
+          paramType = `${paramType} | null`;
+        }
         if (!shouldSkipOverride(setterName, "void", [paramType])) {
           lines.push(`  ${setterName}(value: ${paramType}): void;`);
         }
@@ -1509,7 +1531,11 @@ export function emitProtocolFile(
       lines.push(`  ${prop.name}?(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
-        const paramType = mapParamType(prop.type, proto.name);
+        let paramType = mapParamType(prop.type, proto.name);
+        // null_resettable: setter accepts null to reset to default value
+        if (prop.nullResettable && !paramType.includes("| null")) {
+          paramType = `${paramType} | null`;
+        }
         lines.push(`  ${setterName}?(value: ${paramType}): void;`);
       }
     }
