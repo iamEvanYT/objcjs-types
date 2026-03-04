@@ -16,6 +16,19 @@ import type { ProtocolMap } from "./delegates.js";
 type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I : never;
 
 /**
+ * Extracts only explicitly declared (non-index-signature) string keys from a type.
+ *
+ * Generated ObjC classes extend `NobjcObject` which has `[key: string]: NobjcMethod`.
+ * Plain `keyof T` includes `string` from that index signature, defeating autocomplete
+ * and generic key constraints. This type filters it out, keeping only the known
+ * literal method names like `"init"`, `"description"`, `"setTitle$"`, etc.
+ */
+type DeclaredKeys<T> = Extract<
+  keyof { [K in keyof T as string extends K ? never : number extends K ? never : symbol extends K ? never : K]: T[K] },
+  string
+>;
+
+/**
  * A method definition for a subclass.
  *
  * @param TSelf - The type of `self` (the instance) passed as the first argument
@@ -52,13 +65,13 @@ type ProtocolMethodKeys<TProtocols extends keyof ProtocolMap> = Extract<
 /**
  * Methods record for a subclass definition.
  *
- * Provides autocomplete for method names from the specified protocols
- * while allowing arbitrary method names for custom methods or
- * superclass overrides.
+ * Provides autocomplete for method names from the superclass and any
+ * specified protocols, while still allowing arbitrary method names for
+ * custom methods via `(string & {})`.
  */
 type SubclassMethods<TSelf, TProtocols extends keyof ProtocolMap> = {
-  [key: string]: SubclassMethodDef<TSelf> | undefined;
-} & { [K in ProtocolMethodKeys<TProtocols>]?: SubclassMethodDef<TSelf> };
+  [K in ProtocolMethodKeys<TProtocols> | DeclaredKeys<TSelf> | (string & {})]?: SubclassMethodDef<TSelf>;
+};
 
 /**
  * Define a new Objective-C subclass at runtime with TypeScript type safety.
@@ -150,21 +163,32 @@ export function defineSubclass<
  * Call the superclass implementation of a method from within a subclass
  * method implementation.
  *
+ * The selector is constrained to method names on the `self` type, giving
+ * autocomplete and validating that a super implementation exists. Arguments
+ * and return type are inferred from the superclass method signature.
+ *
+ * For dynamic selectors not known at compile time, use `NobjcClass.super()`
+ * from `objc-js` directly.
+ *
  * @param self - The instance (`self`, the first argument of your implementation)
- * @param selector - The method selector (e.g. `"init"`, `"viewDidLoad"`)
- * @param args - Arguments to forward to the super implementation
- * @returns The result of the super call
+ * @param selector - The method name to call on super (e.g. `"init"`, `"viewDidLoad"`)
+ * @param args - Arguments matching the superclass method's parameter types
+ * @returns The return type of the superclass method
  *
  * @example
  * ```ts
  * init: {
  *   types: "@@:",
  *   implementation(self) {
- *     return callSuper(self, "init");
+ *     return callSuper(self, "init"); // returns _NSObject
  *   },
  * }
  * ```
  */
-export function callSuper(self: NobjcObject, selector: string, ...args: unknown[]): any {
-  return NobjcClass.super(self, selector, ...args);
+export function callSuper<TSelf, K extends DeclaredKeys<TSelf>>(
+  self: TSelf,
+  selector: K,
+  ...args: TSelf[K] extends (...a: infer A) => any ? A : any[]
+): TSelf[K] extends (...a: any[]) => infer R ? R : any {
+  return NobjcClass.super(self as any, selector as string, ...args);
 }

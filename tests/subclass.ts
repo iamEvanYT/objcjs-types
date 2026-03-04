@@ -7,8 +7,8 @@
  * Run: bunx tsgo --noEmit tests/subclass.ts
  */
 
-import { NSObject, type _NSObject } from "../src/Foundation";
-import { NSWindow } from "../src/AppKit";
+import { NSObject, type _NSObject, type _NSString } from "../src/Foundation";
+import { NSWindow, type _NSWindow } from "../src/AppKit";
 import { defineSubclass, callSuper } from "../src/subclass";
 
 // --- Basic subclass with protocol conformance ---
@@ -85,3 +85,28 @@ const MyWindow = defineSubclass(NSWindow, {
 // Should have NSWindow's static methods
 const win = MyWindow.alloc().init();
 win.makeKeyAndOrderFront$(null as any);
+
+// --- callSuper is type-safe ---
+
+defineSubclass(NSWindow, {
+  name: "TypedSuperWindow",
+  methods: {
+    init: {
+      types: "@@:",
+      implementation(self) {
+        // callSuper infers return type from the superclass method
+        const result: _NSWindow = callSuper(self, "init");
+
+        // callSuper validates selector exists on self
+        // callSuper(self, "nonExistentMethod"); // type error: not a key of _NSWindow
+
+        // callSuper validates argument types and return type
+        const title: _NSString = callSuper(self, "title");
+
+        void result;
+        void title;
+        return result;
+      }
+    }
+  }
+});
