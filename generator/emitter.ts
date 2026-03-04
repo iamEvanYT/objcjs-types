@@ -2134,6 +2134,7 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
 
   lines.push(`export * from "./structs/index.js";`);
   lines.push(`export { createDelegate } from "./delegates.js";`);
+  lines.push(`export { defineSubclass, callSuper } from "./subclass.js";`);
   lines.push("");
 
   return lines.join("\n");

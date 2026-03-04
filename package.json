@@ -27,6 +27,10 @@
       "types": "./dist/osversion.d.ts",
       "default": "./dist/osversion.js"
     },
+    "./subclass": {
+      "types": "./dist/subclass.d.ts",
+      "default": "./dist/subclass.js"
+    },
     "./*": {
       "types": "./dist/*/index.d.ts",
       "default": "./dist/*/index.js"

@@ -23,7 +23,7 @@ const _kindCache = new WeakMap<object, Map<object, boolean>>();
  * Cached `isKindOfClass:` check — the single path used by both
  * `instanceof` (via `Symbol.hasInstance`) and the `isKindOfClass()` helper.
  */
-function _isKindOfClass(obj: any, cls: any): boolean {
+export function _isKindOfClass(obj: any, cls: any): boolean {
   if (typeof obj !== "object" || obj === null) return false;
   let m = _kindCache.get(obj);
   if (m) {
