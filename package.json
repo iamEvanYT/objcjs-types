@@ -1,6 +1,6 @@
 {
   "name": "objcjs-types",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Auto-generated TypeScript type declarations for macOS Objective-C frameworks that supplement objc-js",
   "type": "module",
   "sideEffects": false,

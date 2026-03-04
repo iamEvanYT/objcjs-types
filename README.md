@@ -108,6 +108,39 @@ if (isKindOfClass<_ASAuthorizationAppleIDCredential>(cred, ASAuthorizationAppleI
 
 Both `instanceof` and `isKindOfClass` cache results per (object, class) pair so repeated checks skip the native boundary.
 
+### Subclassing
+
+`defineSubclass` wraps `NobjcClass.define()` with type safety — `self` is typed as the superclass, protocol method names get autocomplete, and the returned class supports `alloc`/`init` and `instanceof`:
+
+```ts
+import { NSObject } from "objcjs-types/Foundation";
+import { defineSubclass, callSuper } from "objcjs-types/subclass";
+
+const MyDelegate = defineSubclass(NSObject, {
+  name: "MyDelegate",
+  protocols: ["NSWindowDelegate"],
+  methods: {
+    windowDidResize$: {
+      types: "v@:@",
+      implementation(self, notification) {
+        console.log("Resized!");
+      }
+    },
+    init: {
+      types: "@@:",
+      implementation(self) {
+        return callSuper(self, "init");
+      }
+    }
+  }
+});
+
+const instance = MyDelegate.alloc().init();
+window.setDelegate$(instance);
+```
+
+Use `callSuper` inside method implementations to invoke the superclass version of a method.
+
 ### NS_OPTIONS
 
 Use `options()` to combine bitmask flags with type safety:
@@ -175,14 +208,15 @@ const nsStr = NSStringFromString("hello");
 
 ## Subpath exports
 
-| Import path                | Contents                                               |
-| -------------------------- | ------------------------------------------------------ |
-| `objcjs-types`             | Structs, `createDelegate`, barrel re-exports           |
-| `objcjs-types/helpers`     | `NSStringFromString`, `options`, `isKindOfClass`, etc. |
-| `objcjs-types/nsdata`      | NSData/Buffer conversion utilities                     |
-| `objcjs-types/osversion`   | macOS version detection and comparison                 |
-| `objcjs-types/delegates`   | `createDelegate` and `ProtocolMap` type                |
-| `objcjs-types/<Framework>` | Framework exports (e.g. `objcjs-types/AppKit`)         |
+| Import path                | Contents                                                 |
+| -------------------------- | -------------------------------------------------------- |
+| `objcjs-types`             | Structs, `createDelegate`, `defineSubclass`, `callSuper` |
+| `objcjs-types/helpers`     | `NSStringFromString`, `options`, `isKindOfClass`, etc.   |
+| `objcjs-types/subclass`    | `defineSubclass`, `callSuper`                            |
+| `objcjs-types/nsdata`      | NSData/Buffer conversion utilities                       |
+| `objcjs-types/osversion`   | macOS version detection and comparison                   |
+| `objcjs-types/delegates`   | `createDelegate` and `ProtocolMap` type                  |
+| `objcjs-types/<Framework>` | Framework exports (e.g. `objcjs-types/AppKit`)           |
 
 ## ObjC selector naming
 
