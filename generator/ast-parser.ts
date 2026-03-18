@@ -9,6 +9,7 @@ export interface ObjCMethod {
   returnType: string;
   parameters: { name: string; type: string; blockParamNames?: string[] }[];
   isClassMethod: boolean;
+  isOptional: boolean;
   isDeprecated: boolean;
   deprecationMessage?: string;
   description?: string;
@@ -19,6 +20,7 @@ export interface ObjCProperty {
   type: string;
   readonly: boolean;
   isClassProperty: boolean;
+  isOptional: boolean;
   /** Whether the property is null_resettable (getter returns non-null, setter accepts null) */
   nullResettable: boolean;
   isDeprecated: boolean;
@@ -497,6 +499,58 @@ function scanForDeprecation(
   return { isDeprecated: false };
 }
 
+/**
+ * Update protocol required/optional state by scanning source lines between two
+ * member declarations. ObjC protocol members are required by default unless an
+ * `@optional` directive appears more recently than `@required`.
+ */
+function scanProtocolOptionalityInRange(
+  lines: string[] | undefined,
+  startLine: number,
+  endLine: number,
+  initialIsOptional: boolean
+): boolean {
+  if (!lines || startLine > endLine) return initialIsOptional;
+
+  let isOptional = initialIsOptional;
+  let inBlockComment = false;
+
+  for (let i = startLine; i <= endLine && i < lines.length; i++) {
+    let line = lines[i] ?? "";
+
+    // Strip block comments so `@optional` / `@required` in comments don't
+    // affect the protocol section state.
+    if (inBlockComment) {
+      const endIdx = line.indexOf("*/");
+      if (endIdx === -1) continue;
+      line = line.slice(endIdx + 2);
+      inBlockComment = false;
+    }
+
+    while (true) {
+      const startIdx = line.indexOf("/*");
+      if (startIdx === -1) break;
+      const endIdx = line.indexOf("*/", startIdx + 2);
+      if (endIdx === -1) {
+        line = line.slice(0, startIdx);
+        inBlockComment = true;
+        break;
+      }
+      line = line.slice(0, startIdx) + " " + line.slice(endIdx + 2);
+    }
+
+    const lineCommentIdx = line.indexOf("//");
+    if (lineCommentIdx !== -1) {
+      line = line.slice(0, lineCommentIdx);
+    }
+
+    if (/\B@optional\b/.test(line)) isOptional = true;
+    if (/\B@required\b/.test(line)) isOptional = false;
+  }
+
+  return isOptional;
+}
+
 // --- Block parameter name extraction from header source ---
 
 /**
@@ -806,6 +860,7 @@ export function parseAST(
       returnType,
       parameters,
       isClassMethod,
+      isOptional: false,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
       description
@@ -834,6 +889,7 @@ export function parseAST(
       type,
       readonly,
       isClassProperty,
+      isOptional: false,
       nullResettable,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
@@ -956,7 +1012,7 @@ export function parseProtocols(
     return node.inner.some((child) => child.kind === "UnavailableAttr");
   }
 
-  function extractMethod(node: ClangASTNode, contextFile?: string): ObjCMethod | null {
+  function extractMethod(node: ClangASTNode, isOptional: boolean, contextFile?: string): ObjCMethod | null {
     if (node.kind !== "ObjCMethodDecl") return null;
     if (node.isImplicit) return null;
     if (isUnavailable(node)) return null;
@@ -1004,13 +1060,14 @@ export function parseProtocols(
       returnType,
       parameters,
       isClassMethod,
+      isOptional,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
       description
     };
   }
 
-  function extractProperty(node: ClangASTNode, contextFile?: string): ObjCProperty | null {
+  function extractProperty(node: ClangASTNode, isOptional: boolean, contextFile?: string): ObjCProperty | null {
     if (node.kind !== "ObjCPropertyDecl") return null;
     if (node.isImplicit) return null;
 
@@ -1029,6 +1086,7 @@ export function parseProtocols(
       type,
       readonly,
       isClassProperty,
+      isOptional,
       nullResettable,
       isDeprecated: deprecated,
       deprecationMessage: sourceDeprecation.message,
@@ -1071,6 +1129,10 @@ export function parseProtocols(
     // Resolve the file path from the parent node for child context.
     // Fall back to walkContextFile (the running file tracker from walk()).
     const parentFile = getLocFile(node) ?? walkContextFile;
+    const protocolLines = resolveHeaderLines(node, headerLines, headerLinesMap, parentFile);
+    const protocolLine = getLocLine(node) ?? 1;
+    let lastScannedLine = protocolLine - 1;
+    let currentIsOptional = false;
 
     // Track selectors we've already added (to handle multiple declarations of the same protocol)
     const existingInstanceSelectors = new Set(proto.instanceMethods.map((m) => m.selector));
@@ -1078,8 +1140,18 @@ export function parseProtocols(
     const existingProperties = new Set(proto.properties.map((p) => p.name));
 
     for (const child of node.inner) {
+      const childLine = getLocLine(child);
+      if (childLine && childLine >= 1) {
+        currentIsOptional = scanProtocolOptionalityInRange(
+          protocolLines,
+          Math.max(lastScannedLine, 0),
+          childLine - 2,
+          currentIsOptional
+        );
+      }
+
       if (child.kind === "ObjCMethodDecl") {
-        const method = extractMethod(child, parentFile);
+        const method = extractMethod(child, currentIsOptional, parentFile);
         if (!method) continue;
 
         if (method.isClassMethod) {
@@ -1094,11 +1166,15 @@ export function parseProtocols(
           }
         }
       } else if (child.kind === "ObjCPropertyDecl") {
-        const prop = extractProperty(child, parentFile);
+        const prop = extractProperty(child, currentIsOptional, parentFile);
         if (prop && !existingProperties.has(prop.name)) {
           proto.properties.push(prop);
           existingProperties.add(prop.name);
         }
+      }
+
+      if (childLine && childLine >= 1) {
+        lastScannedLine = childLine;
       }
     }
   }

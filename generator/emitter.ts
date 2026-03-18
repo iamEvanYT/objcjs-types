@@ -546,7 +546,7 @@ function getMergedProtocols(
   interface Sig {
     returnType: string;
     paramTypes: string[];
-    /** Whether this signature came from a protocol (optional in TS) vs a class body (non-optional). */
+    /** Whether this signature is optional in TypeScript. */
     isOptional: boolean;
   }
   const inherited = new Map<string, Sig>();
@@ -684,7 +684,7 @@ function collectProtocolSignatures(
       sigs.set(jsName, {
         returnType: mapReturnType(method.returnType, containingClass),
         paramTypes: method.parameters.map((p) => mapParamType(p.type, containingClass)),
-        isOptional: true
+        isOptional: method.isOptional
       });
     }
   }
@@ -695,7 +695,7 @@ function collectProtocolSignatures(
       sigs.set(prop.name, {
         returnType: mapReturnType(prop.type, containingClass),
         paramTypes: [],
-        isOptional: true
+        isOptional: prop.isOptional
       });
     }
     if (!prop.readonly) {
@@ -708,7 +708,7 @@ function collectProtocolSignatures(
         sigs.set(setterName, {
           returnType: "void",
           paramTypes: [paramType],
-          isOptional: true
+          isOptional: prop.isOptional
         });
       }
     }
@@ -745,10 +745,8 @@ function checkProtocolConflicts(
     const retType = mapReturnType(method.returnType, containingClass);
     if (retType !== parentSig.returnType) return true;
 
-    // Protocol methods are emitted as optional (foo?()) but class methods are
-    // non-optional (foo()). TypeScript considers these "not identical" in an
-    // interface extends clause, producing TS2320.
-    if (!parentSig.isOptional) return true;
+    // TypeScript interface merging requires optionality to match.
+    if (method.isOptional !== parentSig.isOptional) return true;
 
     const paramTypes = method.parameters.map((p) => mapParamType(p.type, containingClass));
     if (paramTypes.length === parentSig.paramTypes.length) {
@@ -765,13 +763,13 @@ function checkProtocolConflicts(
     if (parentSig) {
       const tsType = mapReturnType(prop.type, containingClass);
       if (tsType !== parentSig.returnType) return true;
-      if (!parentSig.isOptional) return true;
+      if (prop.isOptional !== parentSig.isOptional) return true;
     }
     if (!prop.readonly) {
       const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
       const parentSetterSig = inherited.get(setterName);
       if (parentSetterSig) {
-        if (!parentSetterSig.isOptional) return true;
+        if (prop.isOptional !== parentSetterSig.isOptional) return true;
         let paramType = mapParamType(prop.type, containingClass);
         if (prop.nullResettable && !paramType.includes("| null")) {
           paramType = `${paramType} | null`;
@@ -1483,7 +1481,7 @@ export function emitProtocolFile(
   // Split properties into class and instance
   const instanceProps = proto.properties.filter((p) => !p.isClassProperty);
 
-  // Emit instance methods (all optional with ? syntax)
+  // Emit instance methods
   const instancePropertyNames = new Set(instanceProps.map((p) => p.name));
   const regularMethods = proto.instanceMethods.filter((m) => !instancePropertyNames.has(m.selector));
 
@@ -1512,11 +1510,12 @@ export function emitProtocolFile(
         selector: method.selector
       });
       if (jsdoc.length > 0) lines.push(...jsdoc);
-      lines.push(`  ${jsName}?(${params.join(", ")}): ${returnType};`);
+      const optional = method.isOptional ? "?" : "";
+      lines.push(`  ${jsName}${optional}(${params.join(", ")}): ${returnType};`);
     }
   }
 
-  // Emit instance properties (as optional getter methods)
+  // Emit instance properties
   if (instanceProps.length > 0) {
     if (regularMethods.length > 0) lines.push("");
     lines.push("  // Properties");
@@ -1528,7 +1527,8 @@ export function emitProtocolFile(
         deprecationMessage: prop.deprecationMessage
       });
       if (jsdoc.length > 0) lines.push(...jsdoc);
-      lines.push(`  ${prop.name}?(): ${tsType};`);
+      const optional = prop.isOptional ? "?" : "";
+      lines.push(`  ${prop.name}${optional}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
         let paramType = mapParamType(prop.type, proto.name);
@@ -1536,7 +1536,7 @@ export function emitProtocolFile(
         if (prop.nullResettable && !paramType.includes("| null")) {
           paramType = `${paramType} | null`;
         }
-        lines.push(`  ${setterName}?(value: ${paramType}): void;`);
+        lines.push(`  ${setterName}${optional}(value: ${paramType}): void;`);
       }
     }
   }

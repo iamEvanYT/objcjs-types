@@ -587,7 +587,7 @@ function emitCustomProtocolFile(
   const instancePropertyNames = new Set(instanceProps.map((p) => p.name));
   const regularMethods = proto.instanceMethods.filter((m) => !instancePropertyNames.has(m.selector));
 
-  // Instance methods (optional)
+  // Instance methods
   if (regularMethods.length > 0) {
     lines.push("  // Instance methods");
     for (const method of regularMethods) {
@@ -605,21 +605,23 @@ function emitCustomProtocolFile(
         }
         params.push(`${safeName}: ${tsType}`);
       }
-      lines.push(`  ${jsName}?(${params.join(", ")}): ${returnType};`);
+      const optional = method.isOptional ? "?" : "";
+      lines.push(`  ${jsName}${optional}(${params.join(", ")}): ${returnType};`);
     }
   }
 
-  // Instance properties (optional getters)
+  // Instance properties
   if (instanceProps.length > 0) {
     if (regularMethods.length > 0) lines.push("");
     lines.push("  // Properties");
     for (const prop of instanceProps) {
       const tsType = mapReturnType(prop.type, proto.name);
-      lines.push(`  ${prop.name}?(): ${tsType};`);
+      const optional = prop.isOptional ? "?" : "";
+      lines.push(`  ${prop.name}${optional}(): ${tsType};`);
       if (!prop.readonly) {
         const setterName = `set${prop.name[0]!.toUpperCase()}${prop.name.slice(1)}$`;
         const paramType = mapParamType(prop.type, proto.name);
-        lines.push(`  ${setterName}?(value: ${paramType}): void;`);
+        lines.push(`  ${setterName}${optional}(value: ${paramType}): void;`);
       }
     }
   }
@@ -710,7 +712,8 @@ async function main(): Promise<void> {
       discovery.classes.size === 0 &&
       discovery.protocols.size === 0 &&
       discovery.integerEnums.size === 0 &&
-      discovery.stringEnums.size === 0
+      discovery.stringEnums.size === 0 &&
+      discovery.numericConstants.size === 0
     )
       continue;
 
@@ -720,10 +723,12 @@ async function main(): Promise<void> {
       protocols: [...discovery.protocols.keys()].sort(),
       integerEnums: [...discovery.integerEnums.keys()].sort(),
       stringEnums: [...discovery.stringEnums.keys()].sort(),
+      numericConstants: [...discovery.numericConstants.keys()].sort(),
       classHeaders: discovery.classes,
       protocolHeaders: discovery.protocols,
       integerEnumHeaders: discovery.integerEnums,
-      stringEnumHeaders: discovery.stringEnums
+      stringEnumHeaders: discovery.stringEnums,
+      numericConstantHeaders: discovery.numericConstants
     });
   }
 
