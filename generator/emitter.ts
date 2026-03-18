@@ -1641,6 +1641,8 @@ export function emitStringEnumFile(enumDef: ObjCStringEnum, _currentFrameworkNam
   const lines: string[] = [];
   lines.push(AUTOGEN_HEADER);
   lines.push("");
+  lines.push(`import type { NSStringLiteral } from "../helpers.js";`);
+  lines.push("");
 
   // Filter to values that were successfully resolved
   const resolvedValues = enumDef.values.filter((v) => v.value !== null);
@@ -1657,7 +1659,8 @@ export function emitStringEnumFile(enumDef: ObjCStringEnum, _currentFrameworkNam
     lines.push(`} as const;`);
 
     lines.push(`export type ${enumDef.name} =`);
-    lines.push(`  typeof ${enumDef.name}[keyof typeof ${enumDef.name}];`);
+    lines.push(`  | NSStringLiteral<(typeof ${enumDef.name})[keyof typeof ${enumDef.name}]>`);
+    lines.push(`  | (typeof ${enumDef.name})[keyof typeof ${enumDef.name}];`);
   } else {
     // Fallback: if no values could be resolved, emit short names as a JSDoc comment
     // and a type alias that accepts any string (for forward compatibility)
@@ -1668,7 +1671,7 @@ export function emitStringEnumFile(enumDef: ObjCStringEnum, _currentFrameworkNam
       lines.push(` * Values could not be resolved from the framework binary.`);
       lines.push(` */`);
     }
-    lines.push(`export type ${enumDef.name} = string;`);
+    lines.push(`export type ${enumDef.name} = NSStringLiteral<string>;`);
   }
 
   lines.push("");

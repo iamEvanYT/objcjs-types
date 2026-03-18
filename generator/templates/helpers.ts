@@ -8,17 +8,27 @@ import {
   type _NSString
 } from "./Foundation/index.js";
 
+declare const NS_STRING_LITERAL: unique symbol;
+/**
+ * NSString subtype that preserves the originating string literal in the type system.
+ *
+ * This is a compile-time brand only. At runtime it is still just an NSString.
+ */
+export interface NSStringLiteral<T extends string = string> extends _NSString {
+  readonly [NS_STRING_LITERAL]?: T;
+}
+
 /**
  * Create NSString from a JavaScript string
  * @param str The string object
  * @returns An NSString object
  */
-export function NSStringFromString(str: string): _NSString {
+export function NSStringFromString<T extends string>(str: T): NSStringLiteral<T> {
   const nsString = NSString.stringWithUTF8String$(str);
   if (!nsString) {
     throw new Error(`Failed to create NSString from string: ${str}`);
   }
-  return nsString;
+  return nsString as NSStringLiteral<T>;
 }
 
 /**

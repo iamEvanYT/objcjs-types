@@ -466,6 +466,31 @@ function mapTypeInner(
 }
 
 /**
+ * Check whether a type should be represented as an NSString object when used
+ * as a parameter at runtime.
+ *
+ * Certain NSString typedef aliases should still be represented as NSString
+ * objects in parameter position. String enums are handled via their own
+ * branded enum types, so they are intentionally excluded here.
+ */
+function isNSStringRuntimeParamType(cleaned: string, resolving?: Set<string>): boolean {
+  if (cleaned in DIRECT_MAPPINGS) {
+    return DIRECT_MAPPINGS[cleaned] === "_NSString";
+  }
+
+  if (knownTypedefs.has(cleaned)) {
+    const seen = resolving ?? new Set<string>();
+    if (!seen.has(cleaned)) {
+      seen.add(cleaned);
+      const underlying = knownTypedefs.get(cleaned)!;
+      return isNSStringRuntimeParamType(cleanQualType(underlying), seen);
+    }
+  }
+
+  return false;
+}
+
+/**
  * Map a return type, handling instancetype specially.
  *
  * CF opaque types (CGContextRef, etc.) are struct pointers at the ABI level.
@@ -871,6 +896,10 @@ export function mapParamType(qualType: string, containingClass: string, blockPar
   if (CF_OPAQUE_TYPES.has(cleaned)) {
     const nullable = isNullableType(qualType);
     return nullable ? "Uint8Array | null" : "Uint8Array";
+  }
+  if (isNSStringRuntimeParamType(cleaned)) {
+    const nullable = isNullableType(qualType);
+    return nullable ? "_NSString | null" : "_NSString";
   }
   return mapType(qualType, containingClass, false, blockParamNames);
 }
