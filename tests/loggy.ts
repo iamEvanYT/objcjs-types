@@ -1,4 +1,4 @@
-import { NSLog } from "../src/Foundation";
+import { NSLog } from "../src/Foundation/functions";
 import { NSStringFromString } from "../src/helpers";
 
 console.log("Creating NSString");
