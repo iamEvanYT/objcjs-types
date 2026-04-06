@@ -2203,11 +2203,11 @@ export function emitDelegatesFile(
   lines.push(`export function createDelegate<K extends keyof ProtocolMap>(`);
   lines.push(`  protocolName: K,`);
   lines.push(`  methods: Partial<ProtocolMap[K]>,`);
-  lines.push(`): NobjcObject {`);
+  lines.push(`): NobjcObject & ProtocolMap[K] {`);
   lines.push(`  return NobjcProtocol.implement(`);
   lines.push(`    protocolName,`);
   lines.push(`    methods as Record<string, (...args: any[]) => any>,`);
-  lines.push(`  );`);
+  lines.push(`  ) as NobjcObject & ProtocolMap[K];`);
   lines.push(`}`);
   lines.push("");
 
