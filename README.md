@@ -108,6 +108,40 @@ if (isKindOfClass<_ASAuthorizationAppleIDCredential>(cred, ASAuthorizationAppleI
 
 Both `instanceof` and `isKindOfClass` cache results per (object, class) pair so repeated checks skip the native boundary.
 
+### Typed block wrappers
+
+Methods that accept block (closure) parameters require Objective-C type encodings at runtime. The `blocks` submodule provides pre-generated wrapper functions that handle this automatically:
+
+```ts
+import { NSArray, NSString } from "objcjs-types/Foundation";
+import { enumerateObjectsUsingBlock$Block_0, sortedArrayUsingComparator$Block } from "objcjs-types/Foundation/blocks";
+
+const array = NSArray.arrayWithObjects$count$(
+  [
+    NSString.stringWithUTF8String$("banana"),
+    NSString.stringWithUTF8String$("apple"),
+    NSString.stringWithUTF8String$("cherry")
+  ],
+  3
+);
+
+// Enumerate with typed block wrapper
+array.enumerateObjectsUsingBlock$(
+  enumerateObjectsUsingBlock$Block_0((obj, idx, stop) => {
+    console.log(`Item ${idx}:`, obj.description().UTF8String());
+  })
+);
+
+// Sort with comparator block
+const sorted = array.sortedArrayUsingComparator$(
+  sortedArrayUsingComparator$Block((a, b) => {
+    return a.compare$(b);
+  })
+);
+```
+
+Block wrappers are named `<selector>Block` with numeric suffixes (`_0`, `_1`) when different classes use the same selector with different signatures. Nullable block parameters are handled automatically.
+
 ### Subclassing
 
 `defineSubclass` wraps `NobjcClass.define()` with type safety — `self` is typed as the superclass, protocol method names get autocomplete, and the returned class supports `alloc`/`init` and `instanceof`:
@@ -208,15 +242,16 @@ const nsStr = NSStringFromString("hello");
 
 ## Subpath exports
 
-| Import path                | Contents                                                 |
-| -------------------------- | -------------------------------------------------------- |
-| `objcjs-types`             | Structs, `createDelegate`, `defineSubclass`, `callSuper` |
-| `objcjs-types/helpers`     | `NSStringFromString`, `options`, `isKindOfClass`, etc.   |
-| `objcjs-types/subclass`    | `defineSubclass`, `callSuper`                            |
-| `objcjs-types/nsdata`      | NSData/Buffer conversion utilities                       |
-| `objcjs-types/osversion`   | macOS version detection and comparison                   |
-| `objcjs-types/delegates`   | `createDelegate` and `ProtocolMap` type                  |
-| `objcjs-types/<Framework>` | Framework exports (e.g. `objcjs-types/AppKit`)           |
+| Import path                       | Contents                                                     |
+| --------------------------------- | ------------------------------------------------------------ |
+| `objcjs-types`                    | Structs, `createDelegate`, `defineSubclass`, `callSuper`     |
+| `objcjs-types/helpers`            | `NSStringFromString`, `options`, `isKindOfClass`, etc.       |
+| `objcjs-types/subclass`           | `defineSubclass`, `callSuper`                                |
+| `objcjs-types/nsdata`             | NSData/Buffer conversion utilities                           |
+| `objcjs-types/osversion`          | macOS version detection and comparison                       |
+| `objcjs-types/delegates`          | `createDelegate` and `ProtocolMap` type                      |
+| `objcjs-types/<Framework>`        | Framework exports (e.g. `objcjs-types/AppKit`)               |
+| `objcjs-types/<Framework>/blocks` | Typed block wrappers (e.g. `objcjs-types/Foundation/blocks`) |
 
 ## ObjC selector naming
 

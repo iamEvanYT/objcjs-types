@@ -19,6 +19,7 @@ import {
   mapReturnType,
   mapParamType,
   qualTypeToEncoding,
+  blockQualTypeToFullEncoding,
   STRUCT_TS_TYPES,
   getKnownIntegerEnums,
   getKnownStringEnums
@@ -2210,6 +2211,248 @@ export function emitDelegatesFile(
   lines.push(`  ) as NobjcObject & ProtocolMap[K];`);
   lines.push(`}`);
   lines.push("");
+
+  return lines.join("\n");
+}
+
+// --- Block wrapper file generation ---
+
+/**
+ * Represents a block parameter found in a method.
+ */
+interface BlockWrapperInfo {
+  /** The method selector (JS format with $) */
+  selector: string;
+  /** Parameter index (for methods with multiple block params) */
+  paramIndex: number;
+  /** The ObjC qualType of the block */
+  qualType: string;
+  /** The full block encoding (e.g., "@?<v@?@Q^B>") */
+  encoding: string;
+  /** The TypeScript function type (e.g., "(obj: NobjcObject, idx: number) => void") */
+  tsType: string;
+}
+
+/**
+ * Generate a blocks.ts file for a framework containing typed wrappers
+ * around `typedBlock()` from objc-js.
+ *
+ * Each method that accepts a block parameter gets a wrapper function that
+ * embeds the correct type encoding, so users don't need to specify it manually.
+ *
+ * Example output:
+ * ```ts
+ * import { typedBlock } from "objc-js";
+ * import type { NobjcObject } from "objc-js";
+ *
+ * export function enumerateObjectsUsingBlock$Block(
+ *   fn: (obj: NobjcObject, idx: number, stop: NobjcObject) => void
+ * ): (obj: NobjcObject, idx: number, stop: NobjcObject) => void {
+ *   return typedBlock("@?<v@?@Q^B>", fn);
+ * }
+ * ```
+ *
+ * @returns The generated file content, or null if no blocks were found
+ */
+export function emitBlocksFile(
+  classes: ObjCClass[],
+  protocols: ObjCProtocol[],
+  currentFramework: FrameworkConfig,
+  allFrameworks: FrameworkConfig[],
+  classToFile?: Map<string, string>
+): string | null {
+  // Collect all block parameters from all methods
+  const blockWrappers: BlockWrapperInfo[] = [];
+
+  // Helper to process a method's parameters
+  const processMethod = (method: ObjCMethod) => {
+    const jsSelector = selectorToJS(method.selector);
+    let blockIndex = 0;
+
+    for (let i = 0; i < method.parameters.length; i++) {
+      const param = method.parameters[i]!;
+
+      // Map the TypeScript type first to detect block types
+      const tsType = mapParamType(param.type, "", param.blockParamNames);
+
+      // Check if this parameter is a block type:
+      // 1. Raw block syntax: (^) in the ObjC type
+      // 2. Typedef'd blocks: the mapped TS type is a function type (contains "=>")
+      const isRawBlock = param.type.includes("(^");
+      const isFunctionType = tsType.includes("=>");
+
+      if (isRawBlock || isFunctionType) {
+        const encoding = blockQualTypeToFullEncoding(param.type);
+        if (!encoding) continue; // Skip if we can't generate encoding
+
+        blockWrappers.push({
+          selector: jsSelector,
+          paramIndex: blockIndex,
+          qualType: param.type,
+          encoding,
+          tsType
+        });
+        blockIndex++;
+      }
+    }
+  };
+
+  // Process all classes
+  for (const cls of classes) {
+    for (const method of cls.instanceMethods) {
+      processMethod(method);
+    }
+    for (const method of cls.classMethods) {
+      processMethod(method);
+    }
+  }
+
+  // Process all protocols
+  for (const proto of protocols) {
+    for (const method of proto.instanceMethods) {
+      processMethod(method);
+    }
+    for (const method of proto.classMethods) {
+      processMethod(method);
+    }
+  }
+
+  // No blocks found
+  if (blockWrappers.length === 0) {
+    return null;
+  }
+
+  // First pass: deduplicate by selector + paramIndex + encoding
+  // This handles the same signature appearing in multiple classes
+  const dedupeKey = (w: BlockWrapperInfo) => `${w.selector}:${w.paramIndex}:${w.encoding}`;
+  const dedupedByEncoding = new Map<string, BlockWrapperInfo>();
+  for (const wrapper of blockWrappers) {
+    const key = dedupeKey(wrapper);
+    if (!dedupedByEncoding.has(key)) {
+      dedupedByEncoding.set(key, wrapper);
+    }
+  }
+
+  // Second pass: group by selector+paramIndex to detect encoding variants
+  // If a selector has multiple different encodings, we need to add numeric suffix
+  const selectorParamKey = (w: BlockWrapperInfo) => `${w.selector}:${w.paramIndex}`;
+  const encodingsBySelector = new Map<string, Set<string>>();
+  for (const wrapper of dedupedByEncoding.values()) {
+    const spKey = selectorParamKey(wrapper);
+    if (!encodingsBySelector.has(spKey)) {
+      encodingsBySelector.set(spKey, new Set());
+    }
+    encodingsBySelector.get(spKey)!.add(wrapper.encoding);
+  }
+
+  // Build final map with proper naming
+  const finalWrappers = new Map<string, BlockWrapperInfo>();
+  const encodingIndexBySelectorParam = new Map<string, Map<string, number>>();
+
+  for (const wrapper of dedupedByEncoding.values()) {
+    const spKey = selectorParamKey(wrapper);
+    const encodingsForSelector = encodingsBySelector.get(spKey)!;
+    const hasMultipleEncodings = encodingsForSelector.size > 1;
+
+    // Check if this method has multiple block params (paramIndex > 0 means multiple)
+    const maxParamIndex = Math.max(
+      ...[...dedupedByEncoding.values()].filter((w) => w.selector === wrapper.selector).map((w) => w.paramIndex)
+    );
+    const hasMultipleParams = maxParamIndex > 0;
+
+    let wrapperName: string;
+    if (hasMultipleEncodings) {
+      // Multiple different block signatures for same selector — need encoding index
+      if (!encodingIndexBySelectorParam.has(spKey)) {
+        encodingIndexBySelectorParam.set(spKey, new Map());
+      }
+      const indexMap = encodingIndexBySelectorParam.get(spKey)!;
+      if (!indexMap.has(wrapper.encoding)) {
+        indexMap.set(wrapper.encoding, indexMap.size);
+      }
+      const encodingIdx = indexMap.get(wrapper.encoding)!;
+
+      if (hasMultipleParams) {
+        wrapperName = `${wrapper.selector}Block${wrapper.paramIndex}_${encodingIdx}`;
+      } else {
+        wrapperName = `${wrapper.selector}Block_${encodingIdx}`;
+      }
+    } else {
+      // Single encoding for this selector
+      if (hasMultipleParams) {
+        wrapperName = `${wrapper.selector}Block${wrapper.paramIndex}`;
+      } else {
+        wrapperName = `${wrapper.selector}Block`;
+      }
+    }
+
+    finalWrappers.set(wrapperName, wrapper);
+  }
+
+  // Sort alphabetically by wrapper name for deterministic output
+  const sorted = [...finalWrappers.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  // Build the output
+  const lines: string[] = [];
+  lines.push(AUTOGEN_HEADER);
+  lines.push(`import { typedBlock } from "objc-js";`);
+
+  // Check if we need NobjcObject import
+  const needsNobjcObject = sorted.some(([, w]) => w.tsType.includes("NobjcObject"));
+  if (needsNobjcObject) {
+    lines.push(`import type { NobjcObject } from "objc-js";`);
+  }
+
+  // Collect type references for imports
+  const classRefs = new Set<string>();
+  const structRefs = new Set<string>();
+  const enumRefs = new Set<string>();
+  const intEnums = getKnownIntegerEnums();
+  const strEnums = getKnownStringEnums();
+
+  for (const [, wrapper] of sorted) {
+    extractFunctionTypeRefs(wrapper.tsType, classRefs, structRefs, enumRefs, intEnums, strEnums);
+  }
+
+  // Emit class/protocol imports
+  if (classRefs.size > 0) {
+    lines.push(...emitImports(classRefs, currentFramework, allFrameworks, classToFile));
+  }
+
+  // Emit struct imports
+  for (const name of [...structRefs].sort()) {
+    lines.push(`import type { ${name} } from "../structs/${name}.js";`);
+  }
+
+  // Emit enum imports
+  lines.push(...emitEnumImports(enumRefs, currentFramework, allFrameworks));
+
+  lines.push("");
+
+  // Emit each wrapper function
+  for (const [wrapperName, wrapper] of sorted) {
+    // Check if the type is nullable (ends with "| null")
+    const isNullable = wrapper.tsType.endsWith("| null");
+    const nonNullType = isNullable ? wrapper.tsType.slice(0, -7).trim() : wrapper.tsType;
+    // Remove outer parens if present: "((x: T) => R)" → "(x: T) => R"
+    const cleanNonNullType =
+      nonNullType.startsWith("(") && nonNullType.endsWith(")") ? nonNullType.slice(1, -1) : nonNullType;
+
+    lines.push(`/**`);
+    lines.push(` * Block wrapper for methods using selector: ${wrapper.selector.replace(/\$/g, ":")}`);
+    lines.push(` * @param fn The callback function`);
+    lines.push(` */`);
+    lines.push(`export function ${wrapperName}(`);
+    lines.push(`  fn: ${wrapper.tsType}`);
+    lines.push(`): ${wrapper.tsType} {`);
+    if (isNullable) {
+      lines.push(`  return fn === null ? null : typedBlock("${wrapper.encoding}", fn);`);
+    } else {
+      lines.push(`  return typedBlock("${wrapper.encoding}", fn);`);
+    }
+    lines.push(`}`);
+    lines.push("");
+  }
 
   return lines.join("\n");
 }

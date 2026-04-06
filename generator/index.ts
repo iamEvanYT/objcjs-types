@@ -53,6 +53,7 @@ import {
   emitStringEnumFile,
   emitFunctionsFile,
   emitConstantsFile,
+  emitBlocksFile,
   groupCaseCollisions
 } from "./emitter.ts";
 import type { StructDef, StructFieldDef } from "./emitter.ts";
@@ -1273,6 +1274,19 @@ async function main(): Promise<void> {
       hasConstants = true;
     }
 
+    // Emit blocks file (typed wrappers for block parameters)
+    const fwClassesArray = [...fwClasses.values()];
+    const fwProtosArray = [...fwProtos.values()];
+    let hasBlocks = false;
+    let blocksCount = 0;
+    const blocksContent = emitBlocksFile(fwClassesArray, fwProtosArray, framework, frameworks, globalClassToFile);
+    if (blocksContent) {
+      await writeFile(join(frameworkDir, "blocks.ts"), blocksContent);
+      hasBlocks = true;
+      // Count block wrappers (each "export function" line)
+      blocksCount = (blocksContent.match(/^export function /gm) || []).length;
+    }
+
     // Emit framework index
     const indexContent = emitFrameworkIndex(
       framework,
@@ -1292,8 +1306,9 @@ async function main(): Promise<void> {
       generatedIntegerEnums.length + generatedStringEnums.length + generatedStringEnumsTypeOnly.length;
     const funcCountStr = hasFunctions ? ` + ${fwFuncs!.size} functions` : "";
     const constCountStr = hasConstants ? ` + ${fwConsts!.size} constants` : "";
+    const blocksCountStr = hasBlocks ? ` + ${blocksCount} blocks` : "";
     console.log(
-      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files${funcCountStr}${constCountStr} + index.ts`
+      `  ${framework.name}: ${generatedClasses.length} class files + ${generatedProtocols.length} protocol files + ${totalEnumCount} enum files${funcCountStr}${constCountStr}${blocksCountStr} + index.ts`
     );
   }
 

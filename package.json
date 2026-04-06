@@ -42,6 +42,10 @@
     "./*/constants": {
       "types": "./dist/*/constants.d.ts",
       "default": "./dist/*/constants.js"
+    },
+    "./*/blocks": {
+      "types": "./dist/*/blocks.d.ts",
+      "default": "./dist/*/blocks.js"
     }
   },
   "files": [

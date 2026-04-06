@@ -30,6 +30,11 @@ export function getKnownStringEnums(): Set<string> {
   return knownStringEnums;
 }
 
+/** Read-only access to the known typedefs map (for use by the emitter). */
+export function getKnownTypedefs(): Map<string, string> {
+  return knownTypedefs;
+}
+
 export function setKnownClasses(classes: Set<string>): void {
   knownClasses = classes;
 }
@@ -587,6 +592,28 @@ export function qualTypeToEncoding(qualType: string): string | null {
   // Void pointer
   if (cleaned === "void *" || cleaned === "const void *") return "^v";
 
+  // Primitive pointer types (BOOL *, int *, etc.) — must check before generic object pointer
+  if (cleaned.endsWith(" *") || cleaned.endsWith(" *const")) {
+    const baseType = cleaned.replace(/ \*(?:const)?$/, "");
+    // Check if it's a primitive type that needs ^X encoding
+    if (baseType === "BOOL" || baseType === "bool" || baseType === "_Bool") return "^B";
+    if (baseType === "char" || baseType === "signed char") return "^c";
+    if (baseType === "unsigned char") return "^C";
+    if (baseType === "short") return "^s";
+    if (baseType === "unsigned short") return "^S";
+    if (baseType === "int") return "^i";
+    if (baseType === "unsigned int") return "^I";
+    if (baseType === "long") return "^l";
+    if (baseType === "unsigned long") return "^L";
+    if (baseType === "long long") return "^q";
+    if (baseType === "unsigned long long") return "^Q";
+    if (baseType === "float") return "^f";
+    if (baseType === "double") return "^d";
+    if (baseType === "NSInteger") return "^q";
+    if (baseType === "NSUInteger") return "^Q";
+    // Fall through for ObjC object pointers
+  }
+
   // ObjC id (bare)
   if (cleaned === "id") return "@";
 
@@ -902,4 +929,100 @@ export function mapParamType(qualType: string, containingClass: string, blockPar
     return nullable ? "_NSString | null" : "_NSString";
   }
   return mapType(qualType, containingClass, false, blockParamNames);
+}
+
+// --- Block encoding generation ---
+
+/**
+ * Convert a block qualType to its full ObjC type encoding with angle brackets.
+ *
+ * The full block encoding format is: `@?<returnType@?argTypes...>`
+ * - `@?` prefix indicates a block type
+ * - Return type encoding comes first inside the angle brackets
+ * - `@?` for the implicit block-self parameter
+ * - Then each argument's encoding concatenated
+ *
+ * Also resolves typedef'd block types (e.g., NSComparator → NSComparisonResult (^)(id, id))
+ *
+ * @example
+ * blockQualTypeToFullEncoding("void (^)(id, NSUInteger, BOOL *)") → "@?<v@?@Q^B>"
+ * blockQualTypeToFullEncoding("NSComparisonResult (^)(id, id)") → "@?<q@?@@>"
+ * blockQualTypeToFullEncoding("void (^)(void)") → "@?<v@?>"
+ * blockQualTypeToFullEncoding("NSComparator") → "@?<q@?@@>" (via typedef resolution)
+ *
+ * @param qualType The ObjC block qualType string
+ * @returns The full block encoding string, or null if parsing fails
+ */
+export function blockQualTypeToFullEncoding(qualType: string): string | null {
+  let cleaned = cleanQualType(qualType);
+
+  // Resolve typedef'd block types (e.g., NSComparator → block type)
+  if (knownTypedefs.has(cleaned)) {
+    const underlying = knownTypedefs.get(cleaned)!;
+    // If the underlying type is a block, use that
+    if (underlying.includes("(^")) {
+      cleaned = cleanQualType(underlying);
+    }
+  }
+
+  // Find the (^ ...) separator between return type and parameter list
+  const caretIdx = cleaned.indexOf("(^");
+  if (caretIdx === -1) return null;
+
+  // Return type is everything before (^
+  let returnTypeStr = cleaned.slice(0, caretIdx).trim();
+  if (!returnTypeStr) returnTypeStr = "void";
+
+  // Find matching ) for the (^ ...) part
+  let i = caretIdx + 1; // points to '^'
+  let depth = 1;
+  i++; // skip '^'
+  while (i < cleaned.length && depth > 0) {
+    if (cleaned[i] === "(") depth++;
+    else if (cleaned[i] === ")") depth--;
+    i++;
+  }
+  // i now points past the closing ) of (^...)
+
+  // Skip whitespace to find the parameter list
+  while (i < cleaned.length && cleaned[i] === " ") i++;
+
+  // Get return type encoding
+  const returnEncoding = qualTypeToEncoding(returnTypeStr) ?? "v";
+
+  // If no parameter list follows, treat as no-arg block
+  if (i >= cleaned.length || cleaned[i] !== "(") {
+    return `@?<${returnEncoding}@?>`;
+  }
+
+  // Extract the parameter list
+  const paramListStart = i + 1;
+  depth = 1;
+  i++;
+  while (i < cleaned.length && depth > 0) {
+    if (cleaned[i] === "(") depth++;
+    else if (cleaned[i] === ")") depth--;
+    i++;
+  }
+  const paramListEnd = i - 1;
+  const paramStr = cleaned.slice(paramListStart, paramListEnd).trim();
+
+  // Handle void/empty parameter list
+  if (paramStr === "void" || paramStr === "") {
+    return `@?<${returnEncoding}@?>`;
+  }
+
+  // Split and encode each parameter type
+  const paramTypes = splitBlockParams(paramStr);
+  const argEncodings: string[] = [];
+
+  for (const p of paramTypes) {
+    const paramCleaned = cleanQualType(p.trim());
+    // Extract just the type, stripping any parameter name
+    const { type: typeStr } = extractBlockParamName(paramCleaned);
+    const encoding = qualTypeToEncoding(typeStr) ?? "@";
+    argEncodings.push(encoding);
+  }
+
+  return `@?<${returnEncoding}@?${argEncodings.join("")}>`;
 }
