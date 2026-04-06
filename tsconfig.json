@@ -7,6 +7,8 @@
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
 
+    "types": ["bun-types"],
+
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
