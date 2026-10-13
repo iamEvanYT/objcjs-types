@@ -76,13 +76,13 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "objc-js": "^1.5.0",
+    "objc-js": "^1.6.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@typescript/native-preview": "^7.0.0-dev.20260405.1",
-    "objc-js": "^1.5.0",
+    "objc-js": "^1.6.0",
     "prettier": "^3.8.1"
   },
   "trustedDependencies": [

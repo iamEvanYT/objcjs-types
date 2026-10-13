@@ -297,15 +297,13 @@ function getEntityFramework(name: string, frameworks: FrameworkConfig[]): string
  */
 const METHOD_JSDOC_OVERRIDES: Record<string, string> = {
   retain:
-    "**Do not call.** objc-js uses ARC — object lifetimes are managed automatically. Calling `retain()` will leak memory.",
+    "**Do not call.** objc-js retains the object for the lifetime of the wrapper. Calling `retain()` will leak memory.",
   release:
-    "**Do not call.** objc-js uses ARC — object lifetimes are managed automatically. Calling `release()` risks a double-free crash.",
-  autorelease:
-    "**Do not call.** objc-js uses ARC — object lifetimes are managed automatically. Calling `autorelease()` is unnecessary and unsafe.",
+    "**Do not call.** To drop the wrapper's reference immediately, call `dispose()` instead. Calling `release()` risks a double-free crash.",
+  autorelease: "**Do not call.** objc-js uses ARC. Calling `autorelease()` is unnecessary and unsafe.",
   dealloc:
-    "**Do not call.** objc-js uses ARC — objects are deallocated automatically when the JavaScript garbage collector collects the wrapper.",
-  retainCount:
-    "**Do not use.** objc-js uses ARC — manual reference counting is not applicable. The value returned by this method is meaningless."
+    "**Do not call.** The wrapper is released when it is garbage collected. To release it immediately, call `dispose()`.",
+  retainCount: "**Do not use.** objc-js uses ARC. The value returned by this method is meaningless."
 };
 
 /**
@@ -2127,9 +2125,9 @@ export function emitFrameworkIndex(
 
 /**
  * Generate the top-level src/index.ts barrel.
- * Only exports structs and delegates — frameworks are imported via
- * subpath exports (e.g., "objcjs-types/AppKit") to avoid loading
- * all framework types into the editor at once.
+ * Exports structs, delegates, subclass helpers, and `dispose`.
+ * Frameworks are imported via subpath exports (e.g., "objcjs-types/AppKit")
+ * to avoid loading all framework types into the editor at once.
  */
 export function emitTopLevelIndex(frameworkNames: string[]): string {
   const lines: string[] = [];
@@ -2139,6 +2137,7 @@ export function emitTopLevelIndex(frameworkNames: string[]): string {
   lines.push(`export * from "./structs/index.js";`);
   lines.push(`export { createDelegate } from "./delegates.js";`);
   lines.push(`export { defineSubclass, callSuper } from "./subclass.js";`);
+  lines.push(`export { dispose } from "objc-js";`);
   lines.push("");
 
   return lines.join("\n");

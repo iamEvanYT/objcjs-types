@@ -6,13 +6,15 @@ Designed for use with [objc-js](https://github.com/iamEvanYT/objc-js) and [Bun](
 
 ## Coverage
 
-~5,400 classes, ~1,000 protocols, ~2,600 enums, and ~100 structs across 153 frameworks including Foundation, AppKit, WebKit, Metal, AVFoundation, CoreData, and more.
+~5,700 classes, ~1,100 protocols, ~2,900 enums, and ~100 structs across 156 frameworks including Foundation, AppKit, WebKit, Metal, AVFoundation, CoreData, and more.
 
 ## Install
 
 ```bash
 bun add objcjs-types objc-js
 ```
+
+Requires [objc-js](https://github.com/iamEvanYT/objc-js) 1.6 or later.
 
 ## Usage
 
@@ -175,6 +177,20 @@ window.setDelegate$(instance);
 
 Use `callSuper` inside method implementations to invoke the superclass version of a method.
 
+### Releasing objects
+
+A wrapper keeps its Objective-C object alive until the wrapper is garbage collected. `dispose()` drops that reference immediately. Use it for objects that hold JavaScript callbacks, such as event monitors, notification observers, and delegates.
+
+```ts
+import { dispose } from "objcjs-types";
+import { NSEvent } from "objcjs-types/AppKit";
+
+NSEvent.removeMonitor$(monitor);
+dispose(monitor);
+```
+
+Calling a method on a disposed wrapper, or passing it to Objective-C, throws. Disposing the same wrapper again does nothing. `retain`, `release`, `autorelease`, and `dealloc` remain manual reference-counting methods and should not be called.
+
 ### NS_OPTIONS
 
 Use `options()` to combine bitmask flags with type safety:
@@ -242,16 +258,16 @@ const nsStr = NSStringFromString("hello");
 
 ## Subpath exports
 
-| Import path                       | Contents                                                     |
-| --------------------------------- | ------------------------------------------------------------ |
-| `objcjs-types`                    | Structs, `createDelegate`, `defineSubclass`, `callSuper`     |
-| `objcjs-types/helpers`            | `NSStringFromString`, `options`, `isKindOfClass`, etc.       |
-| `objcjs-types/subclass`           | `defineSubclass`, `callSuper`                                |
-| `objcjs-types/nsdata`             | NSData/Buffer conversion utilities                           |
-| `objcjs-types/osversion`          | macOS version detection and comparison                       |
-| `objcjs-types/delegates`          | `createDelegate` and `ProtocolMap` type                      |
-| `objcjs-types/<Framework>`        | Framework exports (e.g. `objcjs-types/AppKit`)               |
-| `objcjs-types/<Framework>/blocks` | Typed block wrappers (e.g. `objcjs-types/Foundation/blocks`) |
+| Import path                       | Contents                                                            |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `objcjs-types`                    | Structs, `createDelegate`, `defineSubclass`, `callSuper`, `dispose` |
+| `objcjs-types/helpers`            | `NSStringFromString`, `options`, `isKindOfClass`, etc.              |
+| `objcjs-types/subclass`           | `defineSubclass`, `callSuper`                                       |
+| `objcjs-types/nsdata`             | NSData/Buffer conversion utilities                                  |
+| `objcjs-types/osversion`          | macOS version detection and comparison                              |
+| `objcjs-types/delegates`          | `createDelegate` and `ProtocolMap` type                             |
+| `objcjs-types/<Framework>`        | Framework exports (e.g. `objcjs-types/AppKit`)                      |
+| `objcjs-types/<Framework>/blocks` | Typed block wrappers (e.g. `objcjs-types/Foundation/blocks`)        |
 
 ## ObjC selector naming
 
@@ -273,9 +289,9 @@ window.setTitle$(value); // setter
 ## Available frameworks
 
 <details>
-<summary>All 153 frameworks</summary>
+<summary>All 156 frameworks</summary>
 
-Accessibility, AccessorySetupKit, Accounts, AddressBook, AdServices, AdSupport,
+Accessibility, AccessoryAccess, AccessorySetupKit, Accounts, AddressBook, AdServices, AdSupport,
 AppKit, AppleScriptKit, AppTrackingTransparency, AudioToolbox, AudioVideoBridging,
 AuthenticationServices, AutomaticAssessmentConfiguration, Automator, AVFAudio,
 AVFoundation, AVKit, AVRouting, BackgroundAssets, BackgroundTasks, BrowserEngineCore,
@@ -288,7 +304,7 @@ ExceptionHandling, ExecutionPolicy, ExtensionKit, ExternalAccessory, FileProvide
 FileProviderUI, FinderSync, Foundation, FSKit, GameController, GameKit, GameplayKit,
 GameSave, GLKit, HealthKit, IdentityLookup, ImageCaptureCore, InputMethodKit,
 InstallerPlugins, InstantMessage, Intents, IntentsUI, IOSurface, IOUSBHost,
-iTunesLibrary, JavaRuntimeSupport, JavaScriptCore, Kernel, LinkPresentation,
+iTunesLibrary, JavaRuntimeSupport, JavaScriptCore, Kernel, LinkPresentation, LinkSecurity,
 LocalAuthentication, LocalAuthenticationEmbeddedUI, MailKit, MapKit, Matter,
 MediaAccessibility, MediaExtension, MediaLibrary, MediaPlayer, Metal, MetalFX,
 MetalKit, MetalPerformanceShaders, MetalPerformanceShadersGraph, MetricKit, MLCompute,
@@ -299,7 +315,7 @@ QuickLookThumbnailing, QuickLookUI, ReplayKit, SafariServices, SafetyKit, SceneK
 ScreenCaptureKit, ScreenSaver, ScreenTime, ScriptingBridge, SecurityFoundation,
 SecurityInterface, SecurityUI, SensitiveContentAnalysis, SensorKit, ServiceManagement,
 SharedWithYou, SharedWithYouCore, ShazamKit, Social, SoundAnalysis, Speech, SpriteKit,
-StoreKit, Symbols, SyncServices, SystemExtensions, ThreadNetwork,
+StateReporting, StoreKit, Symbols, SyncServices, SystemExtensions, ThreadNetwork,
 UniformTypeIdentifiers, UserNotifications, UserNotificationsUI, VideoSubscriberAccount,
 VideoToolbox, Virtualization, Vision, WebKit
 
